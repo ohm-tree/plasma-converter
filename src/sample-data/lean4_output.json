@@ -1,0 +1,335 @@
+{
+    "sorries": [],
+    "tactics": [],
+    "errors": [],
+    "warnings": [],
+    "infos": [],
+    "system_messages": "",
+    "system_errors": null,
+    "ast": {
+        "tactics": [
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : u 1 = 2\nh₂ : u 3 = 6\n⊢ u 0 = 2 / √3 ∨ u 0 = -(2 / √3)",
+                "stateAfter": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "pos": 509,
+                "endPos": 614
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "stateAfter": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "pos": 617,
+                "endPos": 663
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\n⊢ a * r = 2",
+                "stateAfter": "no goals",
+                "pos": 644,
+                "endPos": 663
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "stateAfter": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "pos": 666,
+                "endPos": 716
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\n⊢ a * r ^ 3 = 6",
+                "stateAfter": "no goals",
+                "pos": 697,
+                "endPos": 716
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "stateAfter": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "pos": 719,
+                "endPos": 758
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\n⊢ r ^ 2 = 3",
+                "stateAfter": "no goals",
+                "pos": 749,
+                "endPos": 758
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "stateAfter": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\nh₄ : a = 2 / √3 ∨ a = -(2 / √3)\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "pos": 761,
+                "endPos": 893
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a = 2 / √3 ∨ a = -(2 / √3)",
+                "stateAfter": "no goals",
+                "pos": 826,
+                "endPos": 893
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a = 2 / √3 ∨ a = -(2 / √3)",
+                "stateAfter": "case a\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a ^ 2 * 3 = 2 ^ 2",
+                "pos": 826,
+                "endPos": 875
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a = 2 / √3 ∨ a = -(2 / √3)",
+                "stateAfter": "case a\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a ^ 2 = (2 / √3) ^ 2",
+                "pos": 826,
+                "endPos": 856
+            },
+            {
+                "stateBefore": "case a\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a ^ 2 = (2 / √3) ^ 2",
+                "stateAfter": "case a\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a ^ 2 * 3 = 2 ^ 2",
+                "pos": 865,
+                "endPos": 875
+            },
+            {
+                "stateBefore": "case a\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\n⊢ a ^ 2 * 3 = 2 ^ 2",
+                "stateAfter": "no goals",
+                "pos": 884,
+                "endPos": 893
+            },
+            {
+                "stateBefore": "a r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\nh₁' : a * r = 2\nh₂' : a * r ^ 3 = 6\nh₃ : r ^ 2 = 3\nh₄ : a = 2 / √3 ∨ a = -(2 / √3)\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)",
+                "stateAfter": "no goals",
+                "pos": 896,
+                "endPos": 914
+            }
+        ],
+        "premises": [],
+        "declarations": [
+            {
+                "kind": "Lean.Parser.Module.header",
+                "content": "import Mathlib\nimport Aesop",
+                "whole_start_pos": {
+                    "position": 0,
+                    "line": 1,
+                    "column": 1
+                },
+                "whole_end_pos": {
+                    "position": 27,
+                    "line": 2,
+                    "column": 13
+                }
+            },
+            {
+                "kind": "Lean.Parser.Command.set_option",
+                "content": "set_option maxHeartbeats 0",
+                "whole_start_pos": {
+                    "position": 29,
+                    "line": 4,
+                    "column": 1
+                },
+                "whole_end_pos": {
+                    "position": 55,
+                    "line": 4,
+                    "column": 27
+                }
+            },
+            {
+                "kind": "Lean.Parser.Command.set_option",
+                "content": "set_option linter.unusedVariables false",
+                "whole_start_pos": {
+                    "position": 56,
+                    "line": 5,
+                    "column": 1
+                },
+                "whole_end_pos": {
+                    "position": 95,
+                    "line": 5,
+                    "column": 40
+                }
+            },
+            {
+                "kind": "Lean.Parser.Command.set_option",
+                "content": "set_option linter.unnecessarySeqFocus false",
+                "whole_start_pos": {
+                    "position": 96,
+                    "line": 6,
+                    "column": 1
+                },
+                "whole_end_pos": {
+                    "position": 139,
+                    "line": 6,
+                    "column": 44
+                }
+            },
+            {
+                "kind": "Lean.Parser.Command.open",
+                "content": "open BigOperators Real Nat Topology Rat",
+                "whole_start_pos": {
+                    "position": 141,
+                    "line": 8,
+                    "column": 1
+                },
+                "whole_end_pos": {
+                    "position": 180,
+                    "line": 8,
+                    "column": 40
+                }
+            },
+            {
+                "kind": "theorem",
+                "whole_start_pos": {
+                    "position": 182,
+                    "line": 10,
+                    "column": 1
+                },
+                "whole_end_pos": {
+                    "position": 914,
+                    "line": 24,
+                    "column": 21
+                },
+                "attributes": null,
+                "comment": {
+                    "content": "/-- The second and fourth terms of a geometric sequence are $2$ and $6$. Which of the following is a possible first term?\nShow that it is $\\frac{2\\sqrt{3}}{3}$.-/",
+                    "start_pos": {
+                        "position": 182,
+                        "line": 10,
+                        "column": 1
+                    },
+                    "end_pos": {
+                        "position": 344,
+                        "line": 11,
+                        "column": 41
+                    }
+                },
+                "private_protected": null,
+                "name": {
+                    "content": "amc12b_2003_p6",
+                    "start_pos": {
+                        "position": 353,
+                        "line": 12,
+                        "column": 9
+                    },
+                    "end_pos": {
+                        "position": 367,
+                        "line": 12,
+                        "column": 23
+                    }
+                },
+                "parameters": [
+                    {
+                        "explicitBinder": {
+                            "content": "(a r : ℝ)",
+                            "start_pos": {
+                                "position": 368,
+                                "line": 12,
+                                "column": 24
+                            },
+                            "end_pos": {
+                                "position": 377,
+                                "line": 12,
+                                "column": 33
+                            }
+                        }
+                    },
+                    {
+                        "explicitBinder": {
+                            "content": "(u : ℕ → ℝ)",
+                            "start_pos": {
+                                "position": 378,
+                                "line": 12,
+                                "column": 34
+                            },
+                            "end_pos": {
+                                "position": 389,
+                                "line": 12,
+                                "column": 45
+                            }
+                        }
+                    },
+                    {
+                        "explicitBinder": {
+                            "content": "(h₀ : ∀ k, u k = a * r ^ k)",
+                            "start_pos": {
+                                "position": 390,
+                                "line": 12,
+                                "column": 46
+                            },
+                            "end_pos": {
+                                "position": 417,
+                                "line": 12,
+                                "column": 73
+                            }
+                        }
+                    },
+                    {
+                        "explicitBinder": {
+                            "content": "(h₁ : u 1 = 2)",
+                            "start_pos": {
+                                "position": 418,
+                                "line": 12,
+                                "column": 74
+                            },
+                            "end_pos": {
+                                "position": 432,
+                                "line": 12,
+                                "column": 88
+                            }
+                        }
+                    },
+                    {
+                        "explicitBinder": {
+                            "content": "(h₂ : u 3 = 6)",
+                            "start_pos": {
+                                "position": 435,
+                                "line": 13,
+                                "column": 3
+                            },
+                            "end_pos": {
+                                "position": 449,
+                                "line": 13,
+                                "column": 17
+                            }
+                        }
+                    }
+                ],
+                "Type": [
+                    {
+                        "typeSpec": {
+                            "content": ": u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3)",
+                            "start_pos": {
+                                "position": 450,
+                                "line": 13,
+                                "column": 18
+                            },
+                            "end_pos": {
+                                "position": 500,
+                                "line": 13,
+                                "column": 68
+                            }
+                        }
+                    }
+                ],
+                "statement": {
+                    "content": "/-- The second and fourth terms of a geometric sequence are $2$ and $6$. Which of the following is a possible first term?\nShow that it is $\\frac{2\\sqrt{3}}{3}$.-/\ntheorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2)\n  (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3)",
+                    "start_pos": {
+                        "position": 182,
+                        "line": 10,
+                        "column": 1
+                    },
+                    "end_pos": {
+                        "position": 500,
+                        "line": 13,
+                        "column": 68
+                    }
+                },
+                "proof": {
+                    "content": ":= by\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,\n    Nat.succ_add]\n  have h₁' : a * r = 2 := by simpa [h₀] using h₁\n  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂\n  have h₃ : r ^ 2 = 3 := by\n    nlinarith\n  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by\n    apply eq_or_eq_neg_of_sq_eq_sq <;>\n    field_simp <;>\n    nlinarith\n  simpa [h₀] using h",
+                    "start_pos": {
+                        "position": 501,
+                        "line": 13,
+                        "column": 69
+                    },
+                    "end_pos": {
+                        "position": 914,
+                        "line": 24,
+                        "column": 21
+                    }
+                }
+            }
+        ]
+    },
+    "verified_code": "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\nset_option linter.unusedVariables false\nset_option linter.unnecessarySeqFocus false\n\nopen BigOperators Real Nat Topology Rat\n\n/-- The second and fourth terms of a geometric sequence are $2$ and $6$. Which of the following is a possible first term?\nShow that it is $\\frac{2\\sqrt{3}}{3}$.-/\ntheorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2)\n  (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,\n    Nat.succ_add]\n  have h₁' : a * r = 2 := by simpa [h₀] using h₁\n  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂\n  have h₃ : r ^ 2 = 3 := by\n    nlinarith\n  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by\n    apply eq_or_eq_neg_of_sq_eq_sq <;>\n    field_simp <;>\n    nlinarith\n  simpa [h₀] using h₄",
+    "pass": true,
+    "complete": true,
+    "verify_time": 14.676776647567749
+}

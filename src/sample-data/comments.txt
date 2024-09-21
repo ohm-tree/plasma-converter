@@ -1,0 +1,52 @@
+
+-- Start by clearly stating what you need to prove.
+-- Define all terms and variables before proceeding.
+-- Check if direct proof is possible by using known definitions and theorems.
+-- Consider proving by contradiction if direct proof seems difficult.
+-- Use mathematical induction for statements involving natural numbers.
+-- Try proof by contrapositive if proving the original statement is challenging.
+-- Split the proof into cases to handle different scenarios.
+-- Look for counterexamples to test if a statement might be false.
+-- Simplify the problem using algebraic manipulation or substitution.
+-- Use previously proven lemmas or propositions to build your proof.
+-- Translate the problem into an equivalent but easier form.
+-- If the problem involves divisibility, use properties of integers and divisibility rules.
+-- Express elements in terms of their prime factorizations if possible.
+-- Use properties of parity (odd/even) when dealing with integers.
+-- If the statement involves sets, consider using Venn diagrams or set notation.
+-- Apply basic logic rules like De Morgan's laws to simplify statements.
+-- Consider using induction on more than one variable if necessary.
+-- Break down the problem into smaller, more manageable parts.
+-- Use modular arithmetic to simplify expressions or to prove congruences.
+-- Look for symmetries or patterns in the problem to reduce complexity.
+-- Check if any functions involved are injective, surjective, or bijective.
+-- Use the definitions of functions, sequences, or series to start the proof.
+-- Apply known formulas or identities, such as the Binomial Theorem.
+-- Express sums and products using sigma or pi notation to simplify manipulation.
+-- Look for invariants or quantities that remain unchanged throughout the problem.
+-- Use the concept of well-ordering, particularly when dealing with the natural numbers.
+-- Apply the pigeonhole principle in problems involving counting or allocation.
+-- If the statement involves inequalities, use properties like the triangle inequality.
+-- Translate word problems into algebraic or set-theoretic expressions.
+-- Check for boundary or edge cases separately to ensure completeness.
+-- Use the method of exhaustion if there are only a finite number of cases.
+-- Construct a function or sequence to model the problem's conditions.
+-- Consider whether proving the contrapositive might be easier.
+-- Check if the hypothesis of the theorem implies other useful properties.
+-- Use logical equivalences to transform the statement into an easier form.
+-- Construct an example or counterexample to gain insight into the problem.
+-- Identify the structure of the problem: Is it algebraic, combinatorial, or logical?
+-- Use counting principles or combinatorial arguments for problems involving selection.
+-- Establish base cases clearly when using induction, and prove the inductive step rigorously.
+-- If working with an equation, isolate variables to make the proof more straightforward.
+-- Leverage symmetry in equations or functions to reduce the number of cases.
+-- Use reductio ad absurdum (reduction to the absurd) for indirect proof.
+-- Determine if an auxiliary statement or lemma might simplify the proof.
+-- Check if the converse or the contrapositive of a known theorem applies.
+-- Use graphical representations to gain intuition if the problem lends itself to it.
+-- Remember to verify that each logical step in the proof is valid.
+-- Write down each assumption you make, and ensure they are used correctly.
+-- Summarize the proof at the end to ensure all parts are connected coherently.
+-- Consider the logical structure of the argument: are you proving an implication, an equivalence, or a statement with multiple conditions?
+-- Look for indirect implications that might lead to a simpler proof path.
+-- Always double-check the conditions of any theorems or properties you use.

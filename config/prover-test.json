@@ -1,0 +1,20 @@
+{
+    "modelName": "prover-llm",
+    "modelVariant": "v0",
+    "numGroups": 1,
+    "numWorkerTasks": 1,
+    "numIters": 10000,
+    "worldSize": 1,
+    "workerTimeToKill": 60,
+    "use_ddp": false,
+    "sync": false,
+    "linearWeighting": true,
+    "numTrainSamples": 1000,
+    "numSaveSamples": 100,
+    "batchSize": 32,
+    "lrInit": 0.001,
+    "numGamesPerWorker": 1,
+    "uctTraversals": 100000,
+    "maxBatchSize": 1,
+    "maxQueueSize": 1
+}
