@@ -1,11 +1,13 @@
+"a mcts lean prover"
+
 Design principles:
 
 -   The MCTS algorithm should be agnostic to the game.
 -   Each agent should be agnostic to the game.
--   The LLM stuff should be completely wrapped inside of prover_llm;
+-   The LLM stuff should be completely wrapped inside of prover*llm;
     this means that everything should be passing around GameState
     instances, and we only "realize" that this is a LeanGameState
-    inside of prover_llm, which _knows_ that its a LeanGameState.
+    inside of prover_llm, which \_knows* that its a LeanGameState.
 
 -   The things that we store in worker outputs should be agnostic
     to the implementation of prover_llm; they should be essentially
