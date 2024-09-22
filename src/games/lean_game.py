@@ -664,14 +664,14 @@ class LeanGame(Game[LeanGameState]):
         """
         The game is considered over if the board is fully filled or if the state is dead.
         """
-        state.process()
+        state.post_process()
         return state.terminal() or state.depth > self.max_depth
 
     def reward(self, state: LeanGameState) -> float:
         """
         Rewards the player if the board is correctly completed, otherwise 0.
         """
-        state.process()
+        state.post_process()
         assert self.is_terminal(
             state), "Reward can only be calculated for terminal states."
         return 1.0 if state.win else -1.0
@@ -680,12 +680,12 @@ class LeanGame(Game[LeanGameState]):
         """
         Returns a string representation of the game state, marking dead states.
         """
-        state.process()
+        state.post_process()
         return str(state)
 
     def hash_state(self, state: LeanGameState) -> int:
         """
         Returns a hash of the game state.
         """
-        state.process()
+        state.post_process()
         return hash(state.code)

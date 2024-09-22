@@ -1,6 +1,11 @@
 """
-In this file, we run some Lean games with minif2f. TODO: command line config options?
+In this file, we PROFILE lean_worker. At the time of creation, this file
+- tests lean_worker, that it terminates when a proof is complete (almost guarunteed by limiting comments = 2)
+- profiles every function called in lean_worker (and outside)
+- tests Rowechen's lean speed up (bug: timeout=1->10)
+- tests Modal volume storing data (states, distributions, outcomes)
 """
+
 
 
 import csv
@@ -9,6 +14,8 @@ import logging
 import os
 import random
 import sys
+
+print("os.getcwd()", os.getcwd())
 
 import numpy as np
 import torch
@@ -32,9 +39,8 @@ task_id = 0
 num_tasks = 1
 json_name = "prover-test"
 
-import os
 
-os.chdir("../../")
+# os.chdir("../../")
 
 with open(f"config/{json_name}.json", "r") as f: # stupid make relative to root
     config = json.load(f)
@@ -100,8 +106,7 @@ def load_game(problem_idx):  # TODO: change to problem id?
     print(goal)
 
     game: LeanGame = LeanGame(
-        comment_seeds=comments,
-        completion_model=ProverLLM(),
+        comment_seeds=comments
     )
     state = game.start_state(problem=prompt, tactic_state=goal)
     return game, state
