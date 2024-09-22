@@ -225,6 +225,7 @@ class LeanGameState:
                  processed: bool = False,
                  new_code: Optional[str] = None,
                  win: Optional[bool] = None,
+                 dead: Optional[bool] = None,
                  tactic_state: Optional[str] = None,
                  valid_code: Optional[str] = None,
                  ):
@@ -252,6 +253,7 @@ class LeanGameState:
         | processed        | False            | False        | True            |
         | new_code         | None             | Required     | Required        |
         | win              | None             | None         | Required        |
+        | dead             | None             | None         | Required        |
         | tactic_state     | None             | None         | Required        |
         | valid_code       | None             | None         | Required        |
 
@@ -290,6 +292,9 @@ class LeanGameState:
         win: Optional[bool]
             Whether the proof is complete. This will be None
             if the proof is not fully processed.
+        dead: Optional[bool]
+            Whether the proof is dead. This will be None
+            if the proof is not fully processed.
         tactic_state: Optional[str]
             The tactic state after the new code was added.
             This will be None if the proof is not fully processed.
@@ -299,21 +304,21 @@ class LeanGameState:
         """
         if rollout_done:
             if processed:
-                if new_code is None or win is None or tactic_state is None or valid_code is None:
+                if new_code is None or win is None or dead is None or tactic_state is None or valid_code is None:
                     raise ValueError(
                         "If rollout_done is True and processed is True, new_code, win, tactic_state, and valid_code must all be non-None.")
             else:
                 if new_code is None:
                     raise ValueError(
                         "If rollout_done is True and processed is False, new_code must be non-None.")
-                if win is not None or tactic_state is not None or valid_code is not None:
+                if win is not None or dead is not None or tactic_state is not None or valid_code is not None:
                     raise ValueError(
                         "If rollout_done is True and processed is False, win, tactic_state, and valid_code must all be None.")
         else:
             if processed:
                 raise ValueError(
                     "If rollout_done is False, processed must be False.")
-            if new_code is not None or win is not None or tactic_state is not None or valid_code is not None:
+            if new_code is not None or win is not None or dead is not None or tactic_state is not None or valid_code is not None:
                 raise ValueError(
                     "If rollout_done is False, new_code, win, tactic_state, and valid_code must all be None.")
 
@@ -328,6 +333,7 @@ class LeanGameState:
         self.processed: bool = processed
         self.new_code: Optional[str] = new_code
         self.win: Optional[bool] = win
+        self.dead: Optional[bool] = dead
         self.tactic_state: Optional[str] = tactic_state
         self.valid_code: Optional[str] = valid_code
 
@@ -349,45 +355,43 @@ class LeanGameState:
 
     def human_printout(self) -> str:
         res = ""
-        res += "Status".center(80, "-") + "\n"
+        
+        def fancy_field(name: str, value: str, length = 80, tick = '-') -> str:
+            res = name.center(length, tick) + "\n"
+            res += value
+            if value[-1] != '\n':
+                res += '\n'
+                res += "[Missing newline]\n"
+            return res
+
         if self.rollout_done:
             if self.processed:
-                res += "Fully processed\n"
+                status_code = "Fully processed\n"
             else:
-                res += "Rollout done\n"
+                status_code = "Rollout done\n"
         else:
-            res += "Just initialized\n"
-
-        res += "Header".center(80, "-") + "\n"
-        res += self.header
-        res += "Problem".center(80, "-") + "\n"
-        res += self.problem
-        res += "Old Code".center(80, "-") + "\n"
-        res += self.old_code
-        res += "Comment".center(80, "-") + "\n"
-        res += self.comment
-
-        if self.rollout_done:
-            res += "Valid Truncation of New Code".center(80, "-") + "\n"
-            res += self.valid_code
-        elif self.processed:
-            res += "Completed Rollout without Truncation".center(
-                80, "-") + "\n"
-            res += self.new_code
+            status_code = "Just initialized\n"
+        
+        res += fancy_field("Status", status_code)
+        res += fancy_field("Header", self.header)
+        res += fancy_field("Problem", self.problem)
+        res += fancy_field("Old Code", self.old_code)
+        res += fancy_field("Comment", self.comment)
+        if self.processed:
+            res += fancy_field("Valid Truncation of New Code", self.valid_code)
+        elif self.rollout_done:
+            res += fancy_field("Completed Rollout without Truncation", self.new_code)
         else:
-            res += "[New Code will be here]".center(80, "-") + "\n"
-
-        res += "Tailer".center(80, "-") + "\n"
-        res += self.tailer
-        res += "Old Tactic State".center(80, "-") + "\n"
-        res += self.old_tactic_state
-        res += "New Tactic State".center(80, "-") + "\n"
-        res += self.tactic_state
-        res += "Meta".center(80, "-") + "\n"
-        res += f"Processed: {self.processed}, Rollout Done: {self.rollout_done}\n"
-        res += f"Win: {self.win}, Dead: {self.dead}\n"
-        res += f"Depth: {self.depth} Number of Children: {len(self.children)}\n"
-
+            res += fancy_field("[New Code will be here]", "\n")
+        
+        res += fancy_field("Tailer", self.tailer)
+        res += fancy_field("Old Tactic State", self.old_tactic_state)
+        if self.processed:
+            res += fancy_field("New Tactic State", self.tactic_state)
+        
+        res += fancy_field("Meta", f"Processed: {self.processed}, Rollout Done: {self.rollout_done}\n"\
+            f"Win: {self.win}, Dead: {self.dead}\n"\
+            f"Depth: {self.depth} Number of Children: {len(self.children)}\n")
         return res
 
     def human_json(self) -> dict:
@@ -414,6 +418,16 @@ class LeanGameState:
 
     def __str__(self) -> str:
         return f"LeanGameState({self.problem}, {self.code}, processed = {self.processed})"
+
+    def post_LLM_rollout(self, new_code: str):
+        """
+        This function is called after the LLM rollout is done.
+        """
+        if self.rollout_done:
+            raise LeanGameStateError(
+                "Should not LLM-post-process a LeanGameState that has already had an LLM rollout.")
+        self.new_code = new_code
+        self.rollout_done = True
 
     def pre_process(self) -> str:
         """
@@ -456,6 +470,7 @@ class LeanGameState:
             The result of the Lean 4 verification.
 
         """
+        self.processed = True
         full_code = ''.join(
             [self.header, self.problem, self.old_code, self.comment, self.tailer]
         )
@@ -586,7 +601,7 @@ class LeanGame(Game[LeanGameState]):
                     problem: str,
                     header: str = LEAN4_DEFAULT_HEADER,
                     tailer: str = "",
-                    tactic_state: str = None
+                    tactic_state: str = ""
                     ) -> LeanGameState:
         """
         Returns the initial state of the game.
@@ -615,6 +630,7 @@ class LeanGame(Game[LeanGameState]):
             processed=True,
             new_code="",
             win=False,
+            dead=False,
             tactic_state=tactic_state,
             valid_code=""
         )
@@ -642,13 +658,13 @@ class LeanGame(Game[LeanGameState]):
         return LeanGameState(
             problem=state.problem,
             old_code=state.code(),
+            old_tactic_state=state.tactic_state,
             comment=comment,
             depth=state.depth + 1,
             header=state.header,
             tailer=state.tailer,
             rollout_done=False,
             processed=False,
-            tactic_state=state.old_tactic_state
         )
 
     def action_mask(self, state: LeanGameState) -> np.ndarray:
@@ -664,14 +680,12 @@ class LeanGame(Game[LeanGameState]):
         """
         The game is considered over if the board is fully filled or if the state is dead.
         """
-        state.process()
         return state.terminal() or state.depth > self.max_depth
 
     def reward(self, state: LeanGameState) -> float:
         """
         Rewards the player if the board is correctly completed, otherwise 0.
         """
-        state.process()
         assert self.is_terminal(
             state), "Reward can only be calculated for terminal states."
         return 1.0 if state.win else -1.0
@@ -680,12 +694,10 @@ class LeanGame(Game[LeanGameState]):
         """
         Returns a string representation of the game state, marking dead states.
         """
-        state.process()
         return str(state)
 
     def hash_state(self, state: LeanGameState) -> int:
         """
         Returns a hash of the game state.
         """
-        state.process()
         return hash(state.code)

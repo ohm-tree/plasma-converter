@@ -69,7 +69,7 @@ def main(
         f"{DEFAULT_LAKE_PATH} exe repl",
         cwd=DEFAULT_LEAN_WORKSPACE)
 
-    init_repl()
+    init_repl(repl)
 
 
     while True:
