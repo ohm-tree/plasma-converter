@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+import multiprocessing
 import os
 import random
 import sys
@@ -15,13 +16,11 @@ from src.policies.random_policy import RandomPolicy
 from src.policies.uct_policy import UCTPolicy
 from src.train.self_play import self_play
 
-import multiprocessing
 
-
-def setup_logging(task_id):
+def setup_logging(task_id, run_name):
     ensure_directory_exists('logs')
     logging.basicConfig(
-        filename=f'logs/{RUN_NAME}_x{task_id}.log', level=logging.INFO,
+        filename=f'logs/{run_name}_x{task_id}.log', level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s')
 
 def ensure_directory_exists(path):
@@ -92,6 +91,8 @@ def main(
     json_name: str
         The name of the json file to load the configuration from
     """
+
+
     with open(f"config/{json_name}.json", "r") as f:
         config = json.load(f)
         MODEL_NAME = config["modelName"]
@@ -102,10 +103,9 @@ def main(
         UCT_TRAVERSALS = config["uctTraversals"]
 
     RUN_NAME = f'{MODEL_NAME}_{MODEL_VARIANT}'
-
     group_id = task_id // (NUM_WORKER_TASKS // NUM_GROUPS)
 
-    setup_logging(task_id)
+    setup_logging(task_id, RUN_NAME)
     logging.info("Starting worker...")
 
     model_path = f"data/{RUN_NAME}/models"

@@ -473,18 +473,16 @@ class LeanGameState:
             self.tailer,
         )
 
-        new_code = ""
+        self.new_code = ""
         i = 0
-        while len(new_code) <= len(self.old_code) and i < len(segments):
-            new_code += segments[i].tactic_code
+        while len(self.new_code) <= len(self.old_code) and i < len(segments):
+            self.new_code += segments[i].tactic_code
             i += 1
         i -= 1
 
         print("New code:")
-        print(new_code)
-        assert new_code.startswith(self.old_code)
-
-        self.new_code = new_code
+        print(self.new_code)
+        assert self.new_code.startswith(self.old_code)
 
         if 0 <= i < len(segments):
             self.tactic_state = segments[i].state_comment
@@ -511,6 +509,22 @@ class LeanGameState:
 
         self.dead = False
         self.win = False
+
+    def code(self) -> str:
+        """
+        Returns the full code of the state.
+
+        Returns
+        -------
+        str
+            The full code of the state.
+        """
+        if not self.processed:
+            raise LeanGameStateError(
+                "Cannot get the code of a LeanGameState that has not been processed.")
+        return ''.join(
+            [self.old_code, self.comment, self.new_code]
+        )
 
     @classmethod
     def saves(cls, states: List['LeanGameState'], filename: str):
@@ -541,8 +555,6 @@ class LeanGame(Game[LeanGameState]):
     def __init__(self,
                  comment_seeds: List[str],
                  max_depth: Optional[int] = 10,
-                 prompter: Callable[[LeanGameState], str] = None,
-                 completion_model: nn.Module = None,
                  max_completion_len: int = 2000):
         """
         In this game, ACTIONs are comments that can be added to the proof.
@@ -560,10 +572,6 @@ class LeanGame(Game[LeanGameState]):
             The list of comments that can be used as actions.
         max_depth: Optional[int]
             The maximum depth of the proof.
-        prompter: Callable[[LeanGameState], str]
-            A function that generates a prompt for the LLM given the current state.
-        completion_model: nn.Module
-            The model used to generate completions.
         max_completion_len: int
             The maximum length of the completion.
         """
@@ -571,9 +579,6 @@ class LeanGame(Game[LeanGameState]):
         self.num_comment_seeds = len(comment_seeds)
         self.max_depth = max_depth
 
-        self.prompter = prompter
-
-        self.completion_model = completion_model
         self.max_completion_len = max_completion_len
 
 
@@ -636,7 +641,7 @@ class LeanGame(Game[LeanGameState]):
 
         return LeanGameState(
             problem=state.problem,
-            old_code=state.code,
+            old_code=state.code(),
             comment=comment,
             depth=state.depth + 1,
             header=state.header,
