@@ -38,18 +38,6 @@ class AttrDict(dict):
         del self[name]
 
 
-# send_code_read_json(
-#             repl,
-#             {
-#                 "cmd": code,
-#                 "tactics": True,
-#                 "ast": True,
-#                 "env": 0,  # Picks up the default env which was initialized with the header
-#             },
-#             timeout=60
-#         )
-
-
 def process_lean4_results(
     code: str,
     repl_result: dict,
@@ -391,6 +379,8 @@ class LeanGameState:
 
         res += "Tailer".center(80, "-") + "\n"
         res += self.tailer
+        res += "Old Tactic State".center(80, "-") + "\n"
+        res += self.old_tactic_state
         res += "New Tactic State".center(80, "-") + "\n"
         res += self.tactic_state
         res += "Meta".center(80, "-") + "\n"
@@ -409,6 +399,7 @@ class LeanGameState:
         return {
             "problem": self.problem,
             "old_code": self.old_code,
+            "old_tactic_state": self.old_tactic_state,
             "comment": self.comment,
             "depth": self.depth,
             "header": self.header,
@@ -540,29 +531,6 @@ class LeanGameState:
         return [cls(**state) for state in states]
 
 
-def send_code_read_json(child: pexpect.spawn, cmd, timeout=20):
-    cmd_json = json.dumps(cmd)
-    print(cmd_json)
-    child.send(cmd_json + "\r\n")
-    # Read the input itself.
-    # This should be printed instantly, so timeout is set to 1 second.
-    child.expect_exact(cmd_json + "\r\n", timeout=1)
-    assert child.after.decode('utf-8') == cmd_json + "\r\n"
-
-    res = ""
-    # while res is not a valid json string, read lines.
-    start_time = time.time()
-    while True:
-        try:
-            res = res + child.readline().decode('utf-8')
-            json.loads(res)
-            break
-        except json.JSONDecodeError:
-            pass
-        if time.time() - start_time > timeout:
-            raise TimeoutError("Lean4 REPL timed out.")
-    return json.loads(res)
-
 
 class LeanGame(Game[LeanGameState]):
     """
@@ -608,22 +576,6 @@ class LeanGame(Game[LeanGameState]):
         self.completion_model = completion_model
         self.max_completion_len = max_completion_len
 
-    #     # This reference will get passed into all of the states.
-    #     self.repl = pexpect.spawn(
-    #         f"{DEFAULT_LAKE_PATH} exe repl",
-    #         cwd=DEFAULT_LEAN_WORKSPACE)
-
-    #     self.init_repl()
-
-    # def init_repl(self):
-    #     send_code_read_json(
-    #         self.repl,
-    #         {
-    #             "cmd": LEAN4_DEFAULT_HEADER,
-    #             "allTactics": True,
-    #             "tactics": True
-    #         }
-    #     )
 
     def start_state(self,
                     problem: str,
