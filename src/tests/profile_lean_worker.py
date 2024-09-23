@@ -100,8 +100,7 @@ def load_game(problem_idx):  # TODO: change to problem id?
     print(goal)
 
     game: LeanGame = LeanGame(
-        comment_seeds=comments,
-        completion_model=ProverLLM(),
+        comment_seeds=comments
     )
     state = game.start_state(problem=prompt, tactic_state=goal)
     return game, state
