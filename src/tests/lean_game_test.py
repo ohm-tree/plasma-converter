@@ -51,7 +51,7 @@ tactic_state = r'''
 """
 
 
-def send_code_read_json(child: pexpect.spawn, cmd, timeout=20):
+def send_code_read_json(child: pexpect.spawn, cmd, timeout_start=20, timeout_finish = 1):
     cmd_json = json.dumps(cmd)
     print(cmd_json)
     child.send(cmd_json + "\r\n")
@@ -60,7 +60,15 @@ def send_code_read_json(child: pexpect.spawn, cmd, timeout=20):
     child.expect_exact(cmd_json + "\r\n", timeout=1)
     assert child.after.decode('utf-8') == cmd_json + "\r\n"
     print("Sent code to Lean4 REPL.")
-    res = ""
+
+    # Read the output.
+    # This code is critical; the repl seems to print out some
+    # strange non-json stuff before the actual json output,
+    # including characters that delete the previous input,
+    # such that it doesn't show up in debug output.
+    child.expect_exact("{", timeout=timeout_start)
+    res = "{"
+
     # while res is not a valid json string, read lines.
     # All of the lines should print essentially instantly,
     # so there are no timeouts in this loop.
@@ -68,15 +76,13 @@ def send_code_read_json(child: pexpect.spawn, cmd, timeout=20):
     while True:
         res = res + child.readline().decode('utf-8')
         try:
+            # print all chars in res
             json.loads(res.strip())
             break
         except json.JSONDecodeError as e:
             print(e)
             pass
-        print("---")
-        print(res.strip())
-        print("---")
-        if time.time() - start_time > timeout:
+        if time.time() - start_time > timeout_finish:
             raise TimeoutError("Lean4 REPL timed out.")
     return json.loads(res)
 

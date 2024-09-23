@@ -359,7 +359,9 @@ class LeanGameState:
         def fancy_field(name: str, value: str, length = 80, tick = '-') -> str:
             res = name.center(length, tick) + "\n"
             res += value
-            if value[-1] != '\n':
+            if len(value) == 0:
+                res += "[Empty Field]\n"
+            elif value[-1] != '\n':
                 res += '\n'
                 res += "[Missing newline]\n"
             return res
