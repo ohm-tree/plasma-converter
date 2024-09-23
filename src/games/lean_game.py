@@ -474,21 +474,29 @@ class LeanGameState:
         """
         self.processed = True
         full_code = ''.join(
-            [self.header, self.problem, self.old_code, self.comment, self.tailer]
+            [self.header, self.problem, self.old_code, self.comment, self.new_code, self.tailer]
         )
+
+        print("Full code:")
+        print(full_code)
 
         result = process_lean4_results(
             full_code,
             repl_result,
         )
+        print("Result:")
+        pprint(result)
 
         segments = segmentation(
-            full_code,
+            ''.join([self.old_code, self.comment, self.new_code]),
             self.problem,
             result,
             self.header,
             self.tailer,
         )
+
+        print("Segments:")
+        pprint(segments)
 
         self.new_code = ""
         i = 0
@@ -530,6 +538,7 @@ class LeanGameState:
     def code(self) -> str:
         """
         Returns the full code of the state.
+        old_code + comment + new_code
 
         Returns
         -------

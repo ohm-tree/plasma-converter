@@ -80,7 +80,7 @@ def send_code_read_json(child: pexpect.spawn, cmd, timeout_start=20, timeout_fin
             json.loads(res.strip())
             break
         except json.JSONDecodeError as e:
-            print(e)
+            # print(e)
             pass
         if time.time() - start_time > timeout_finish:
             raise TimeoutError("Lean4 REPL timed out.")
@@ -153,12 +153,13 @@ while not game.is_terminal(state):
                                     "cmd": lean4_input,
                                     "allTactics": True,
                                     "tactics": True,
+                                    "ast": True,
                                     "env": 0
-                                    }, timeout=20)
+                                    })
 
-    lean4_output = send_code_read_json(lean4_input)
     print("Lean4 Output".center(80, "-"))
-    print(lean4_output)
+    print(str(lean4_output)[:100])
+    print(f"({len(str(lean4_output))} characters)")
     state.post_process(lean4_output)
 
 
