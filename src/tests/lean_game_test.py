@@ -4,13 +4,15 @@ In this file, we will let a human play a game of Lean (using modal).
 
 import cProfile
 import io
+import json
 import os
 import pstats
-import pexpect
-import json
 import time
+
+import pexpect
+
 from src.games.lean_game import LeanGame, LeanGameState
-from src.networks.prover_llm import ProverLLM
+
 pr = cProfile.Profile()  # Initialize the profiler
 pr.enable()              # Start profiling
 
@@ -21,14 +23,15 @@ formal_statement = r'''theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h�
     (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by
 '''
 PROBLEM_STATEMENT = informal_prefix + formal_statement
-tactic_state = r'''
--- goal:
--- a r : ℝ
--- u : ℕ → ℝ
--- h₀ : ∀ (k : ℕ), u k = a * r ^ k
--- h₁ : u 1 = 2
--- h₂ : u 3 = 6
--- ⊢ u 0 = 2 / √3 ∨ u 0 = -(2 / √3)
+tactic_state = r'''/- tactic state:
+
+a r : ℝ
+u : ℕ → ℝ
+h₀ : ∀ (k : ℕ), u k = a * r ^ k
+h₁ : u 1 = 2
+h₂ : u 3 = 6
+⊢ u 0 = 2 / √3 ∨ u 0 = -(2 / √3)
+-/
 '''
 
 # useful copy+paste for the game.
@@ -51,7 +54,12 @@ tactic_state = r'''
 """
 
 
-def send_code_read_json(child: pexpect.spawn, cmd, timeout_start=20, timeout_finish = 1):
+def send_code_read_json(cmd, timeout_start=30, timeout_finish=30):
+
+    child = pexpect.spawn(
+        f"{DEFAULT_LAKE_PATH} exe repl",
+        cwd=DEFAULT_LEAN_WORKSPACE)
+
     cmd_json = json.dumps(cmd)
     print(cmd_json)
     child.send(cmd_json + "\r\n")
@@ -68,7 +76,7 @@ def send_code_read_json(child: pexpect.spawn, cmd, timeout_start=20, timeout_fin
     # such that it doesn't show up in debug output.
     child.expect_exact("{", timeout=timeout_start)
     res = "{"
-
+    print("Received start of output from Lean4 REPL.")
     # while res is not a valid json string, read lines.
     # All of the lines should print essentially instantly,
     # so there are no timeouts in this loop.
@@ -84,6 +92,10 @@ def send_code_read_json(child: pexpect.spawn, cmd, timeout_start=20, timeout_fin
             pass
         if time.time() - start_time > timeout_finish:
             raise TimeoutError("Lean4 REPL timed out.")
+        # time.sleep(0.1)
+
+    # kill
+    child.close()
     return json.loads(res)
 
 
@@ -93,23 +105,6 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
-
-def init_repl(repl):
-    send_code_read_json(
-        repl,
-        {
-            "cmd": LEAN4_DEFAULT_HEADER,
-            "allTactics": True,
-            "tactics": True
-        }
-    )
-
-repl = pexpect.spawn(
-    f"{DEFAULT_LAKE_PATH} exe repl",
-    cwd=DEFAULT_LEAN_WORKSPACE)
-
-init_repl(repl)
-
 comments = None
 with open("src/sample-data/comments.txt", 'r') as file:
     comments = [line.strip() for line in file.readlines()]
@@ -118,8 +113,8 @@ game: LeanGame = LeanGame(
     comment_seeds=comments,
 )
 state: LeanGameState = game.start_state(
-    problem = PROBLEM_STATEMENT,
-    tactic_state = tactic_state
+    problem=PROBLEM_STATEMENT,
+    tactic_state=tactic_state
 )
 while not game.is_terminal(state):
     print("Player Must Act".center(80, "#"))
@@ -148,14 +143,12 @@ while not game.is_terminal(state):
     print("Lean4 Input".center(80, "-"))
     lean4_input = state.pre_process()
 
-    lean4_output = send_code_read_json(repl,
-                                    {
-                                    "cmd": lean4_input,
-                                    "allTactics": True,
-                                    "tactics": True,
-                                    "ast": True,
-                                    "env": 0
-                                    })
+    lean4_output = send_code_read_json({
+        "cmd": lean4_input,
+        "allTactics": True,
+        "tactics": True,
+        "ast": True,
+    })
 
     print("Lean4 Output".center(80, "-"))
     print(str(lean4_output)[:100])
@@ -164,7 +157,6 @@ while not game.is_terminal(state):
 
 
 print("Terminated!")
-state.process()
 print(state.human_printout())
 
 pr.disable()             # Stop profiling

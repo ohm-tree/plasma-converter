@@ -1,15 +1,10 @@
-import json
 import os
-import subprocess
-import tempfile
 import time
 import traceback
 from pprint import pprint
 from typing import Callable, List, Optional
 
 import numpy as np
-import pexpect
-import torch.nn as nn
 
 from src.games.ast_parser import lean4_parser
 from src.games.game import Game
@@ -120,9 +115,13 @@ def segmentation(
 
     if truncate_pos <= _prefix_len:
         # all proof lines are invalid
+        print("All proof lines are invalid, returning empty segments")
         return []
 
     partial_code = full_code[:truncate_pos]
+
+    print("Partial code")
+    print(partial_code)
 
     code_lines = partial_code.split('\n')
     pos_last, segments = _prefix_len, []
@@ -472,9 +471,9 @@ class LeanGameState:
             raise LeanGameStateError(
                 "Should not pre-process a LeanGameState that has already been processed.")
 
-        # full_code without the header.
         return ''.join(
-            [self.problem, self.old_code, self.comment, self.new_code, self.tailer]
+            [self.header, self.problem, self.old_code,
+                self.comment, self.new_code, self.tailer]
         )
 
     def post_process(self, repl_result: dict):
@@ -506,21 +505,20 @@ class LeanGameState:
         self.processed = True
         full_code = ''.join(
             [self.header, self.problem, self.old_code,
-                self.comment, self.new_code, self.tailer]
+                self.comment, self.new_code]
         )
-
-        print("Full code:")
-        print(full_code)
 
         result = process_lean4_results(
             full_code,
-            repl_result,
+            repl_result
         )
-        print("Result:")
-        pprint(result)
+        print("Result['ast']['tactics']:")
+        pprint(result['ast']['tactics'])
 
         segments = segmentation(
-            ''.join([self.old_code, self.comment, self.new_code]),
+            ''.join(
+                [self.old_code, self.comment, self.new_code]
+            ),
             self.problem,
             result,
             self.header,
@@ -530,16 +528,17 @@ class LeanGameState:
         print("Segments:")
         pprint(segments)
 
-        self.new_code = ""
+        self.valid_code = ""
         i = 0
-        while len(self.new_code) <= len(self.old_code) and i < len(segments):
-            self.new_code += segments[i].tactic_code
+        while len(self.valid_code) <= len(self.old_code) and i < len(segments):
+            self.valid_code += segments[i].tactic_code
             i += 1
         i -= 1
 
-        print("New code:")
-        print(self.new_code)
-        assert self.new_code.startswith(self.old_code)
+        print("Valid code:")
+        print(self.valid_code)
+        assert self.valid_code.startswith(self.old_code)
+        self.valid_code = self.valid_code[len(self.old_code):]
 
         if 0 <= i < len(segments):
             self.tactic_state = segments[i].state_comment
@@ -581,7 +580,7 @@ class LeanGameState:
             raise LeanGameStateError(
                 "Cannot get the code of a LeanGameState that has not been processed.")
         return ''.join(
-            [self.old_code, self.comment, self.new_code]
+            [self.old_code, self.comment, self.valid_code]
         )
 
     @classmethod

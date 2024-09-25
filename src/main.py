@@ -32,12 +32,15 @@ if __name__ == "__main__":
     #   2. Collect new tasks from the completion/policy_value queue until either there are no tasks
     #      left on the queue (a timeout occurs) or we have collected COMPLETION_BATCH_SIZE or
     #      POLICY_VALUE_BATCH_SIZE tasks.
-
     completion_queue = multiprocessing.Queue()
     policy_value_queue = multiprocessing.Queue()
 
     # There is one global queue for lean repl queries, because such queries are not batched.
     lean_queue = multiprocessing.Queue()
+
+    # There is one global queue for master queries. These are used to signal to workers that
+    # they should terminate.
+    master_queue = multiprocessing.Queue()
 
     # Create worker processes
     worker_procs = [multiprocessing.Process(target=worker_process, kwargs={

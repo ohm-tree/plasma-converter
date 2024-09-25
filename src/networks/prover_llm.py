@@ -21,9 +21,8 @@ class ProverLLM(Network):
         and MCTS decision-making. It implements:
         1. Given a game state, generate a prompt (either for the V/P-heads or for completion).
         2. Given this prompt, tokenize it.
-        3. Given a tokenized prompt, run it through the base model to get a completion.
-        4. Given a tokenized prompt, run it through the base model to get an intermediate state.
-        5. Use the intermediate state to get a value estimate and a policy output.
+        3. Given a tokenized prompt, run it through the base model to get an intermediate state.
+        4. Use the intermediate state to get a value estimate and a policy output.
 
         The worker/MCTS immediately outside of ProverLLM should be agnostic to the LLM-related
         principles including the specific prompting methods etc. To this end,
