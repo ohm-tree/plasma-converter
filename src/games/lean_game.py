@@ -341,6 +341,12 @@ class LeanGameState:
         # so pointers to the children are stored here.
         self.children = {}
 
+    def __hash__(self) -> int:
+        return hash(
+            (self.problem, self.old_code, self.old_tactic_state, self.comment, self.depth, self.header, self.tailer,
+             self.rollout_done, self.processed, self.new_code, self.win, self.dead, self.tactic_state, self.valid_code)
+        )
+
     def add_child(self, action: int, child: 'LeanGameState'):
         if not self.processed:
             raise LeanGameStateError(
@@ -355,8 +361,8 @@ class LeanGameState:
 
     def human_printout(self) -> str:
         res = ""
-        
-        def fancy_field(name: str, value: str, length = 80, tick = '-') -> str:
+
+        def fancy_field(name: str, value: str, length=80, tick='-') -> str:
             res = name.center(length, tick) + "\n"
             res += value
             if len(value) == 0:
@@ -373,7 +379,7 @@ class LeanGameState:
                 status_code = "Rollout done\n"
         else:
             status_code = "Just initialized\n"
-        
+
         res += fancy_field("Status", status_code)
         res += fancy_field("Header", self.header)
         res += fancy_field("Problem", self.problem)
@@ -382,18 +388,19 @@ class LeanGameState:
         if self.processed:
             res += fancy_field("Valid Truncation of New Code", self.valid_code)
         elif self.rollout_done:
-            res += fancy_field("Completed Rollout without Truncation", self.new_code)
+            res += fancy_field("Completed Rollout without Truncation",
+                               self.new_code)
         else:
             res += fancy_field("[New Code will be here]", "\n")
-        
+
         res += fancy_field("Tailer", self.tailer)
         res += fancy_field("Old Tactic State", self.old_tactic_state)
         if self.processed:
             res += fancy_field("New Tactic State", self.tactic_state)
-        
-        res += fancy_field("Meta", f"Processed: {self.processed}, Rollout Done: {self.rollout_done}\n"\
-            f"Win: {self.win}, Dead: {self.dead}\n"\
-            f"Depth: {self.depth} Number of Children: {len(self.children)}\n")
+
+        res += fancy_field("Meta", f"Processed: {self.processed}, Rollout Done: {self.rollout_done}\n"
+                           f"Win: {self.win}, Dead: {self.dead}\n"
+                           f"Depth: {self.depth} Number of Children: {len(self.children)}\n")
         return res
 
     def human_json(self) -> dict:
@@ -421,6 +428,17 @@ class LeanGameState:
     def __str__(self) -> str:
         return f"LeanGameState({self.problem}, {self.code}, processed = {self.processed})"
 
+    def pre_LLM_rollout(self) -> str:
+        """
+        This function is called before the LLM rollout is done.
+        It generates a prompt for the LLM.
+        """
+        if self.rollout_done:
+            raise LeanGameStateError(
+                "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
+
+        return 'Complete the following Lean 4 code.\n```lean\n' + self.header + self.problem + self.old_code + self.comment
+
     def post_LLM_rollout(self, new_code: str):
         """
         This function is called after the LLM rollout is done.
@@ -430,6 +448,19 @@ class LeanGameState:
                 "Should not LLM-post-process a LeanGameState that has already had an LLM rollout.")
         self.new_code = new_code
         self.rollout_done = True
+
+    def pre_policy_value(self) -> str:
+        """
+        This function is called before the policy value network is called.
+        It generates a prompt for the policy value network.
+        """
+        if not self.processed:
+            raise LeanGameStateError(
+                "Should not pre-process a LeanGameState that has not been processed.")
+
+        # TODO: make this better.
+
+        return 'Complete the following Lean 4 code.\n```lean\n' + self.header + self.problem + self.old_code + self.comment + self.new_code
 
     def pre_process(self) -> str:
         """
@@ -474,7 +505,8 @@ class LeanGameState:
         """
         self.processed = True
         full_code = ''.join(
-            [self.header, self.problem, self.old_code, self.comment, self.new_code, self.tailer]
+            [self.header, self.problem, self.old_code,
+                self.comment, self.new_code, self.tailer]
         )
 
         print("Full code:")
@@ -571,7 +603,6 @@ class LeanGameState:
         return [cls(**state) for state in states]
 
 
-
 class LeanGame(Game[LeanGameState]):
     """
     The LeanGame class implements the game logic
@@ -606,7 +637,6 @@ class LeanGame(Game[LeanGameState]):
         self.max_depth = max_depth
 
         self.max_completion_len = max_completion_len
-
 
     def start_state(self,
                     problem: str,
@@ -666,7 +696,7 @@ class LeanGame(Game[LeanGameState]):
 
         comment = self.comment_seeds[action]
 
-        return LeanGameState(
+        new_state = LeanGameState(
             problem=state.problem,
             old_code=state.code(),
             old_tactic_state=state.tactic_state,
@@ -677,6 +707,9 @@ class LeanGame(Game[LeanGameState]):
             rollout_done=False,
             processed=False,
         )
+
+        state.add_child(action, new_state)
+        return new_state
 
     def action_mask(self, state: LeanGameState) -> np.ndarray:
         """

@@ -7,6 +7,7 @@ and returns the game states and action distributions, as well as the final resul
 It also contains a larger function which generates a dataset of self-play games.
 """
 
+import multiprocessing
 from typing import Any, List, Tuple
 
 import numpy as np
@@ -16,7 +17,12 @@ from src.games.game import Game, GameState
 from src.policies.policy import Policy
 
 
-def self_play(state: GameState, game: Game, policy: Policy) -> Tuple[List[GameState], List[np.ndarray], float]:
+def self_play(state: GameState, game: Game, policy: Policy,
+              queue: multiprocessing.Queue,
+              completion_queue: multiprocessing.Queue,
+              policy_value_queue: multiprocessing.Queue,
+              lean_queue: multiprocessing.Queue,
+              ) -> Tuple[List[GameState], List[np.ndarray], float]:
     """
     Play a game using a policy, and return the game states, action distributions, and final reward.
     """
@@ -28,6 +34,10 @@ def self_play(state: GameState, game: Game, policy: Policy) -> Tuple[List[GameSt
 
     while not game.is_terminal(state):
         states.append(state)
+
+        """
+        TODO: Fast Playouts would be implemented here.
+        """
 
         distribution, _ = policy.action(game, state)
 
