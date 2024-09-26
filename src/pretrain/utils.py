@@ -3,12 +3,12 @@ Helper functions for loading pre-training data and parsing proof segments.
 '''
 
 import json
-import ijson
 import os
 import subprocess
 import tempfile
 import time
 import traceback
+from typing import List
 from src.games.ast_parser import lean4_parser
 from pprint import pprint
 
@@ -56,14 +56,6 @@ def verify_lean4_file(code,
                                      capture_output=True, text=True, cwd=lean_workspace, timeout=timeout)
         result = json.loads(outputs.stdout)
 
-        errors =  [m for m in result.get('messages', []) if m['severity'] == 'error']
-        if len(errors) > 0 and errors[0]['data']=='no goals to be solved':
-            first_line_after = errors[0]['pos']['line'] - 1
-            lines = code.splitlines()[:first_line_after]
-            # Join the lines back into a single string with line breaks
-            prefix = '\n'.join(lines)
-            return prefix
-
         ast_results = lean4_parser(
             code, result['ast']) if 'ast' in result and result['ast'] else {}
         result = {
@@ -93,39 +85,26 @@ def verify_lean4_file(code,
 
 class Proof(object):
     def __init__(self,
-                 code,
+                 code: List[str],
                  formal_statement,
                  header = LEAN4_DEFAULT_HEADER,
-                 tailer = "",
+                 segments = None,
+                 problem_name: str = ""
                  ):
         
         self.code = code
         self.header = header
         self.formal_statement = formal_statement
-        self.tailer = tailer
         self.full_code = ''.join([self.header, self.formal_statement, code.rstrip(' \n'), self.tailer])
-        print("old full_code".center(80, '-'))
-        print(self.full_code)
 
         self.result = verify_lean4_file(self.full_code, ast = True, tactics = True)
-        if type(self.result) is not dict:
-            new_full_code = self.result
-            # print("self.code".center(80, '-'))
-            # print(self.code)
-            suffix_start = new_full_code.find(self.code)
-            code = new_full_code[suffix_start:]
-            self.code = code
-            self.full_code = new_full_code
-            # print("new_full_code".center(80, '-'))
-            # print(new_full_code)
-            # print("code".center(80, '-'))
-            # print(code)
-            self.result = verify_lean4_file(self.full_code, ast = True, tactics = True)
             
         self._parse_full_code_lines()
 
         print("full_code".center(80, '-'))
         print(self.full_code)
+
+        self.segments = self.segmentation()
 
 
     def _parse_full_code_lines(self):
@@ -252,105 +231,27 @@ class Proof(object):
 
 
 
-# Example
-"""
-{
-    "natural_language_statement": "$29\\cdot31+37-41\\equiv 3\\pmod{4}$",
-    "answer": "3",
-    "tags": [
-        "number_theory",
-        "equation",
-        "modular_arithmetic"
-    ],
-    "formal_statement": "theorem lean_workbook_18 :\n  (29 * 31 + 37 - 41) % 4 = 3  :=  by sorry",
-    "split": "lean_workbook",
-    "proof": [
-        "simp [Nat.mod_lt]",
-        "simp only [Nat.add_mod_left, Nat.mod_eq_zero_of_dvd, dvd_pow]",
-        "simp only [Nat.gcd_add_self_right]",
-        "simp only [Nat.add_mod, Nat.mul_mod, Nat.mod_mod]",
-        "simp only [Nat.mod_add_div]",
-        "exact (by norm_num : (29 * 31 + 37 - 41) % 4 = 3)",
-        "simp only [Nat.mul_comm, Nat.mul_assoc, Nat.mul_left_comm]",
-        "norm_num [Int.add_emod]",
-        "simp only [Nat.mul_mod_right]",
-        "simp only [add_comm]",
-        "simp only [Nat.gcd]",
-        "simp only [Nat.mod_eq_zero_of_dvd, dvd_pow]",
-        "simp only [Nat.mul_mod, Nat.mod_mod]",
-        "simp [Mod.mod]",
-        "simp only [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc, Nat.sub_sub]",
-        "simp only [Nat.add_comm, Nat.add_left_comm]",
-        "simp only [Nat.add_sub_assoc, Nat.mod_self]",
-        "simp only [mod_eq_sub_mod]",
-        "norm_num [Nat.mod_eq_of_lt]",
-        "simp only [Nat.add_mod, Nat.mul_mod, Nat.mod_mod, Nat.mod_eq_zero_of_dvd]",
-        "exact Nat.mod_mod 3 4",
-        "norm_num [Nat.mul_mod, Nat.add_mod, Nat.mod_mod]",
-        "simp only [Nat.mod_mod]",
-        "exact rfl",
-        "simp only [Nat.add_sub_assoc]"
-    ]
-},
-"""
-# fit in to
-"""
-code,
-formal_statement,
-header = LEAN4_DEFAULT_HEADER,
-tailer = "",
-"""
 
-
-def load_data(
-        file_path: str = "data/prover-llm_v0/lean_workbook_with_proofs.json",
-        num_samples: int = 1000) -> Proof:
+def load_IMO_problems(
+        file_path: str = "data/prover-llm_v0/IMO_problems/Bulgaria1998P1.lean"
+        )
     
     # load only first num_samples entries of json
     data = []
     with open(file_path, 'r') as f:
-        # parse the file incrementally, looking for objects
-        parser = ijson.items(f, 'item')  # 'item' assumes top-level is a list of items
-        for i, item in enumerate(parser):
-            if i >= num_samples:
-                break
-            data.append(item)
-
-    # print(data[0])
-    
+        data = json.load(f)
+    data = [data[i] for i in samples_idx]
     def format(raw_proof) -> Proof:
-        code = '\n'.join('    ' + line for line in raw_proof['proof'])
-        code = "  " + code
-        print("code", code)
+        code = '\n'.join('  ' + line for line in raw_proof['proof'])
         formal_statement = raw_proof['formal_statement']
         return Proof(code=code,
                      formal_statement=formal_statement)
 
-    return [format(raw_proof) for raw_proof in data[:num_samples]]
+    return [format(raw_proof) for raw_proof in data]
 
-
-sample_amc = {
-    "code": """simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,
-    Nat.succ_add]
-  have h₁' : a * r = 2 := by simpa [h₀] using h₁
-  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂
-  -- Now we can divide the two equations to eliminate $a$ and determine $r$
-  have h₃ : r ^ 2 = 3 := by
-    nlinarith
-  -- Finally, we can substitute back to find $a$
-  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by
-    apply eq_or_eq_neg_of_sq_eq_sq <;>
-    field_simp <;>
-    nlinarith
-  simpa [h₀] using h₄
-    """,
-    "formal_statement": '''theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2)
-  (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by
-  '''
-}
 
 if __name__ == "__main__":
-    data = load_data(num_samples=2)
+    data = load_data(samples_idx=[0])
     # data = [Proof(code=sample_amc["code"], formal_statement=sample_amc["formal_statement"])]
     for proof in data:
         print("Segmentation".center(80, '-'))

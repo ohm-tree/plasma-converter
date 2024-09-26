@@ -13,9 +13,12 @@ from src.networks.prover_llm import ProverLLM
 import torch
 import torch.nn as nn
 
-num_samples = 1
-data = load_data(num_samples = num_samples)
+samples_idx = [0]
+data = load_data(samples_idx = samples_idx)
 
-print(len(data))
+print("bonk:")
+print(data[0].segmentation())
 
-# use tokenize, get_intermediate_state, and value_head t
+# use tokenize, get_intermediate_state, and value_head to turn the lean text into numbers
+# then feed it through the value network and train
+
