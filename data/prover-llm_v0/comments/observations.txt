@@ -1,0 +1,211 @@
+**Algebra**
+
+1. Notice that the left-hand side factors into a sum of squares.
+2. Observe that the equation is symmetric in \(x\) and \(y\).
+3. Recognize that substituting \(y = kx\) simplifies the equation.
+4. Factor the quadratic expression by grouping terms.
+5. Identify that the polynomial can be factored using the difference of cubes.
+6. Complete the square to transform the quadratic into vertex form.
+7. Realize that both sides of the equation are perfect squares.
+8. Apply the AM-GM inequality to the given expression.
+9. Spot that the expression simplifies when \(x = y\).
+10. Notice that the denominator can be rationalized to simplify the fraction.
+11. Observe that adding a specific term completes a known identity.
+12. Use substitution \(u = x + y\) and \(v = x - y\) to simplify.
+13. Identify that the expression represents a geometric sequence.
+14. Recognize that expanding \((x + y)^2\) aids in simplifying the equation.
+15. Factor the expression as a product of binomials.
+16. Notice that both sides have a common factor that can be canceled out.
+17. Identify that the equation represents a conic section (e.g., circle, ellipse).
+18. Realize that setting \(x = 0\) or \(y = 0\) provides useful insights.
+19. Spot that the equation can be rewritten as a difference of squares.
+20. Apply the quadratic formula to solve for one variable in terms of the other.
+21. Observe that the expression is a telescoping product or sum.
+22. Recognize that the equation simplifies when expressed in exponential form.
+23. Notice that the LHS can be expressed as a binomial coefficient.
+24. Use the identity \(a^2 - b^2 = (a - b)(a + b)\) to factor.
+25. Identify that substituting \(z = x/y\) leads to a simpler equation.
+26. Spot that the equation can be rearranged into a linear form.
+27. Recognize that the expression is a geometric mean of two terms.
+28. Notice that the equation simplifies under the assumption \(x + y = k\).
+29. Apply the method of undetermined coefficients to find particular solutions.
+30. Identify that the equation represents an arithmetic sequence.
+31. Realize that multiplying both sides by a common denominator simplifies fractions.
+32. Spot that the expression can be rewritten using the distributive property.
+33. Use the binomial expansion to simplify higher power terms.
+34. Observe that substituting \(t = x^2\) reduces the equation's degree.
+35. Recognize that the LHS is a telescoping product that collapses when expanded.
+36. Notice that both sides can be expressed as polynomials in \(x\).
+37. Identify that the expression represents a linear combination of variables.
+38. Realize that factoring out the greatest common divisor (GCD) simplifies the expression.
+39. Spot that the equation can be transformed into a homogeneous equation.
+40. Apply logarithms to both sides to linearize exponential relationships.
+41. Recognize that the expression is a rational function that can be simplified.
+42. Notice that squaring both sides eliminates square roots in the equation.
+43. Identify that the equation can be expressed as a product of linear terms.
+44. Use the substitution \(x = \frac{1}{t}\) to simplify reciprocal expressions.
+45. Spot that the LHS can be rewritten using the distributive property over addition.
+46. Realize that expanding the product leads to cancellation of terms.
+47. Observe that the equation represents a linear system that can be solved by elimination.
+48. Recognize that the expression can be transformed using the identity \((a + b)^3\).
+49. Notice that substituting \(x = y + k\) aligns variables for easier manipulation.
+50. Identify that the equation can be expressed as a rational equation by cross-multiplication.
+
+**Number Theory**
+
+51. Observe that both sides of the equation are even, implying divisibility by 2.
+52. Recognize that the number must be a prime based on given conditions.
+53. Use modular arithmetic to reduce the problem modulo a small prime.
+54. Identify that applying the Euclidean algorithm finds the greatest common divisor (GCD).
+55. Notice that the equation can be expressed in terms of congruences.
+56. Apply Fermat’s Little Theorem to simplify exponents modulo a prime.
+57. Realize that the Chinese Remainder Theorem can solve the system of congruences.
+58. Spot that the number is a perfect square based on its prime factorization.
+59. Identify that the sum of the digits is divisible by 3, implying the number itself is divisible by 3.
+60. Use the property that if \(a \equiv b \pmod{m}\), then \(a^k \equiv b^k \pmod{m}\).
+61. Recognize that the expression represents a Diophantine equation requiring integer solutions.
+62. Notice that the number is a Mersenne prime of the form \(2^p - 1\).
+63. Apply Wilson’s Theorem to determine if a number is prime.
+64. Identify that the number of divisors relates to its prime factorization.
+65. Use Euler’s Totient Function to find numbers coprime to a given integer.
+66. Recognize that the number is a perfect power based on the exponent relationship.
+67. Observe that the equation represents a Pythagorean triple.
+68. Apply Legendre’s Symbol to determine quadratic residues.
+69. Spot that the number is a sum of two squares based on its prime factors.
+70. Identify that the number is a triangular number based on the given conditions.
+71. Use the concept of coprimality to simplify fractions or ratios.
+72. Recognize that the number satisfies a specific modular condition, such as \(n \equiv 1 \pmod{4}\).
+73. Notice that the expression represents a factorial, facilitating the use of divisibility properties.
+74. Apply the concept of multiplicative inverses in modular equations.
+75. Identify that the number is part of an arithmetic progression of primes.
+76. Use properties of quadratic residues to solve the equation modulo a prime.
+77. Recognize that the number must be a power of 2 based on its properties.
+78. Observe that the sum of two consecutive integers is always odd.
+79. Apply the concept that the product of two coprime numbers has a GCD of 1.
+80. Identify that the number cannot be expressed as a sum of two squares based on its prime factors.
+81. Use the property that if a number divides the product, it must divide at least one of the factors.
+82. Recognize that the number is a Fibonacci number based on its recursive properties.
+83. Notice that the number has a unique prime factorization, aiding in simplification.
+84. Apply the property that any integer greater than 1 is either a prime or a product of primes.
+85. Identify that the number satisfies a specific Pell’s equation.
+86. Use the concept that the Euler’s Totient Function is multiplicative for coprime integers.
+87. Recognize that the number must be a square-free integer based on given conditions.
+88. Observe that the number is part of a geometric sequence involving primes.
+89. Apply the concept that the sum of two primes is even, except for the case involving 2.
+90. Identify that the number is a Carmichael number based on its properties.
+91. Use properties of amicable or perfect numbers if applicable.
+92. Recognize that the number is a Sophie Germain prime based on the given conditions.
+93. Notice that the number is part of a twin prime pair.
+94. Apply the concept of modular inverses to solve linear congruences.
+95. Identify that the number is a palindromic prime based on its digit structure.
+96. Use the property that the sum of the first \(n\) primes has specific divisibility characteristics.
+97. Recognize that the number is a highly composite number based on its divisor count.
+98. Observe that the number must be expressed as a product of two primes (semi-prime).
+99. Apply the concept that the difference between two squares can be factored as \((a - b)(a + b)\).
+100. Identify that the number is a repunit prime based on its digit repetition.
+
+**Combinatorics**
+
+101. Notice that the problem involves selecting subsets, indicating the use of combinations.
+102. Recognize that arranging objects in a circle requires circular permutation formulas.
+103. Apply the Pigeonhole Principle when the number of objects exceeds available categories.
+104. Identify that the problem involves counting distinct paths in a grid using binomial coefficients.
+105. Use the Principle of Inclusion-Exclusion to account for overlapping cases.
+106. Spot that the arrangement must avoid consecutive elements, suggesting derangements.
+107. Recognize that the problem involves partitioning a set, indicating Stirling numbers.
+108. Identify that the selection is with replacement, implying the use of stars and bars.
+109. Apply the concept of distinguishable and indistinguishable objects in counting.
+110. Use generating functions to encode and solve recurrence relations.
+111. Notice that the problem requires counting permutations with specific restrictions.
+112. Recognize that the problem involves recursive structures, suggesting Catalan numbers.
+113. Identify that the arrangement must satisfy rotational symmetry, implying Burnside’s Lemma.
+114. Apply the concept of bijections to equate two combinatorial quantities.
+115. Spot that the problem requires counting colorings with constraints, indicating graph coloring.
+116. Use the hook-length formula for counting Young tableaux if applicable.
+117. Recognize that the problem involves non-attacking placements, such as rooks or queens on a chessboard.
+118. Identify that the problem requires counting binary strings with specific properties.
+119. Apply the concept of multinomial coefficients when distributing objects into multiple categories.
+120. Use the principle of symmetry to reduce the number of cases to consider.
+121. Notice that the problem involves circular arrangements with distinguishable objects.
+122. Recognize that the problem involves tiling, suggesting Fibonacci or other sequence-based solutions.
+123. Identify that the problem requires counting independent events, implying multiplication of probabilities.
+124. Apply combinatorial identities, such as Pascal’s identity, to simplify counts.
+125. Spot that the problem involves partitioning numbers, indicating integer partitions.
+126. Use the concept of expected value to solve counting problems probabilistically.
+127. Recognize that the problem involves arranging letters with repeated elements.
+128. Identify that the problem requires maximizing or minimizing combinatorial quantities.
+129. Apply double counting by counting the same set in two different ways.
+130. Use the concept of restricted permutations, such as avoiding specific sequences.
+131. Notice that the problem involves sampling without replacement, indicating hypergeometric distributions.
+132. Recognize that the problem requires counting lattice paths with constraints.
+133. Identify that the problem involves choosing committees with specific roles, suggesting binomial coefficients.
+134. Apply the concept of weighted counting when elements have different weights or values.
+135. Spot that the problem involves grouping objects into indistinct sets, indicating Bell numbers.
+136. Use the principle of least inclusion to simplify overcounted cases.
+137. Recognize that the problem involves arranging objects in a line with specific adjacency conditions.
+138. Identify that the problem requires counting cyclically distinct arrangements, suggesting necklace counting.
+139. Apply the concept of recurrence relations to build up combinatorial counts.
+140. Use combinatorial proofs to establish identities between different counting methods.
+
+**Ad Hoc**
+
+141. Observe that both sides of the equation share a common symmetry, allowing simplification.
+142. Recognize that substituting \(x = 1\) or another simple value reveals useful information.
+143. Identify that the problem involves an extremal principle, focusing on maximum or minimum cases.
+144. Use a geometric interpretation to visualize and solve the algebraic problem.
+145. Notice that the problem reduces to a well-known identity or theorem when variables are manipulated.
+146. Recognize that drawing a diagram clarifies relationships between elements.
+147. Identify that the problem requires balancing equations by equating coefficients.
+148. Apply a parity argument to determine the impossibility of certain cases.
+149. Use the method of contradiction by assuming the opposite of what needs to be proven.
+150. Recognize that the problem involves symmetry, allowing the reduction of variables.
+151. Identify that the problem can be split into independent subproblems.
+152. Notice that adding or subtracting the same value from both sides maintains equality while simplifying.
+153. Recognize that multiplying both sides by a common denominator removes fractions.
+154. Use substitution to transform the problem into a more familiar form.
+155. Identify that the problem involves complementary angles or elements, simplifying relationships.
+156. Apply the concept of invariants to track changes and maintain balance in transformations.
+157. Recognize that the problem involves a telescoping series, leading to cancellation of terms.
+158. Identify that the problem requires counting distinct cases based on specific criteria.
+159. Notice that reversing the order of elements maintains certain properties, aiding in symmetry arguments.
+160. Use scaling arguments to normalize variables and simplify equations.
+161. Recognize that the problem involves similar figures or proportional relationships.
+162. Identify that the problem requires maximizing area or volume under given constraints.
+163. Notice that the problem can be approached using complementary counting to simplify enumeration.
+164. Apply the concept of logical deduction to eliminate impossible scenarios.
+165. Recognize that the problem involves a recursive structure, allowing for iterative solutions.
+166. Identify that the problem can be transformed into a coordinate system for easier manipulation.
+167. Notice that the problem involves balancing equations by introducing auxiliary variables.
+168. Use estimation to bound the possible values and narrow down the solution.
+169. Recognize that the problem involves congruent segments or angles, aiding in geometric proofs.
+170. Identify that the problem requires finding common factors or multiples to simplify.
+171. Notice that the problem involves exponential growth or decay, suggesting logarithmic transformations.
+172. Apply the concept of modularity to handle periodic or cyclical patterns in the problem.
+173. Recognize that the problem involves a fixed point or invariant under a transformation.
+174. Identify that the problem can be solved by constructing an auxiliary line or point in geometry.
+175. Notice that swapping variables maintains the validity of the equation, suggesting symmetry.
+176. Use combinatorial arguments to establish lower or upper bounds on possible solutions.
+177. Recognize that the problem involves optimizing a function subject to constraints.
+178. Identify that the problem can be approached using piecewise definitions or cases.
+179. Notice that the problem involves transforming an inequality into an equality to find boundaries.
+180. Apply the concept of recursion by expressing the problem in terms of smaller instances.
+181. Recognize that the problem involves a series that converges or diverges, aiding in evaluation.
+182. Identify that the problem can be simplified by considering the complement of the desired outcome.
+183. Notice that the problem involves prime factorization, suggesting the use of divisibility rules.
+184. Use a change of variables to linearize a nonlinear equation.
+185. Recognize that the problem involves symmetry about an axis or point, reducing complexity.
+186. Identify that the problem can be approached by isolating one variable in terms of others.
+187. Notice that the problem involves a modular inverse, suggesting the use of the Euclidean algorithm.
+188. Apply the concept of parity to determine possible values or eliminate cases.
+189. Recognize that the problem involves consecutive integers, suggesting the use of difference properties.
+190. Identify that the problem can be approached using the Principle of Mathematical Induction.
+191. Notice that the problem involves absolute values, suggesting case-wise analysis.
+192. Use symmetry to argue that certain cases are equivalent, reducing the number of distinct cases.
+193. Recognize that the problem involves cyclic permutations, suggesting rotational symmetry.
+194. Identify that the problem can be tackled by finding a pattern through iterative steps.
+195. Notice that the problem involves complementary probabilities, aiding in solution formulation.
+196. Apply the concept of bijection to map one set of solutions to another for easier counting.
+197. Recognize that the problem involves overlapping sets, suggesting the use of Venn diagrams.
+198. Identify that the problem requires balancing multiple equations simultaneously.
+199. Notice that the problem involves symmetry in exponents, suggesting the use of logarithms.
+200. Use creative insight to reinterpret the problem in a different mathematical framework for simplification.

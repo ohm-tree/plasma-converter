@@ -1,0 +1,373 @@
+Carefully read and understand the problem statement.
+Identify what is being asked and what is given.
+Look for patterns or regularities in the problem.
+Consider simplifying the problem or working with a special case.
+Use mathematical induction for proofs involving integers.
+Apply the Pigeonhole Principle in counting problems.
+Assume the opposite to prove by contradiction.
+Identify invariants that remain constant during transformations.
+Break the problem into smaller, more manageable parts.
+Consider extreme values to test the boundaries of the problem.
+Use the contrapositive form of statements for proof.
+Simplify complex expressions through algebraic manipulation.
+Apply well-known inequalities like AM ≥ GM or Cauchy-Schwarz.
+Look for opportunities to factor expressions.
+Use symmetry to reduce the complexity of the problem.
+Check the parity (odd or even nature) of numbers involved.
+Apply the Law of Sines or Cosines where appropriate.
+Set up equations based on the given conditions.
+Explore recursive patterns in sequences.
+Use Vieta's formulas relating roots and coefficients of polynomials.
+Apply modular arithmetic in number theory problems.
+Employ combinatorial arguments in counting scenarios.
+Use the Principle of Inclusion-Exclusion in overlapping sets.
+Look for bijections to simplify counting problems.
+Use substitution to simplify expressions or equations.
+Apply the Extremal Principle by considering the largest or smallest elements.
+Consider the Triangle Inequality in problems involving distances.
+Use the Rearrangement Inequality to compare sums.
+Check for counterexamples to test conjectures.
+Use properties of exponents and logarithms in algebra.
+Employ telescoping sums to simplify series.
+Utilize properties of arithmetic, geometric, or harmonic sequences.
+Consider the use of angle chasing in geometry.
+Apply the method of infinite descent in number theory proofs.
+Use mathematical expectation in probability problems.
+Consider reflections and rotations in geometric transformations.
+Use the properties of special triangles (e.g., 30-60-90).
+Employ synthetic geometry techniques in proofs.
+Apply properties of tangents and secants in circle geometry.
+Use the properties of medians, altitudes, and angle bisectors.
+Consider using mass point geometry for ratio problems.
+Apply Ceva's and Menelaus' Theorems in triangle geometry.
+Use Fermat's Little Theorem in number theory problems.
+Employ the Chinese Remainder Theorem for congruences.
+Consider the use of Fermat's Last Theorem in special cases.
+Use properties of quadratic equations and discriminants.
+Employ the Rational Root Theorem for polynomials.
+Utilize the Euclidean Algorithm to find greatest common divisors.
+Consider constructing an auxiliary function or sequence.
+Use properties of functions like injectivity or surjectivity.
+Apply the method of exhaustion by checking all possible cases.
+Employ combinatorial identities like Pascal's Triangle.
+Use properties of symmetry in combinatorial problems.
+Apply the concept of floor and ceiling functions in integer problems.
+Utilize properties of convex polygons in geometry.
+Consider the use of probability in combinatorial contexts.
+Use the Principle of Mathematical Induction on inequalities.
+Employ logical reasoning to deduce conclusions.
+Apply properties of prime numbers in number theory.
+Use factorization techniques in algebraic problems.
+Consider the use of Euler's Totient Function in modular arithmetic.
+Employ graph theory basics in combinatorial problems.
+Utilize coloring arguments to solve problems.
+Apply Dirichlet's Theorem on arithmetic progressions.
+Use recursive definitions to analyze sequences.
+Consider the use of expected value in probability.
+Employ constructive algorithms to build examples.
+Apply the Pythagorean Theorem in geometric calculations.
+Use coordinate geometry to prove geometric statements.
+Consider the use of inequalities to bound values.
+Employ area computations in geometric proofs.
+Apply number base conversions in number theory problems.
+Use continued fractions for approximations.
+Consider divisibility rules in integer problems.
+Employ properties of cyclic numbers in number theory.
+Use mathematical induction on more than one variable.
+Apply properties of harmonic division in geometry.
+Utilize the method of differences in sequences.
+Consider symmetrizing an expression to simplify it.
+Use the concept of orthogonality in geometric proofs.
+Employ the method of undetermined coefficients in algebra.
+Apply properties of medians and centroids in triangles.
+Use the concept of functional equations in problem-solving.
+Consider working backward from the desired result.
+Employ the use of inequality chains to reach conclusions.
+Apply properties of rational and irrational numbers.
+Use base cases effectively in induction proofs.
+Consider the contrapositive in logic statements.
+Employ double counting in combinatorial proofs.
+Utilize the concept of expected value in games of chance.
+Apply properties of determinants in coordinate geometry.
+Use properties of sequences, like monotonicity or boundedness.
+Consider parity when analyzing numerical problems.
+Employ modular inverses in solving congruences.
+Use mathematical reasoning to generalize patterns.
+Apply the Extremal Principle to identify minimal or maximal elements.
+Consider the use of invariants in problem-solving.
+Use the AM-HM inequality in appropriate contexts.
+Apply the concept of bijection between sets.
+Utilize the Pigeonhole Principle in unexpected ways.
+Consider symmetry axes in geometric figures.
+Apply the concept of complementary counting.
+Use recursion to define sequences or structures.
+Employ properties of convexity in geometric contexts.
+Use the concept of limits for sequences approaching infinity.
+Apply combinatorial geometry in counting lattice points.
+Utilize Burnside's Lemma in counting symmetries.
+Consider homogenous equations in algebraic manipulations.
+Use inequalities like Titu's Lemma in problem-solving.
+Employ properties of circles, such as power of a point.
+Apply Muirhead's Inequality in symmetric sums.
+Use the Squeeze Theorem for bounding sequences.
+Consider the use of geometric means in sequences.
+Employ the method of partial fractions in algebra.
+Utilize properties of polynomials, like the Remainder Factor Theorem.
+Apply Descartes' Rule of Signs in polynomial equations.
+Use properties of exponential functions in algebra.
+Consider rational functions and their asymptotic behavior.
+Employ inequalities involving sums and products.
+Use the Law of Exponents to simplify expressions.
+Apply the concept of symmetry in algebraic equations.
+Employ the concept of maximal and minimal paths in graphs.
+Use the idea of mathematical expectation in combinatorial games.
+Apply direct proof methods where applicable.
+Utilize the use of sequences defined by recurrence relations.
+Consider the method of finite differences in sequences.
+Employ grouping strategies in simplifying expressions.
+Use divisibility properties in number theory proofs.
+Utilize properties of orthocenters, circumcenters, and incenters.
+Employ the concept of coprimality in number theory.
+Use logical negation in understanding statements.
+Apply properties of modular arithmetic in solving equations.
+Utilize the sum and product of roots in quadratic equations.
+Consider the use of algebraic identities to simplify expressions.
+Employ properties of progressions in sequence problems.
+Apply combinatorial proofs for binomial identities.
+Utilize properties of Pascal's Triangle in combinatorics.
+Consider the use of generating functions in counting problems.
+Employ the concept of mathematical games in strategy problems.
+Use Euclid's Lemma in number theory proofs.
+Apply the method of contradiction in logical arguments.
+Utilize properties of subsets and supersets in set theory.
+Consider the use of function composition in problem-solving.
+Employ estimation techniques for bounding values.
+Use logical connectors effectively in proofs.
+Apply properties of absolute values in inequalities.
+Utilize symmetry in polynomial roots.
+Employ extremal elements in combinatorial optimization.
+Use the concept of the harmonic mean.
+Apply counting principles like the multiplication rule.
+Utilize the concept of divisors in number theory.
+Consider the use of Chebyshev's Inequality in probability.
+Use the concept of limit points in sequences.
+Apply strategies of reverse-engineering in problem-solving.
+Utilize modular patterns in cyclical problems.
+Consider properties of palindromic numbers in number theory.
+Employ De Moivre's Theorem in trigonometry problems.
+Apply the Law of Total Probability.
+Utilize recursive functions in combinatorial contexts.
+Consider Euler's Formula relating faces, edges, and vertices.
+Employ substitution methods in solving equations.
+Use the concept of a magic square in combinatorial problems.
+Apply Bézout's Identity in solving linear Diophantine equations.
+Utilize the concept of determinant in solving systems of equations.
+Consider the method of mathematical coloring in proofs.
+Employ properties of triangular numbers in sequences.
+Utilize properties of the Fibonacci sequence in number theory.
+Use properties of reflection and rotation symmetries.
+Apply combinatorial arguments in probability distributions.
+Utilize the method of overlaying grids in counting problems.
+Consider the use of the Euclidean distance formula in geometry.
+Employ techniques of completing the square in algebra.
+Apply logical deduction to eliminate impossible cases.
+Notice that the left-hand side factors into a sum of squares.
+Observe that the equation is symmetric in \(x\) and \(y\).
+Recognize that substituting \(y = kx\) simplifies the equation.
+Factor the quadratic expression by grouping terms.
+Identify that the polynomial can be factored using the difference of cubes.
+Complete the square to transform the quadratic into vertex form.
+Realize that both sides of the equation are perfect squares.
+Apply the AM-GM inequality to the given expression.
+Spot that the expression simplifies when \(x = y\).
+Notice that the denominator can be rationalized to simplify the fraction.
+Observe that adding a specific term completes a known identity.
+Use substitution \(u = x + y\) and \(v = x - y\) to simplify.
+Identify that the expression represents a geometric sequence.
+Recognize that expanding \((x + y)^2\) aids in simplifying the equation.
+Factor the expression as a product of binomials.
+Notice that both sides have a common factor that can be canceled out.
+Identify that the equation represents a conic section (e.g., circle, ellipse).
+Realize that setting \(x = 0\) or \(y = 0\) provides useful insights.
+Spot that the equation can be rewritten as a difference of squares.
+Apply the quadratic formula to solve for one variable in terms of the other.
+Observe that the expression is a telescoping product or sum.
+Recognize that the equation simplifies when expressed in exponential form.
+Notice that the LHS can be expressed as a binomial coefficient.
+Use the identity \(a^2 - b^2 = (a - b)(a + b)\) to factor.
+Identify that substituting \(z = x/y\) leads to a simpler equation.
+Spot that the equation can be rearranged into a linear form.
+Recognize that the expression is a geometric mean of two terms.
+Notice that the equation simplifies under the assumption \(x + y = k\).
+Apply the method of undetermined coefficients to find particular solutions.
+Identify that the equation represents an arithmetic sequence.
+Realize that multiplying both sides by a common denominator simplifies fractions.
+Spot that the expression can be rewritten using the distributive property.
+Use the binomial expansion to simplify higher power terms.
+Observe that substituting \(t = x^2\) reduces the equation's degree.
+Recognize that the LHS is a telescoping product that collapses when expanded.
+Notice that both sides can be expressed as polynomials in \(x\).
+Identify that the expression represents a linear combination of variables.
+Realize that factoring out the greatest common divisor (GCD) simplifies the expression.
+Spot that the equation can be transformed into a homogeneous equation.
+Apply logarithms to both sides to linearize exponential relationships.
+Recognize that the expression is a rational function that can be simplified.
+Notice that squaring both sides eliminates square roots in the equation.
+Identify that the equation can be expressed as a product of linear terms.
+Use the substitution \(x = \frac{1}{t}\) to simplify reciprocal expressions.
+Spot that the LHS can be rewritten using the distributive property over addition.
+Realize that expanding the product leads to cancellation of terms.
+Observe that the equation represents a linear system that can be solved by elimination.
+Recognize that the expression can be transformed using the identity \((a + b)^3\).
+Notice that substituting \(x = y + k\) aligns variables for easier manipulation.
+Identify that the equation can be expressed as a rational equation by cross-multiplication.
+Observe that both sides of the equation are even, implying divisibility by 2.
+Recognize that the number must be a prime based on given conditions.
+Use modular arithmetic to reduce the problem modulo a small prime.
+Identify that applying the Euclidean algorithm finds the greatest common divisor (GCD).
+Notice that the equation can be expressed in terms of congruences.
+Apply Fermat’s Little Theorem to simplify exponents modulo a prime.
+Realize that the Chinese Remainder Theorem can solve the system of congruences.
+Spot that the number is a perfect square based on its prime factorization.
+Identify that the sum of the digits is divisible by 3, implying the number itself is divisible by 3.
+Use the property that if \(a \equiv b \pmod{m}\), then \(a^k \equiv b^k \pmod{m}\).
+Recognize that the expression represents a Diophantine equation requiring integer solutions.
+Notice that the number is a Mersenne prime of the form \(2^p - 1\).
+Apply Wilson’s Theorem to determine if a number is prime.
+Identify that the number of divisors relates to its prime factorization.
+Use Euler’s Totient Function to find numbers coprime to a given integer.
+Recognize that the number is a perfect power based on the exponent relationship.
+Observe that the equation represents a Pythagorean triple.
+Apply Legendre’s Symbol to determine quadratic residues.
+Spot that the number is a sum of two squares based on its prime factors.
+Identify that the number is a triangular number based on the given conditions.
+Use the concept of coprimality to simplify fractions or ratios.
+Recognize that the number satisfies a specific modular condition, such as \(n \equiv 1 \pmod{4}\).
+Notice that the expression represents a factorial, facilitating the use of divisibility properties.
+Apply the concept of multiplicative inverses in modular equations.
+Identify that the number is part of an arithmetic progression of primes.
+Use properties of quadratic residues to solve the equation modulo a prime.
+Recognize that the number must be a power of 2 based on its properties.
+Observe that the sum of two consecutive integers is always odd.
+Apply the concept that the product of two coprime numbers has a GCD of 1.
+Identify that the number cannot be expressed as a sum of two squares based on its prime factors.
+Use the property that if a number divides the product, it must divide at least one of the factors.
+Recognize that the number is a Fibonacci number based on its recursive properties.
+Notice that the number has a unique prime factorization, aiding in simplification.
+Apply the property that any integer greater than 1 is either a prime or a product of primes.
+Identify that the number satisfies a specific Pell’s equation.
+Use the concept that the Euler’s Totient Function is multiplicative for coprime integers.
+Recognize that the number must be a square-free integer based on given conditions.
+Observe that the number is part of a geometric sequence involving primes.
+Apply the concept that the sum of two primes is even, except for the case involving 2.
+Identify that the number is a Carmichael number based on its properties.
+Use properties of amicable or perfect numbers if applicable.
+Recognize that the number is a Sophie Germain prime based on the given conditions.
+Notice that the number is part of a twin prime pair.
+Apply the concept of modular inverses to solve linear congruences.
+Identify that the number is a palindromic prime based on its digit structure.
+Use the property that the sum of the first \(n\) primes has specific divisibility characteristics.
+Recognize that the number is a highly composite number based on its divisor count.
+Observe that the number must be expressed as a product of two primes (semi-prime).
+Apply the concept that the difference between two squares can be factored as \((a - b)(a + b)\).
+Identify that the number is a repunit prime based on its digit repetition.
+Notice that the problem involves selecting subsets, indicating the use of combinations.
+Recognize that arranging objects in a circle requires circular permutation formulas.
+Apply the Pigeonhole Principle when the number of objects exceeds available categories.
+Identify that the problem involves counting distinct paths in a grid using binomial coefficients.
+Use the Principle of Inclusion-Exclusion to account for overlapping cases.
+Spot that the arrangement must avoid consecutive elements, suggesting derangements.
+Recognize that the problem involves partitioning a set, indicating Stirling numbers.
+Identify that the selection is with replacement, implying the use of stars and bars.
+Apply the concept of distinguishable and indistinguishable objects in counting.
+Use generating functions to encode and solve recurrence relations.
+Notice that the problem requires counting permutations with specific restrictions.
+Recognize that the problem involves recursive structures, suggesting Catalan numbers.
+Identify that the arrangement must satisfy rotational symmetry, implying Burnside’s Lemma.
+Apply the concept of bijections to equate two combinatorial quantities.
+Spot that the problem requires counting colorings with constraints, indicating graph coloring.
+Use the hook-length formula for counting Young tableaux if applicable.
+Recognize that the problem involves non-attacking placements, such as rooks or queens on a chessboard.
+Identify that the problem requires counting binary strings with specific properties.
+Apply the concept of multinomial coefficients when distributing objects into multiple categories.
+Use the principle of symmetry to reduce the number of cases to consider.
+Notice that the problem involves circular arrangements with distinguishable objects.
+Recognize that the problem involves tiling, suggesting Fibonacci or other sequence-based solutions.
+Identify that the problem requires counting independent events, implying multiplication of probabilities.
+Apply combinatorial identities, such as Pascal’s identity, to simplify counts.
+Spot that the problem involves partitioning numbers, indicating integer partitions.
+Use the concept of expected value to solve counting problems probabilistically.
+Recognize that the problem involves arranging letters with repeated elements.
+Identify that the problem requires maximizing or minimizing combinatorial quantities.
+Apply double counting by counting the same set in two different ways.
+Use the concept of restricted permutations, such as avoiding specific sequences.
+Notice that the problem involves sampling without replacement, indicating hypergeometric distributions.
+Recognize that the problem requires counting lattice paths with constraints.
+Identify that the problem involves choosing committees with specific roles, suggesting binomial coefficients.
+Apply the concept of weighted counting when elements have different weights or values.
+Spot that the problem involves grouping objects into indistinct sets, indicating Bell numbers.
+Use the principle of least inclusion to simplify overcounted cases.
+Recognize that the problem involves arranging objects in a line with specific adjacency conditions.
+Identify that the problem requires counting cyclically distinct arrangements, suggesting necklace counting.
+Apply the concept of recurrence relations to build up combinatorial counts.
+Use combinatorial proofs to establish identities between different counting methods.
+Observe that both sides of the equation share a common symmetry, allowing simplification.
+Recognize that substituting \(x = 1\) or another simple value reveals useful information.
+Identify that the problem involves an extremal principle, focusing on maximum or minimum cases.
+Use a geometric interpretation to visualize and solve the algebraic problem.
+Notice that the problem reduces to a well-known identity or theorem when variables are manipulated.
+Recognize that drawing a diagram clarifies relationships between elements.
+Identify that the problem requires balancing equations by equating coefficients.
+Apply a parity argument to determine the impossibility of certain cases.
+Use the method of contradiction by assuming the opposite of what needs to be proven.
+Recognize that the problem involves symmetry, allowing the reduction of variables.
+Identify that the problem can be split into independent subproblems.
+Notice that adding or subtracting the same value from both sides maintains equality while simplifying.
+Recognize that multiplying both sides by a common denominator removes fractions.
+Use substitution to transform the problem into a more familiar form.
+Identify that the problem involves complementary angles or elements, simplifying relationships.
+Apply the concept of invariants to track changes and maintain balance in transformations.
+Recognize that the problem involves a telescoping series, leading to cancellation of terms.
+Identify that the problem requires counting distinct cases based on specific criteria.
+Notice that reversing the order of elements maintains certain properties, aiding in symmetry arguments.
+Use scaling arguments to normalize variables and simplify equations.
+Recognize that the problem involves similar figures or proportional relationships.
+Identify that the problem requires maximizing area or volume under given constraints.
+Notice that the problem can be approached using complementary counting to simplify enumeration.
+Apply the concept of logical deduction to eliminate impossible scenarios.
+Recognize that the problem involves a recursive structure, allowing for iterative solutions.
+Identify that the problem can be transformed into a coordinate system for easier manipulation.
+Notice that the problem involves balancing equations by introducing auxiliary variables.
+Use estimation to bound the possible values and narrow down the solution.
+Recognize that the problem involves congruent segments or angles, aiding in geometric proofs.
+Identify that the problem requires finding common factors or multiples to simplify.
+Notice that the problem involves exponential growth or decay, suggesting logarithmic transformations.
+Apply the concept of modularity to handle periodic or cyclical patterns in the problem.
+Recognize that the problem involves a fixed point or invariant under a transformation.
+Identify that the problem can be solved by constructing an auxiliary line or point in geometry.
+Notice that swapping variables maintains the validity of the equation, suggesting symmetry.
+Use combinatorial arguments to establish lower or upper bounds on possible solutions.
+Recognize that the problem involves optimizing a function subject to constraints.
+Identify that the problem can be approached using piecewise definitions or cases.
+Notice that the problem involves transforming an inequality into an equality to find boundaries.
+Apply the concept of recursion by expressing the problem in terms of smaller instances.
+Recognize that the problem involves a series that converges or diverges, aiding in evaluation.
+Identify that the problem can be simplified by considering the complement of the desired outcome.
+Notice that the problem involves prime factorization, suggesting the use of divisibility rules.
+Use a change of variables to linearize a nonlinear equation.
+Recognize that the problem involves symmetry about an axis or point, reducing complexity.
+Identify that the problem can be approached by isolating one variable in terms of others.
+Notice that the problem involves a modular inverse, suggesting the use of the Euclidean algorithm.
+Apply the concept of parity to determine possible values or eliminate cases.
+Recognize that the problem involves consecutive integers, suggesting the use of difference properties.
+Identify that the problem can be approached using the Principle of Mathematical Induction.
+Notice that the problem involves absolute values, suggesting case-wise analysis.
+Use symmetry to argue that certain cases are equivalent, reducing the number of distinct cases.
+Recognize that the problem involves cyclic permutations, suggesting rotational symmetry.
+Identify that the problem can be tackled by finding a pattern through iterative steps.
+Notice that the problem involves complementary probabilities, aiding in solution formulation.
+Apply the concept of bijection to map one set of solutions to another for easier counting.
+Recognize that the problem involves overlapping sets, suggesting the use of Venn diagrams.
+Identify that the problem requires balancing multiple equations simultaneously.
+Notice that the problem involves symmetry in exponents, suggesting the use of logarithms.
+Use creative insight to reinterpret the problem in a different mathematical framework for simplification.
