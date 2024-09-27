@@ -37,11 +37,15 @@ def main(worker_queue: multiprocessing.Queue,
 
     # give myself a custom logging file.
     os.makedirs("logs", exist_ok=True)
-    logging.basicConfig(
-        filename=f"logs/worker_{task_id}.log", level=logging.INFO)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(
+        f"logs/distributed_leaner_game_test_cpu_worker_{task_id}.log")
+    logger.addHandler(fh)
+    logger.info(f"Starting distributed_leaner_game_test_cpu_worker {task_id}.")
 
     for current_problem in range(task_id, len(data), num_tasks):
-        print(f"Worker {task_id} working on problem {current_problem}")
+        logger.info(f"Worker {task_id} working on problem {current_problem}")
         problem = data[current_problem]
         informal_prefix = problem['informal_prefix']
         formal_statement = problem['formal_statement']
@@ -58,7 +62,7 @@ def main(worker_queue: multiprocessing.Queue,
         )
 
         while not game.is_terminal(state):
-            logging.info(state.human_printout())
+            logger.info(state.human_printout())
             action = 0
             state = game.next_state(state, action)
 
@@ -88,7 +92,7 @@ def main(worker_queue: multiprocessing.Queue,
                     pass
 
             time_to_completion += time.time()
-            print(f"Time to completion: {time_to_completion}")
+            logger.info(f"Time to completion: {time_to_completion}")
             assert completion_output['type'] == 'completion'
             assert completion_output['completion_task_id'] == 0
 
@@ -120,7 +124,7 @@ def main(worker_queue: multiprocessing.Queue,
                     lean_4_output = None
                     pass
             time_to_lean += time.time()
-            print(f"Time to lean: {time_to_lean}")
+            logger.info(f"Time to lean: {time_to_lean}")
             assert lean4_output['type'] == 'lean'
             assert lean4_output['lean_task_id'] == 0
             state.post_process(lean4_output)
@@ -129,4 +133,4 @@ def main(worker_queue: multiprocessing.Queue,
         with open(f"outputs/{problem['name']}.txt", 'w') as file:
             file.write(state.human_printout())
 
-        logging.info(f"Finished problem {problem['name']} result: {state.win}")
+        logger.info(f"Finished problem {problem['name']} result: {state.win}")

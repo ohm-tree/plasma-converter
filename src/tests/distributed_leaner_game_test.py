@@ -23,10 +23,9 @@ os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
 
 # todo: make this a config file.
 distributed_config = {
-    'num_worker_procs': 4,
+    'num_worker_procs': 24,
     'num_completion_procs': 1,
-    'num_policy_value_procs': 1,
-    'num_lean_procs': 1,
+    'num_lean_procs': 24,
 }
 
 json_name = "config"  # todo: make this a config file.
@@ -57,7 +56,7 @@ if __name__ == "__main__":
 
     # Create inference processes
     inference_procs = [multiprocessing.Process(target=inference_process, kwargs={
-        'queue': worker_queues[i],
+        'worker_queue': worker_queues[i],
         'completion_queue': completion_queue,
         'lean_queue': lean_queue,
         'task_id': i,
@@ -70,11 +69,11 @@ if __name__ == "__main__":
         'task_id': i,
         'num_tasks': distributed_config['num_completion_procs'],
         'json_name': json_name,
-        'master_queue': completion_queue,
+        'master_queue': master_queue,
         'worker_queues': worker_queues,
         'completion_queue': completion_queue,
         'completion_batch_size': 100,
-        'custom_eos': ['\n'],
+        'custom_eos': ['\n', '```'],
     }
     )
         for i in range(distributed_config['num_completion_procs'])]

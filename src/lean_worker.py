@@ -4,7 +4,7 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Dict
+from typing import Dict, Optional
 
 import pexpect
 
@@ -15,14 +15,10 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
-logging.basicConfig(level=logging.INFO)
-
-
 def send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optional[pexpect.spawn] = None, kill=False):
     try:
         return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_finish=timeout_finish, _child=_child, kill=kill)
     except Exception as e:
-        logging.error(f"Error in send_code_read_json: {e}")
         return {'system_error': str(e)}
 
 
@@ -104,8 +100,11 @@ def main(
     """
     # give myself a custom logging file.
     os.makedirs("logs", exist_ok=True)
-    logging.basicConfig(
-        filename=f"logs/worker_{task_id}.log", level=logging.INFO)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(f"logs/lean_worker_{task_id}.log")
+    logger.addHandler(fh)
+    logger.info(f"Starting lean worker {task_id}.")
 
     child = setup_repl()
 
@@ -138,6 +137,8 @@ def main(
             })
             # if result is error, try restarting the repl.
             if 'system_error' in result:
+                logger.error(
+                    f"Error in send_code_read_json: {result['system_error']}")
                 try:
                     child.close()
                 except:
