@@ -3,6 +3,7 @@ In this file, we will let a human play a game of Lean (using modal).
 """
 
 import json
+import multiprocessing
 import os
 import time
 from typing import Optional
@@ -11,71 +12,91 @@ import pexpect
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
 
-from src.games.leaner_lean_game import LeanGame, LeanGameState
+from src.completion_worker import main as completion_process  # lean_worker entry point
+from src.lean_worker import main as lean_process  # lean_worker entry point
+from src.tests.distributed_leaner_game_test_cpu_worker import (
+    main as inference_process,  # lean_worker entry point
+)
 
 # set "VLLM_LOGGING_LEVEL" to "WARNING" to suppress logging
 os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
 
-HOME_DIR = os.path.expanduser('~')
-print("HOME_DIR", HOME_DIR)
+# todo: make this a config file.
+distributed_config = {
+    'num_worker_procs': 4,
+    'num_completion_procs': 1,
+    'num_policy_value_procs': 1,
+    'num_lean_procs': 1,
+}
 
-with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
-    # Each line in the file is a separate JSON object
-    data = [json.loads(line.strip()) for line in file.readlines()]
+json_name = "config"  # todo: make this a config file.
 
-HOME_DIR = os.path.expanduser('~')
-DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
-DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
+if __name__ == "__main__":
+    worker_queues = {i: multiprocessing.Queue()
+                     for i in range(distributed_config['num_worker_procs'])}
 
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
+    # Policy_value and completion queues are batched. One idea is to assign a many-to-one mapping
+    # between worker processes and completion/policy_value processes, such that each
+    # completion/policy_value process is responsible for a subset of worker processes.
 
+    # Instead, we have global queues for each.
+    # Both the completion and policy_value processes use the following algorithm:
+    # While True:
+    #   1. Check for kill signals from the master queue.
+    #   2. Collect new tasks from the completion/policy_value queue until either there are no tasks
+    #      left on the queue (a timeout occurs) or we have collected COMPLETION_BATCH_SIZE or
+    #      POLICY_VALUE_BATCH_SIZE tasks.
+    completion_queue = multiprocessing.Queue()
 
-comments = None
-with open("src/sample-data/comments.txt", 'r') as file:
-    comments = [line.strip() for line in file.readlines()]
+    # There is one global queue for lean repl queries, because such queries are not batched.
+    lean_queue = multiprocessing.Queue()
 
-child = setup_repl()
+    # There is one global queue for master queries. These are used to signal to workers that
+    # they should terminate.
+    master_queue = multiprocessing.Queue()
 
-for problem in tqdm(data):
-    informal_prefix = problem['informal_prefix']
-    formal_statement = problem['formal_statement']
-    PROBLEM_STATEMENT = informal_prefix + formal_statement
-    tactic_state = problem['goal']
+    # Create inference processes
+    inference_procs = [multiprocessing.Process(target=inference_process, kwargs={
+        'queue': worker_queues[i],
+        'completion_queue': completion_queue,
+        'lean_queue': lean_queue,
+        'task_id': i,
+        'num_tasks': distributed_config['num_worker_procs'],
+        'json_name': json_name
+    }
+    ) for i in range(distributed_config['num_worker_procs'])]
 
-    game: LeanGame = LeanGame(
-        comment_seeds=comments,
-        max_depth=20
+    completion_procs = [multiprocessing.Process(target=completion_process, kwargs={
+        'task_id': i,
+        'num_tasks': distributed_config['num_completion_procs'],
+        'json_name': json_name,
+        'master_queue': completion_queue,
+        'worker_queues': worker_queues,
+        'completion_queue': completion_queue,
+        'completion_batch_size': 100,
+        'custom_eos': ['\n'],
+    }
     )
-    state: LeanGameState = game.start_state(
-        problem=PROBLEM_STATEMENT,
-        tactic_state=tactic_state
+        for i in range(distributed_config['num_completion_procs'])]
+
+    lean_procs = [multiprocessing.Process(target=lean_process, kwargs={
+        'task_id': i,
+        'num_tasks': distributed_config['num_lean_procs'],
+        'json_name': json_name,
+        'master_queue': lean_queue,
+        'worker_queues': worker_queues,
+        'lean_queue': lean_queue
+    }
     )
+        for i in range(distributed_config['num_lean_procs'])]
 
-    children = []
-    while not game.is_terminal(state):
-        print(state.human_printout())
-        action = 0
-        state = game.next_state(state, action)
+    # Start all processes
+    for w in inference_procs + completion_procs + lean_procs:
+        w.start()
 
-        input_data = state.pre_LLM_rollout()
-        outputs = llm.generate(
-            input_data,
-            sampling_params=sampling_params
-        )
-        outputs = outputs[0].outputs[0].text + "\n"
-        state.post_LLM_rollout(outputs)
-        lean4_input = state.pre_process()
-        lean4_output = send_code_read_json({
-            "cmd": lean4_input,
-            "allTactics": True,
-            "tactics": True,
-            "env": 0
-        }, _child=child)
-        state.post_process(lean4_output)
-    # save the human printout to a file
-    os.makedirs("outputs", exist_ok=True)
-    with open(f"outputs/{problem['name']}.txt", 'w') as file:
-        file.write(state.human_printout())
+    # Wait for one hour then terminate all
+    time.sleep(3600)
+    for w in inference_procs + completion_procs + lean_procs:
+        w.terminate()
 
-    print("Finished problem", problem['name'], "result: ", state.win)
-    child.close()
+    print("All processes have been terminated.")

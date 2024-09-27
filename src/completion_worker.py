@@ -17,6 +17,7 @@ def main(
         worker_queues: Dict[int, multiprocessing.Queue],
         completion_queue: multiprocessing.Queue,
         completion_batch_size: int,
+        custom_eos: list
 ):
     """
     Entry point for the lean worker process.
@@ -65,7 +66,8 @@ def main(
         max_tokens=4096,
         temperature=0.0,
         top_k=1,
-        top_p=1.0
+        top_p=1.0,
+        stop=custom_eos
     )
 
     while True:

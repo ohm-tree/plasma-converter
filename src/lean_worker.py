@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing
 import os
 import queue
@@ -14,11 +15,14 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
+logging.basicConfig(level=logging.INFO)
+
+
 def send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optional[pexpect.spawn] = None, kill=False):
     try:
         return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_finish=timeout_finish, _child=_child, kill=kill)
     except Exception as e:
-        print(e)
+        logging.error(f"Error in send_code_read_json: {e}")
         return {'system_error': str(e)}
 
 
@@ -46,7 +50,7 @@ def _send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optio
     # such that it doesn't show up in debug output.
     child.expect_exact("{", timeout=timeout_start)
     res = "{"
-    print("Received start of output from Lean4 REPL.")
+    # print("Received start of output from Lean4 REPL.")
     # while res is not a valid json string, read lines.
     # All of the lines should print essentially instantly,
     # so there are no timeouts in this loop.
@@ -98,6 +102,10 @@ def main(
     """
     Entry point for the lean worker process.
     """
+    # give myself a custom logging file.
+    os.makedirs("logs", exist_ok=True)
+    logging.basicConfig(
+        filename=f"logs/worker_{task_id}.log", level=logging.INFO)
 
     child = setup_repl()
 
@@ -126,8 +134,7 @@ def main(
                 "cmd": input_data['task'],
                 "allTactics": True,
                 "tactics": True,
-                "ast": True,
-                "type": "lean"
+                "env": 0
             })
             # if result is error, try restarting the repl.
             if 'system_error' in result:
@@ -136,6 +143,12 @@ def main(
                 except:
                     pass
                 child = setup_repl()
+                result = send_code_read_json({
+                    "cmd": input_data['task'],
+                    "allTactics": True,
+                    "tactics": True,
+                    "env": 0
+                })
 
             worker_queues[input_data['worker_id']].put(
                 {

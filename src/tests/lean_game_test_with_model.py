@@ -30,7 +30,6 @@ def load_problem_minif2f(problem_name = "algebra_bleqa_apbon2msqrtableqambsqon8b
         if problem['name'] == problem_name:
             return problem
 
-print("HOME_DIR", HOME_DIR)
 problem = load_problem_minif2f()
 
 informal_prefix = problem['informal_prefix']
