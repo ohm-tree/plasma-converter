@@ -5,6 +5,7 @@ import queue
 import time
 from typing import Dict
 
+import torch
 from vllm import LLM, SamplingParams
 
 
@@ -20,13 +21,13 @@ def main(
     """
     Entry point for the lean worker process.
     """
-    
+
     # TODO: stuff all of the configs into a config file.
     llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
               max_num_batched_tokens=8192,
-              trust_remote_code=True)
-    
-    sampling_params=SamplingParams(
+              trust_remote_code=True, dtype=torch.float16, tensor_parallel_size=4)
+
+    sampling_params = SamplingParams(
         max_tokens=4096,
         temperature=0.0,
         top_k=1,
@@ -57,7 +58,8 @@ def main(
                 break
 
         if len(my_tasks) == 0:
-            time.sleep(1) # Spinlock, disappointing, but there's nothing to do.
+            # Spinlock, disappointing, but there's nothing to do.
+            time.sleep(1)
         else:
             # We have tasks to complete.
             input_data = [
@@ -68,7 +70,7 @@ def main(
                 input_data,
                 sampling_params=sampling_params
             )
-            # TODO: generate 
+            # TODO: generate
 
             for i in range(len(outputs)):
                 result = {
