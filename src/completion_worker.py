@@ -5,6 +5,7 @@ import queue
 import time
 from typing import Dict
 
+import torch
 from vllm import LLM, SamplingParams
 
 
@@ -20,13 +21,47 @@ def main(
     """
     Entry point for the lean worker process.
     """
-    
-    # TODO: stuff all of the configs into a config file.
-    llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
-              max_num_batched_tokens=8192,
-              trust_remote_code=True)
-    
-    sampling_params=SamplingParams(
+
+    # detect the type of gpus available.
+    # If there is at least one A100 80GB or H100,
+    # tensor parallelization is not needed.
+    # Else, check that there are at least 4 V100s.
+    # and set tensor_parallel_size=4
+
+    num_devices = torch.cuda.device_count()
+    device_counts = {}
+    for i in range(num_devices):
+        device_name = torch.cuda.get_device_name(i)
+        if device_name in device_counts:
+            device_counts[device_name] += 1
+        else:
+            device_counts[device_name] = 1
+
+    print(f"Worker {task_id} detected the following devices: {device_counts}")
+
+    if "A100-SXM4-80GB" in device_counts or "H100-SXM4-80GB" in device_counts:
+        tensor_parallel_size = 1
+        llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
+                  max_num_batched_tokens=8192,
+                  trust_remote_code=True
+                  )
+    elif "V100-SXM2-16GB" in device_counts:
+        if device_counts["V100-SXM2-16GB"] >= 4:
+            tensor_parallel_size = 4
+        else:
+            raise ValueError("Not enough V100-SXM2-16GB GPUs available.")
+
+        # TODO: stuff all of the configs into a config file.
+        llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
+                  max_num_batched_tokens=8192,
+                  trust_remote_code=True,
+                  dtype="float16",
+                  tensor_parallel_size=tensor_parallel_size)
+    else:
+        raise ValueError(
+            "You probably need to add a new device to the list of supported devices.")
+
+    sampling_params = SamplingParams(
         max_tokens=4096,
         temperature=0.0,
         top_k=1,
@@ -49,6 +84,7 @@ def main(
         #   'worker_id': int, # The worker task id that generated this task.
         #   'completion_task_id': int, # The specific completion task id of this task.
         #   'task': str # The task to complete, a string prompt.
+        #   'type': str # Should be 'completion'
         # }
         while len(my_tasks) < completion_batch_size:
             try:
@@ -56,8 +92,12 @@ def main(
             except queue.Empty:
                 break
 
+        for task in my_tasks:
+            assert task['type'] == 'completion'
+
         if len(my_tasks) == 0:
-            time.sleep(1) # Spinlock, disappointing, but there's nothing to do.
+            # Spinlock, disappointing, but there's nothing to do.
+            time.sleep(1)
         else:
             # We have tasks to complete.
             input_data = [
@@ -71,7 +111,8 @@ def main(
             for i in range(len(outputs)):
                 result = {
                     'completion_task_id': my_tasks[i]['completion_task_id'],
-                    'output': outputs[i].outputs[0].text
+                    'output': outputs[i].outputs[0].text,
+                    'type': 'completion'
                 }
 
                 worker_queues[my_tasks[i]['worker_task_id']].put(result)

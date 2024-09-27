@@ -6,7 +6,6 @@ from typing import Callable, List, Optional
 
 import numpy as np
 
-from src.games.ast_parser import lean4_parser
 from src.games.game import Game
 
 # from src.networks.prover_llm import ProverLLM
@@ -31,177 +30,6 @@ class AttrDict(dict):
 
     def __delattr__(self, name):
         del self[name]
-
-
-def process_lean4_results(
-    code: str,
-    repl_result: dict,
-):
-    start_time = time.time()
-    system_messages = ''
-    try:
-        ast_results = lean4_parser(
-            code, repl_result['ast']) if 'ast' in repl_result and repl_result['ast'] else {}
-        result = {
-            "sorries": repl_result.get('sorries', []),
-            "tactics": repl_result.get('tactics', []),
-            "errors": [m for m in repl_result.get('messages', []) if m['severity'] == 'error'],
-            "warnings": [m for m in repl_result.get('messages', []) if m['severity'] == 'warning'],
-            "infos": [m for m in repl_result.get('messages', []) if m['severity'] == 'info'],
-            "system_messages": system_messages,
-            "system_errors": None,
-            "ast": ast_results,
-            "verified_code": code,
-            "env": repl_result.get('env', None),
-        }
-        result['pass'] = not result['errors']
-        result['complete'] = result['pass'] and not result['sorries'] and not any(
-            "declaration uses 'sorry'" in warning['data'] or 'failed' in warning['data'] for warning in result['warnings'])
-    except:
-        result = {
-            "pass": False,
-            "complete": False,
-            "system_errors": traceback.format_exc(),
-            "system_messages": system_messages
-        }
-    result['verify_time'] = time.time() - start_time
-    return result
-
-
-def segmentation(
-    code: str,
-    formal_statement: str,
-    result: dict,
-    header: str = LEAN4_DEFAULT_HEADER,
-    tailer: str = "",
-):
-
-    if result['system_errors'] is not None:
-        print("System errors, returning empty segments")
-        # compiler timeout
-        return []
-
-    full_code = ''.join(
-        [header, formal_statement, code.rstrip(' \n'), tailer]
-    )
-
-    _full_code_lines = full_code.split('\n')
-    _line_offset, _offset = [], -1
-    for _line in _full_code_lines:
-        _offset += 1  # '\n'
-        _line_offset.append(_offset)
-        _offset += len(_line)
-
-    def _get_idx(pos_info):
-        """
-        Convert a (line, column) dict to the index of the character in the full code.
-        """
-        return _line_offset[pos_info['line'] - 1] + pos_info['column']
-
-    """
-    First, we need to find the last valid tactic.
-
-    Unsolved goals also show up as errors, and we ignore them.
-    """
-
-    _prefix_len = len(header) + len(formal_statement)
-    truncate_pos = len(full_code) - len(tailer)
-    for info in result['sorries'] + result['errors']:
-        if info.get('data', str()).lstrip().startswith('unsolved goals'):
-            continue
-        info_pos = _get_idx(info['pos'])
-        # if info_pos >= _prefix_len:
-        truncate_pos = min(truncate_pos, info_pos)
-
-    if truncate_pos <= _prefix_len:
-        # all proof lines are invalid
-        print("All proof lines are invalid, returning empty segments")
-        return []
-
-    partial_code = full_code[:truncate_pos]
-
-    print("Partial code")
-    print(partial_code)
-
-    code_lines = partial_code.split('\n')
-    pos_last, segments = _prefix_len, []
-    # pos_last, segments = 0, []
-    for line_idx in range(len(code_lines)):
-        # I want to add segments for each line, including
-        # the problem statement etc.
-
-        if _line_offset[line_idx] < _prefix_len:
-            continue
-
-        def compute_last_valid_char_pos(line):
-            idx, last_non_blank = 0, len(line) + 1
-            while idx < len(line):
-                if line[idx: idx+2] == '--':
-                    return last_non_blank
-                elif line[idx: idx+2] == '/-':
-                    if '-/' not in line[idx+2:]:
-                        # cannot split in this line
-                        return len(line) + 1
-                    idx = line.find('-/', idx+2) + 1
-                elif line[idx] != ' ':
-                    last_non_blank = idx
-                idx += 1
-            return last_non_blank
-
-        line_lastChar = _line_offset[line_idx] + \
-            compute_last_valid_char_pos(code_lines[line_idx])
-        line_endPos = _line_offset[line_idx] + \
-            len(code_lines[line_idx])
-
-        pos_min, goal = 1e9, None
-        for tactic_info in result['ast']['tactics']:
-            pos, endPos = tactic_info['pos'], tactic_info['endPos']
-            if line_lastChar <= endPos and endPos <= line_endPos and pos < pos_min:
-                pos_min = pos
-                goal = tactic_info['stateAfter']
-        if goal is None:
-            continue
-
-        for tactic_info in result['ast']['tactics']:
-            pos, endPos = tactic_info['pos'], tactic_info['endPos']
-            if pos_last < endPos and endPos <= line_endPos and pos < pos_min:
-                pos_min = pos
-
-        while pos_min > 0 and partial_code[pos_min - 1] != '\n':
-            pos_min -= 1
-        indent_len = 0
-        while partial_code[pos_min + indent_len] == ' ':
-            indent_len += 1
-        newline_with_indent = '\n' + ' ' * indent_len
-
-        segments.append(AttrDict(
-            tactic_code=partial_code[pos_last: line_endPos] + '\n',
-            state_comment=newline_with_indent.join([
-                ' ' * indent_len + '/- tactic state:',
-                '  ' + goal.replace('\n',
-                                    newline_with_indent + '  '),
-                '-/\n'
-            ]),
-            goal=goal,
-            indent=indent_len,
-        ))
-        pos_last = line_endPos + 1
-    if result['complete'] and (len(segments) == 0 or segments[-1].goal != 'no goals' or segments[-1].indent != segments[0].indent):
-        indent_len = 2 if len(segments) == 0 else segments[0].indent
-        newline_with_indent = '\n' + ' ' * indent_len
-        segments.append(AttrDict(
-            tactic_code=partial_code[pos_last:].rstrip(' \n') + '\n',
-            state_comment=newline_with_indent.join([
-                ' ' * indent_len + '/- tactic state:',
-                '  no goals',
-                '-/\n'
-            ]),
-            goal='no goals',
-            indent=indent_len,
-        ))
-    segments = [seg for seg in segments if len(
-        seg.tactic_code.strip(' \n')) > 0]
-    return segments
 
 
 ############################################# Lean Game Formalism #############################################
@@ -379,11 +207,11 @@ class LeanGameState:
         else:
             status_code = "Just initialized\n"
 
-        # res += fancy_field("Status", status_code)
-        # res += fancy_field("Header", self.header)
-        # res += fancy_field("Problem", self.problem)
+        res += fancy_field("Status", status_code)
+        res += fancy_field("Header", self.header)
+        res += fancy_field("Problem", self.problem)
         res += fancy_field("Old Code", self.old_code)
-        # res += fancy_field("Comment", self.comment)
+        res += fancy_field("Comment", self.comment)
         if self.processed:
             res += fancy_field("Valid Truncation of New Code", self.valid_code)
         elif self.rollout_done:
@@ -392,8 +220,8 @@ class LeanGameState:
         else:
             res += fancy_field("[New Code will be here]", "\n")
 
-        # res += fancy_field("Tailer", self.tailer)
-        # res += fancy_field("Old Tactic State", self.old_tactic_state)
+        res += fancy_field("Tailer", self.tailer)
+        res += fancy_field("Old Tactic State", self.old_tactic_state)
         if self.processed:
             res += fancy_field("New Tactic State", self.tactic_state)
 
@@ -476,7 +304,7 @@ class LeanGameState:
                 "Should not pre-process a LeanGameState that has already been processed.")
 
         return ''.join(
-            [self.header, self.problem, self.old_code,
+            [self.problem, self.old_code,
                 self.comment, self.new_code, self.tailer]
         )
 
@@ -507,64 +335,51 @@ class LeanGameState:
 
         """
         self.processed = True
-        full_code = ''.join(
-            [self.header, self.problem, self.old_code,
-                self.comment, self.new_code]
-        )
 
-        result = process_lean4_results(
-            full_code,
-            repl_result
-        )
-        print("Result['ast']['tactics']:")
-        pprint(result['ast']['tactics'])
+        if repl_result.get('system_error', False):
+            self.tactic_state = ""
+            self.valid_code = ""
+            self.dead = True
+            self.win = False
+            return
 
-        segments = segmentation(
-            ''.join(
-                [self.old_code, self.comment, self.new_code]
-            ),
-            self.problem,
-            result,
-            self.header,
-            self.tailer,
-        )
+        errors = [m for m in repl_result.get(
+            'messages', []) if m['severity'] == 'error']
+        warnings = [m for m in repl_result.get(
+            'messages', []) if m['severity'] == 'warning']
+        infos = [m for m in repl_result.get(
+            'messages', []) if m['severity'] == 'info']
 
-        # print("Segments:")
-        # pprint(segments)
+        goals = [m for m in errors if m['data'].startswith("unsolved goals\n")]
+        errors = [m for m in errors if not m['data'].startswith(
+            "unsolved goals\n")]
+        result = {
+            "sorries": repl_result.get('sorries', []),
+            "tactics": repl_result.get('tactics', []),
+            "errors": errors,
+            "warnings": warnings,
+            "infos": infos,
+            "goals": goals,
+            "system_errors": None,
+            "env": repl_result.get('env', None),
+        }
+        result['complete'] = (not result['errors']) and (not result['goals']) and not result['sorries'] and not any(
+            "declaration uses 'sorry'" in warning['data'] or 'failed' in warning['data'] for warning in result['warnings'])
 
-        self.valid_code = ""
-        i = 0
-        while len(self.valid_code) <= len(self.old_code) and i < len(segments):
-            self.valid_code += segments[i].tactic_code
-            i += 1
-        i -= 1
+        self.tactic_state = ""
+        min_line = float('inf')
+        min_column = float('inf')
+        for tactic in goals:
+            if (tactic['pos']['line'] < min_line) or (tactic['pos']['line'] == min_line and tactic['pos']['column'] < min_column):
+                min_line = tactic['pos']['line']
+                min_column = tactic['pos']['column']
+                self.tactic_state = tactic['data'][len("unsolved goals\n"):]
 
-        print("Valid code:")
-        print(self.valid_code)
-        assert self.valid_code.startswith(self.old_code)
-        self.valid_code = self.valid_code[len(self.old_code):]
-
-        if 0 <= i < len(segments):
-            self.tactic_state = segments[i].state_comment
+        self.valid_code = self.new_code
 
         if result['complete']:
             self.dead = False
             self.win = True
-            return
-
-        # After 480 mod (done) this should never be triggered
-        if self.tactic_state is None:
-            # Special case, root node.
-            print(
-                "BAD should not be here because we initialize and pass down tactic stat")
-            s = result['errors'][1]['data']
-            tactic_state = s[s.find("\n"):]
-            self.tactic_state = '/- tactic state:\n' + tactic_state + '\n-/\n'
-
-        if self.valid_code == "" and self.old_code != "":
-            print("Inside post_process, found empty valid code thus dead")
-            self.dead = True
-            self.win = False
             return
 
         self.dead = False
@@ -614,8 +429,8 @@ class LeanGame(Game[LeanGameState]):
 
     def __init__(self,
                  comment_seeds: List[str],
-                 max_depth: Optional[int] = 10,
-                 max_completion_len: int = 2000):
+                 max_depth: Optional[int] = 50,
+                 max_completion_len: int = 4000):
         """
         In this game, ACTIONs are comments that can be added to the proof.
         Each action is followed by an LLM response, which appends to the
