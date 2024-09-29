@@ -8,7 +8,7 @@ it learns to predict *the number of steps required to complete the proof after t
 '''
 
 
-from utils import load_data
+from src.pretrain.prepare_data import load_data
 from src.networks.prover_llm import ProverLLM
 import torch
 import torch.nn as nn

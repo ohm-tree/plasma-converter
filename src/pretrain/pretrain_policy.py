@@ -38,7 +38,7 @@ def load_checkpoint(model, optimizer, checkpoint_path, device):
 
     Parameters:
     ----------
-    model: YourModelClass
+    model: ProverLLM
         The neural network model.
     optimizer: torch.optim.Optimizer
         The optimizer.
@@ -159,7 +159,7 @@ def main():
     # data_loader = DataLoader(dataset, batch_size=config['training']['batch_size'], shuffle=True, num_workers=4)
 
     try:
-        from src.pretrain.utils import load_workbook_problems  # Replace with your actual dataset module
+        from src.pretrain.prepare_data import load_workbook_problems  # Replace with your actual dataset module
         dataset = load_workbook_problems(config['data']['data_path'])
         data_loader = DataLoader(dataset, 
                                  batch_size=config['training']['batch_size'], 

@@ -314,7 +314,7 @@ def value_policy_prompter(partial_code: List[str], tactic_comment: str) -> str:
     return "\n".join(partial_code) + "\n" + tactic_comment
 
 def internlm_prompter(full_code, i: int, comment: str = ""):
-    prompt = "```"
+    prompt = "```lean4\n"
     prompt += "\n".join(full_code[: i])
     prompt += '\n'
     prompt += comment
@@ -459,7 +459,7 @@ def prepare_value_data(
 
                 data_point = {
                     "prompt": prompt,
-                    "value": len_to_value(len(code_lines) - k)
+                    "value": len_to_value(len(code_lines) - k - 1)
                 }
 
                 print("data point")
@@ -482,7 +482,7 @@ if __name__ == "__main__":
     #     # print("Proof".center(80, '-'))
     #     # pprint(proof.result)
 
-    # prepare_policy_data()
+    prepare_policy_data()
     prepare_value_data()
 
 """ 
