@@ -47,7 +47,6 @@ class LeanGameState:
                  comment: str,
                  depth: int,
                  header: str = LEAN4_DEFAULT_HEADER,
-                 tailer: str = "",
                  rollout_done: bool = False,
                  processed: bool = False,
                  new_code: Optional[str] = None,
@@ -75,7 +74,6 @@ class LeanGameState:
         | comment          | Required         | Required     | Required        |
         | depth            | Required         | Required     | Required        |
         | header           | Required         | Required     | Required        |
-        | tailer           | Required         | Required     | Required        |
         | rollout_done     | False            | True         | True            |
         | processed        | False            | False        | True            |
         | new_code         | None             | Required     | Required        |
@@ -104,8 +102,6 @@ class LeanGameState:
             The depth of the proof.
         header: str
             The header for the Lean code.
-        tailer: str
-            The tailer for the Lean code.
         rollout_done: bool
             Whether the LLM rollout has been done.
         processed: bool
@@ -155,7 +151,6 @@ class LeanGameState:
         self.comment: str = comment
         self.depth: int = depth
         self.header: str = header
-        self.tailer: str = tailer
         self.rollout_done: bool = rollout_done
         self.processed: bool = processed
         self.new_code: Optional[str] = new_code
@@ -170,7 +165,7 @@ class LeanGameState:
 
     def __hash__(self) -> int:
         return hash(
-            (self.problem, self.old_code, self.old_tactic_state, self.comment, self.depth, self.header, self.tailer,
+            (self.problem, self.old_code, self.old_tactic_state, self.comment, self.depth, self.header,
              self.rollout_done, self.processed, self.new_code, self.win, self.dead, self.tactic_state, self.valid_code)
         )
 
@@ -220,7 +215,6 @@ class LeanGameState:
         else:
             res += fancy_field("[New Code will be here]", "\n")
 
-        res += fancy_field("Tailer", self.tailer)
         res += fancy_field("Old Tactic State", self.old_tactic_state)
         if self.processed:
             res += fancy_field("New Tactic State", self.tactic_state)
@@ -243,7 +237,6 @@ class LeanGameState:
             "comment": self.comment,
             "depth": self.depth,
             "header": self.header,
-            "tailer": self.tailer,
             "rollout_done": self.rollout_done,
             "processed": self.processed,
             "new_code": self.new_code,
@@ -305,8 +298,103 @@ class LeanGameState:
 
         return ''.join(
             [self.problem, self.old_code,
-                self.comment, self.new_code, self.tailer]
+                self.comment, self.new_code]
         )
+
+    @ classmethod
+    def get_index(s: str, row: int, col: int) -> int:
+        """
+        Convert a (row, col) pair to an index in a string.
+        The Lean 4 repl convention is that rows are 1-indexed
+        and columns are 0-indexed.
+        """
+        lines = s.split('\n')
+        # Add back the newline for accurate indexing.
+        line_lengths = [len(line) + 1 for line in lines]
+        if row < 1:
+            raise ValueError("Row must be at least 1.")
+        if col < 0:
+            raise ValueError("Column must be at least 0.")
+        if row > len(lines):
+            raise ValueError("Row is too large.")
+        if col >= line_lengths[row-1]:
+            # The col should never be exactly line_lengths;
+            # If the cursor is "after the newline character"
+            # then it should really be the 0th index of the next line.
+            raise ValueError("Column is too large.")
+        return sum(line_lengths[:row-1]) + col
+
+    def truncate(self, sorries: List[dict], errors: List[dict]):
+        """
+        First, we need to find the last valid tactic.
+
+        Unsolved goals also show up as errors, and we ignore them;
+        they have been ommitted from the errors list in post_process()
+        already.
+
+        Parameters
+        ----------
+        sorries: List[dict]
+            A list of sorry messages.
+        errors: List[dict]
+            A list of error messages.
+
+        Modifies
+        -------
+        self.valid_code: str
+            The new code that was added to the proof.
+            This will be truncated to the first error or sorry.
+        """
+        code_no_header = ''.join(
+            [self.problem, self.old_code,
+                self.comment, self.new_code]
+        )
+
+        _prefix_len = len(self.problem)
+        truncate_pos = len(code_no_header)
+        for info in sorries:
+            info_pos = self.get_index(
+                code_no_header, info['pos']['line'], info['pos']['column'])
+            if info_pos >= _prefix_len:
+                truncate_pos = min(truncate_pos, info_pos)
+        for info in errors:
+            info_pos = self.get_index(
+                code_no_header, info['pos']['line'], info['pos']['column'])
+            if info_pos >= _prefix_len:
+                truncate_pos = min(truncate_pos, info_pos)
+
+        self.valid_code = code_no_header[:truncate_pos]
+        assert self.valid_code.startswith(self.problem)
+        self.valid_code = self.valid_code[len(self.problem):]
+        assert self.valid_code.startswith(self.old_code)
+        self.valid_code = self.valid_code[len(self.old_code):]
+        assert self.valid_code.startswith(self.comment)
+        self.valid_code = self.valid_code[len(self.comment):]
+
+    def get_goals(self, goals: List[dict]):
+        """
+        Get the the most recent goal from the Lean 4 verification.
+
+        Parameters
+        ----------
+        goals: List[dict]
+            A list of goal messages.
+
+        Modifies
+        -------
+        self.tactic_state: str
+            The tactic state after the new code was added.
+        """
+
+        self.tactic_state = ""
+        max_line = float('-inf')
+        max_column = float('-inf')
+        for tactic in goals:
+            if (tactic['pos']['line'] < max_line) or (tactic['pos']['line'] == max_line and tactic['pos']['column'] < max_column):
+                max_line = tactic['pos']['line']
+                max_column = tactic['pos']['column']
+                self.tactic_state = tactic['data'].lstrip()[
+                    len("unsolved goals\n"):]
 
     def post_process(self, repl_result: dict):
         """
@@ -343,41 +431,40 @@ class LeanGameState:
             self.win = False
             return
 
-        errors = [m for m in repl_result.get(
-            'messages', []) if m['severity'] == 'error']
-        warnings = [m for m in repl_result.get(
-            'messages', []) if m['severity'] == 'warning']
-        infos = [m for m in repl_result.get(
-            'messages', []) if m['severity'] == 'info']
+        sorries = repl_result.get('sorries', [])
+        tactics = repl_result.get('tactics', [])
 
-        goals = [m for m in errors if m['data'].startswith("unsolved goals\n")]
-        errors = [m for m in errors if not m['data'].startswith(
-            "unsolved goals\n")]
-        result = {
-            "sorries": repl_result.get('sorries', []),
-            "tactics": repl_result.get('tactics', []),
-            "errors": errors,
-            "warnings": warnings,
-            "infos": infos,
-            "goals": goals,
-            "system_errors": None,
-            "env": repl_result.get('env', None),
-        }
-        result['complete'] = (not result['errors']) and (not result['goals']) and not result['sorries'] and not any(
-            "declaration uses 'sorry'" in warning['data'] or 'failed' in warning['data'] for warning in result['warnings'])
+        errors = []
+        warnings = []
+        infos = []
+        goals = []
 
-        self.tactic_state = ""
-        min_line = float('inf')
-        min_column = float('inf')
-        for tactic in goals:
-            if (tactic['pos']['line'] < min_line) or (tactic['pos']['line'] == min_line and tactic['pos']['column'] < min_column):
-                min_line = tactic['pos']['line']
-                min_column = tactic['pos']['column']
-                self.tactic_state = tactic['data'][len("unsolved goals\n"):]
+        complete = not sorries
+        for m in repl_result.get('messages', []):
+            if m['severity'] == 'error':
+                complete = False
+                if m['data'].lstrip().startswith("unsolved goals\n"):
+                    goals.append(m)
+                else:
+                    errors.append(m)
+            elif m['severity'] == 'warning':
+                if "declaration uses 'sorry'" in m['data'] or 'failed' in m['data']:
+                    complete = False
+                warnings.append(m)
+            elif m['severity'] == 'info':
+                infos.append(m)
 
-        self.valid_code = self.new_code
+        self.truncate(sorries, errors)
+        self.get_goals(goals)
+        if self.new_code.strip() == "":
+            # This means that the new code was truncated to nothing,
+            # i.e. the first new line of code written caused an error.
+            # This is a dead state.
+            self.dead = True
+            self.win = False
+            return
 
-        if result['complete']:
+        if complete:
             self.dead = False
             self.win = True
             return
@@ -402,7 +489,7 @@ class LeanGameState:
             [self.old_code, self.comment, self.valid_code]
         )
 
-    @classmethod
+    @ classmethod
     def saves(cls, states: List['LeanGameState'], filename: str):
         """
         Save a collection of states to a file.
@@ -412,7 +499,7 @@ class LeanGameState:
         """
         np.save(filename, [state.human_json() for state in states])
 
-    @classmethod
+    @ classmethod
     def loads(cls, filename: str) -> List['LeanGameState']:
         """
         Load a collection of states from a file.
@@ -459,7 +546,6 @@ class LeanGame(Game[LeanGameState]):
     def start_state(self,
                     problem: str,
                     header: str = LEAN4_DEFAULT_HEADER,
-                    tailer: str = "",
                     tactic_state: str = ""
                     ) -> LeanGameState:
         """
@@ -471,8 +557,6 @@ class LeanGame(Game[LeanGameState]):
             The problem statement to be solved.
         header: str
             The header for the Lean code.
-        tailer: str
-            The tailer for the Lean code.
         tactic_state: str
             The initial tactic state.
         """
@@ -484,7 +568,6 @@ class LeanGame(Game[LeanGameState]):
             comment="",
             depth=0,
             header=header,
-            tailer=tailer,
             rollout_done=True,
             processed=True,
             new_code="",
@@ -521,7 +604,6 @@ class LeanGame(Game[LeanGameState]):
             comment=comment,
             depth=state.depth + 1,
             header=state.header,
-            tailer=state.tailer,
             rollout_done=False,
             processed=False,
         )
