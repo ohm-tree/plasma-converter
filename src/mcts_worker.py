@@ -154,7 +154,13 @@ def main(
         print("game", game)
         print("start_state", start_state)
 
-        states, distributions, rewards = self_play(start_state, game, policy)
+        states, distributions, rewards = self_play(
+            start_state, game, policy,
+            queue,
+            completion_queue,
+            policy_value_queue,
+            lean_queue
+        )
 
         LeanGameState.saves(states, os.path.join(
             game_data_path, f"{worker_iteration}_states.npy"))

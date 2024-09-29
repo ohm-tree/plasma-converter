@@ -1,9 +1,10 @@
 import json
+import logging
 import multiprocessing
 import os
 import queue
 import time
-from typing import Dict
+from typing import Dict, Optional
 
 import pexpect
 
@@ -14,42 +15,76 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
+def send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optional[pexpect.spawn] = None, kill=False):
+    try:
+        return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_finish=timeout_finish, _child=_child, kill=kill)
+    except Exception as e:
+        return {'system_error': str(e)}
 
-def send_code_read_json(child: pexpect.spawn, cmd, timeout=20):
+
+def _send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optional[pexpect.spawn] = None, kill=False):
+    if _child is None:
+        child = pexpect.spawn(
+            f"{DEFAULT_LAKE_PATH} exe repl",
+            cwd=DEFAULT_LEAN_WORKSPACE)
+    else:
+        child = _child
+
     cmd_json = json.dumps(cmd)
-    print(cmd_json)
+    # print(cmd_json)
     child.send(cmd_json + "\r\n")
     # Read the input itself.
     # This should be printed instantly, so timeout is set to 1 second.
-    child.expect_exact(cmd_json + "\r\n", timeout=1)
+    child.expect_exact(cmd_json + "\r\n", timeout=20)
     assert child.after.decode('utf-8') == cmd_json + "\r\n"
+    # print("Sent code to Lean4 REPL.")
 
-    res = ""
+    # Read the output.
+    # This code is critical; the repl seems to print out some
+    # strange non-json stuff before the actual json output,
+    # including characters that delete the previous input,
+    # such that it doesn't show up in debug output.
+    child.expect_exact("{", timeout=timeout_start)
+    res = "{"
+    # print("Received start of output from Lean4 REPL.")
     # while res is not a valid json string, read lines.
     # All of the lines should print essentially instantly,
     # so there are no timeouts in this loop.
     start_time = time.time()
     while True:
+        res = res + child.readline().decode('utf-8')
         try:
-            res = res + child.readline().decode('utf-8')
-            json.loads(res)
+            # print all chars in res
+            json.loads(res.strip())
             break
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            # print(e)
             pass
-        if time.time() - start_time > timeout:
+        if time.time() - start_time > timeout_finish:
             raise TimeoutError("Lean4 REPL timed out.")
+        # time.sleep(0.1)
+
+    # kill
+    if kill:
+        child.close()
     return json.loads(res)
 
 
-def init_repl(repl):
-    send_code_read_json(
-        repl,
+def setup_repl():
+    child = pexpect.spawn(
+        f"{DEFAULT_LAKE_PATH} exe repl",
+        cwd=DEFAULT_LEAN_WORKSPACE)
+
+    # Use the unprotected version to avoid error-loops.
+    _send_code_read_json(
         {
             "cmd": LEAN4_DEFAULT_HEADER,
             "allTactics": True,
-            "tactics": True
-        }
+            "tactics": True,
+        },
+        _child=child
     )
+    return child
 
 
 def main(
@@ -63,14 +98,15 @@ def main(
     """
     Entry point for the lean worker process.
     """
+    # give myself a custom logging file.
+    os.makedirs("logs", exist_ok=True)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(f"logs/lean_worker_{task_id}.log")
+    logger.addHandler(fh)
+    logger.info(f"Starting lean worker {task_id}.")
 
-
-    repl = pexpect.spawn(
-        f"{DEFAULT_LAKE_PATH} exe repl",
-        cwd=DEFAULT_LEAN_WORKSPACE)
-
-    init_repl(repl)
-
+    child = setup_repl()
 
     while True:
         # check for kill signals from the master queue.
@@ -89,20 +125,37 @@ def main(
             #   'worker_id': int, # The worker task id that generated this task.
             #   'lean_task_id': int, # The specific lean task id of this task.
             #   'task': str # The task to complete, a string prompt.
+            #   'type': str # Should be 'lean'
             # }
+            assert input_data['type'] == 'lean'
 
-            result = send_code_read_json(repl,
-                                         {
-                                            "cmd": input_data['task'],
-                                            "allTactics": True,
-                                            "tactics": True,
-                                            "env": 0
-                                         }, timeout=20)
+            result = send_code_read_json({
+                "cmd": input_data['task'],
+                "allTactics": True,
+                "tactics": True,
+                "env": 0
+            })
+            # if result is error, try restarting the repl.
+            if 'system_error' in result:
+                logger.error(
+                    f"Error in send_code_read_json: {result['system_error']}")
+                try:
+                    child.close()
+                except:
+                    pass
+                child = setup_repl()
+                result = send_code_read_json({
+                    "cmd": input_data['task'],
+                    "allTactics": True,
+                    "tactics": True,
+                    "env": 0
+                })
 
             worker_queues[input_data['worker_id']].put(
                 {
                     'lean_task_id': input_data['lean_task_id'],
-                    'result': result
+                    'result': result,
+                    'type': 'lean'
                 }
             )
 

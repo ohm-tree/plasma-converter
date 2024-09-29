@@ -5,7 +5,7 @@ This module contains the UCTNode class, which represents a node in the UCT searc
 The code is adapted from https://www.moderndescartes.com/essays/deep_dive_mcts/.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Generic, Optional
 
 import numpy as np
 
@@ -32,6 +32,8 @@ class UCTNode:
 
         # Whether the node has been expanded to its children
         self.is_expanded: bool = False
+        # Whether the node has been processed by the Lean verifier.
+        self.is_processed: bool = False
 
         # Cached values so that we don't need to recompute them every time
         self.action_mask = self.game.action_mask(self.game_state)
@@ -47,6 +49,12 @@ class UCTNode:
         self.child_number_visits: np.ndarray = np.zeros(num_actions)
 
         self.init_type = init_type
+
+    def __hash__(self):
+        """
+        Hash the node based on the game state.
+        """
+        return hash(self.game_state)
 
     @property
     def number_visits(self):
@@ -87,6 +95,18 @@ class UCTNode:
 
         return self.children[np.argmax(scores)]
 
+    def select_leaf_no_virtual_loss(self, c: float = 1.0) -> 'UCTNode':
+        """
+        Deterministically select the next leaf to expand based on the best path.
+        """
+        current = self
+
+        # iterate until either you reach an un-expanded node or a terminal state
+        while current.is_expanded and current.is_processed and not current.is_terminal:
+            current = current.best_child(c)
+
+        return current
+
     def select_leaf(self, c: float = 1.0) -> 'UCTNode':
         """
         Deterministically select the next leaf to expand based on the best path.
@@ -94,8 +114,16 @@ class UCTNode:
         current = self
 
         # iterate until either you reach an un-expanded node or a terminal state
-        while current.is_expanded and not current.is_terminal:
+        while current.is_expanded and current.is_processed and not current.is_terminal:
+
+            # Add a virtual loss.
+            current.child_number_visits += 1
+            current.child_total_value -= 1
             current = current.best_child(c)
+
+        # Add a virtual loss.
+        current.child_number_visits += 1
+        current.child_total_value -= 1
 
         return current
 
@@ -157,8 +185,9 @@ class UCTNode:
         """
         current = self
         while current.parent is not None:
-            current.number_visits += 1
-            current.total_value += estimate
+            # Do not increment the number of visits here, because it is already done in select_leaf.
+            # Extra +1 to the estimate to offset the virtual loss.
+            current.total_value += estimate + 1
             current = current.parent
 
 

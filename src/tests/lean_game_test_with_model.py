@@ -10,29 +10,48 @@ import pstats
 import time
 
 import pexpect
+from vllm import LLM, SamplingParams
 
 from src.games.lean_game import LeanGame, LeanGameState
 
-pr = cProfile.Profile()  # Initialize the profiler
-pr.enable()              # Start profiling
+HOME_DIR = os.path.expanduser('~')
+DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
+DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
-informal_prefix = r'''/-- The second and fourth terms of a geometric sequence are $2$ and $6$. Which of the following is a possible first term?
-Show that it is $\frac{2\sqrt{3}}{3}$.-/
-'''
-formal_statement = r'''theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2)
-    (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by
-'''
+LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
+
+
+def load_problem_minif2f(problem_name = "algebra_bleqa_apbon2msqrtableqambsqon8b"):
+    data = None
+    with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
+        # Each line in the file is a separate JSON object
+        data = [json.loads(line.strip()) for line in file.readlines()]
+    for problem in data:
+        if problem['name'] == problem_name:
+            return problem
+
+problem = load_problem_minif2f()
+
+informal_prefix = problem['informal_prefix']
+formal_statement = problem['formal_statement']
 PROBLEM_STATEMENT = informal_prefix + formal_statement
-tactic_state = r'''/- tactic state:
 
-a r : ℝ
-u : ℕ → ℝ
-h₀ : ∀ (k : ℕ), u k = a * r ^ k
-h₁ : u 1 = 2
-h₂ : u 3 = 6
-⊢ u 0 = 2 / √3 ∨ u 0 = -(2 / √3)
--/
-'''
+tactic_state = problem['goal']
+
+
+llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
+          max_num_batched_tokens=8192,
+          trust_remote_code=True,
+          dtype="float16",
+          tensor_parallel_size=4)
+
+sampling_params = SamplingParams(
+    max_tokens=4096,
+    temperature=0.0,
+    top_k=1,
+    top_p=1.0
+)
+
 
 # useful copy+paste for the game.
 """
@@ -65,7 +84,7 @@ def send_code_read_json(cmd, timeout_start=30, timeout_finish=30):
     child.send(cmd_json + "\r\n")
     # Read the input itself.
     # This should be printed instantly, so timeout is set to 1 second.
-    child.expect_exact(cmd_json + "\r\n", timeout=1)
+    child.expect_exact(cmd_json + "\r\n", timeout=20)
     assert child.after.decode('utf-8') == cmd_json + "\r\n"
     print("Sent code to Lean4 REPL.")
 
@@ -99,12 +118,6 @@ def send_code_read_json(cmd, timeout_start=30, timeout_finish=30):
     return json.loads(res)
 
 
-HOME_DIR = os.path.expanduser('~')
-DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
-DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
-
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
-
 comments = None
 with open("src/sample-data/comments.txt", 'r') as file:
     comments = [line.strip() for line in file.readlines()]
@@ -119,24 +132,28 @@ state: LeanGameState = game.start_state(
 while not game.is_terminal(state):
     print("Player Must Act".center(80, "#"))
     print(state.human_printout())
+
     # print each possible comment with the index in front.
     for i, comment in enumerate(comments):
         print(f"{i}: {comment}")
-    action = int(input("Enter your action: "))
+    action = int(input("Enter your action (int): "))
     # action = comments[action]
     # action = input("Enter your action: ")
     state = game.next_state(state, action)
 
     print("LLM Must Act".center(80, "#"))
     print(state.human_printout())
-    print("Enter your code, line-by-line. Type ``` to quit: \n")
-    new_code = ""
-    while True:
-        line = input()
-        if line == "```":
-            break
-        new_code += line + "\n"
-    state.post_LLM_rollout(new_code)
+    input_data = state.pre_LLM_rollout()
+    print(input_data)
+    outputs = llm.generate(
+        input_data,
+        sampling_params=sampling_params
+    )
+    outputs = outputs[0].outputs[0].text
+
+    print(outputs)
+
+    state.post_LLM_rollout(outputs)
 
     print("Lean Verifier Must Act!".center(80, "#"))
     print(state.human_printout())
@@ -158,18 +175,3 @@ while not game.is_terminal(state):
 
 print("Terminated!")
 print(state.human_printout())
-
-pr.disable()             # Stop profiling
-
-# Create an output stream to capture the profiling stats
-s = io.StringIO()
-sortby = 'cumulative'
-ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-ps.print_stats()
-# save stats to a file
-with open("profile_stats.txt", "w") as f:
-    ps = pstats.Stats(pr, stream=f).sort_stats(sortby)
-    ps.print_stats()
-
-# Print or log the profiling results
-print(s.getvalue())

@@ -20,13 +20,13 @@ def main(
     """
     Entry point for the lean worker process.
     """
-    
+
     # TODO: stuff all of the configs into a config file.
     llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
               max_num_batched_tokens=8192,
               trust_remote_code=True)
-    
-    sampling_params=SamplingParams(
+
+    sampling_params = SamplingParams(
         max_tokens=4096,
         temperature=0.0,
         top_k=1,
@@ -47,32 +47,36 @@ def main(
         # tasks should take the form
         # {
         #   'worker_id': int, # The worker task id that generated this task.
-        #   'policy_value_task_id': int, # The specific completion task id of this task.
-        #   'task': str # The task to complete, a string prompt.
+        #   'task_id': int, # The specific completion task id of this task.
+        #   'task_input': str # The task to complete, a string prompt.
+        #   'task': str # Should always be 'policy_value'
         # }
         while len(my_tasks) < policy_value_batch_size:
             try:
-                my_tasks.append(policy_value_queue.get_nowait())
+                new_task = policy_value_queue.get_nowait()
             except queue.Empty:
                 break
+            assert new_task['task'] == 'policy_value'
+            my_tasks.append(new_task)
 
         if len(my_tasks) == 0:
-            time.sleep(1) # Spinlock, disappointing, but there's nothing to do.
+            # Spinlock, disappointing, but there's nothing to do.
+            time.sleep(1)
         else:
             # We have tasks to complete.
             input_data = [
-                my_tasks[i]['task']
+                my_tasks[i]['task_input']
                 for i in range(len(my_tasks))
             ]
             outputs = llm.generate(
                 input_data,
                 sampling_params=sampling_params
             )
-            # TODO: generate 
+            # TODO: generate
 
             for i in range(len(outputs)):
                 result = {
-                    'policy_value_task_id': my_tasks[i]['policy_value_task_id'],
+                    'task_id': my_tasks[i]['task_id'],
                     'output': outputs[i].outputs[0].text
                 }
 
