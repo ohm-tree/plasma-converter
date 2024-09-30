@@ -114,7 +114,7 @@ def uct_search(
                 # Update the node with the lean.
                 node.is_processed = True
                 state: LeanGameState = node.game_state
-                state.post_process(result['output'])
+                state.post_process(result['result'])
 
                 # Enqueue the node to the context_queue.
                 context_queue.put(
