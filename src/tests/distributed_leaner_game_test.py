@@ -20,11 +20,11 @@ from src.tests.distributed_leaner_game_test_cpu_worker import main as inference_
 
 # todo: make this a config file.
 distributed_config = {
-    'num_worker_procs': 1,
-    'num_completion_procs': 1,
+    'num_worker_procs': 24,
+    'num_completion_procs': 2,
     'num_context_procs': 1,
     'num_policy_value_procs': 1,
-    'num_lean_procs': 1,
+    'num_lean_procs': 24,
 }
 
 json_name = "config"  # todo: make this a config file.

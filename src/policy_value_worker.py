@@ -75,11 +75,11 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
     # We truncated the first <IDEA> for prompting purposes...
     output = "<IDEA>" + output
 
-    rating_output = output.split("<RATING>")[1]
     try:
+        rating_output = output.split("<RATING>")[1]
         res['rating'] = int(rating_output.split("</RATING>")[0])
-    except ValueError:
-        logger.warning(f"Rating output is not a number: {rating_output}")
+    except:
+        logger.warning(f"Rating output is not a number.")
         res['rating'] = 5  # default to 5 if the rating is not a number.
 
     idea_outputs = output.split("<IDEA>")
