@@ -1,4 +1,5 @@
-"a mcts lean prover"
+# Usage
+This project enhances Lean provers with MCTS.
 
 The git repository contains submodules. To clone it, you should use
 
@@ -20,3 +21,11 @@ Design principles:
     readable to everyone. So, we shouldn't store an exact prompt
     format or anything. This stuff should all get handled by the
     prover_LLM.
+
+
+# LambdaLabs Setup (dev)
+
+On initial start up, run `start.sh` (pretrain branch, if not on main). This creates a micromamba environment `ohm-tree` and builds Lean packages.
+
+`python -m ipykernel install --user --name='ohm-tree' --display-name='ohm-tree'`
+To create a kernel from the micromamba env for notebooks.
