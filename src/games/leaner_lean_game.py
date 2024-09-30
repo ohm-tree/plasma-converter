@@ -39,48 +39,57 @@ class LeanGameStateError(Exception):
     pass
 
 
+class LeanGameStateStep(Enum):
+    INITIALIZED = 0
+    ROLLOUT = 1
+    PROCESSED = 2
+    COMMENTED = 3
+
+
 class LeanGameState:
     def __init__(self,
+                 step: LeanGameStateStep,
                  problem: str,
                  old_code: str,
                  old_tactic_state: str,
                  comment: str,
                  depth: int,
                  header: str = LEAN4_DEFAULT_HEADER,
-                 rollout_done: bool = False,
-                 processed: bool = False,
                  new_code: Optional[str] = None,
                  win: Optional[bool] = None,
                  dead: Optional[bool] = None,
                  tactic_state: Optional[str] = None,
                  valid_code: Optional[str] = None,
+                 gen_comments: Optional[List[str]] = None,
                  ):
         """
-        A LeanGameState can be in one of three states:
+        A LeanGameState can be in one of four states:
         1. Just-initialized. In this case, neither the LLM
         rollout nor the Lean verification has been run.
         2. Post-rollout. In this case, the LLM rollout has
         been run, but the Lean verification has not been run.
-        3. Fully processed. In this case, both the LLM
+        3. Processed. In this case, both the LLM
         rollout and the Lean verification have been run.
+        4. Commented. In this case, the state has been
+        processed and the possible comments have been generated.
 
         Here are the fields and their statuses in each state:
 
-        | Field            | Just-initialized | Post-rollout | Fully processed |
-        | ---------------- | ---------------- | ------------ | --------------- |
-        | problem          | Required         | Required     | Required        |
-        | old_code         | Required         | Required     | Required        |
-        | old_tactic_state | Required         | Required     | Required        |
-        | comment          | Required         | Required     | Required        |
-        | depth            | Required         | Required     | Required        |
-        | header           | Required         | Required     | Required        |
-        | rollout_done     | False            | True         | True            |
-        | processed        | False            | False        | True            |
-        | new_code         | None             | Required     | Required        |
-        | win              | None             | None         | Required        |
-        | dead             | None             | None         | Required        |
-        | tactic_state     | None             | None         | Required        |
-        | valid_code       | None             | None         | Required        |
+        | Field            | Just-initialized | Post-rollout | Processed   | Commented   |
+        | ---------------- | ---------------- | ------------ | ----------- | ----------- |
+        | step             | "initialized"    | "rollout"    | "processed" | "commented" |
+        | problem          | Required         | Required     | Required    | Required    |
+        | old_code         | Required         | Required     | Required    | Required    |
+        | old_tactic_state | Required         | Required     | Required    | Required    |
+        | comment          | Required         | Required     | Required    | Required    |
+        | depth            | Required         | Required     | Required    | Required    |
+        | header           | Required         | Required     | Required    | Required    |
+        | new_code         | None             | Required     | Required    | Required    |
+        | win              | None             | None         | Required    | Required    |
+        | dead             | None             | None         | Required    | Required    |
+        | tactic_state     | None             | None         | Required    | Required    |
+        | valid_code       | None             | None         | Required    | Required    |
+        | gen_comments     | None             | None         | None        | Required    |
 
         Attempting to call methods like LeanGame.is_terminal(),
         Leangame.reward(), or LeanGame.next_state() on a
@@ -88,6 +97,8 @@ class LeanGameState:
 
         Parameters
         ----------
+        step: LeanGameStateStep
+            The step of the game state.
         problem: str
             The problem statement to be solved.
         old_code: str
@@ -102,10 +113,6 @@ class LeanGameState:
             The depth of the proof.
         header: str
             The header for the Lean code.
-        rollout_done: bool
-            Whether the LLM rollout has been done.
-        processed: bool
-            Whether the Lean verification has been done.
         new_code: Optional[str]
             The new code that was added to the proof.
             This will generally not be truncated to a valid proof
@@ -124,59 +131,74 @@ class LeanGameState:
         valid_code: Optional[str]
             The new code that was added to the proof.
             This will be None if the proof is not fully processed.
+        gen_comments: Optional[List[str]]
+            The comments that were generated by the LLM.
+            This will be None if the proof is not fully processed.
         """
-        if rollout_done:
-            if processed:
-                if new_code is None or win is None or dead is None or tactic_state is None or valid_code is None:
-                    raise ValueError(
-                        "If rollout_done is True and processed is True, new_code, win, tactic_state, and valid_code must all be non-None.")
-            else:
-                if new_code is None:
-                    raise ValueError(
-                        "If rollout_done is True and processed is False, new_code must be non-None.")
-                if win is not None or dead is not None or tactic_state is not None or valid_code is not None:
-                    raise ValueError(
-                        "If rollout_done is True and processed is False, win, tactic_state, and valid_code must all be None.")
-        else:
-            if processed:
-                raise ValueError(
-                    "If rollout_done is False, processed must be False.")
-            if new_code is not None or win is not None or dead is not None or tactic_state is not None or valid_code is not None:
-                raise ValueError(
-                    "If rollout_done is False, new_code, win, tactic_state, and valid_code must all be None.")
-
+        self.step = step
         self.problem: str = problem
         self.old_code: str = old_code
         self.old_tactic_state: str = old_tactic_state
         self.comment: str = comment
         self.depth: int = depth
         self.header: str = header
-        self.rollout_done: bool = rollout_done
-        self.processed: bool = processed
         self.new_code: Optional[str] = new_code
         self.win: Optional[bool] = win
         self.dead: Optional[bool] = dead
         self.tactic_state: Optional[str] = tactic_state
         self.valid_code: Optional[str] = valid_code
+        self.gen_comments: Optional[List[str]] = gen_comments
+
+        self.check_state()
 
         # We don't want to re-generate a child when we re-do an action,
         # so pointers to the children are stored here.
         self.children = {}
 
+    def check_state(self) -> None:
+        """
+        Check that the state is valid.
+        """
+        if None in [self.problem, self.old_code, self.old_tactic_state, self.comment, self.depth, self.header]:
+            raise ValueError("None is not allowed for any required fields.")
+
+        if self.step >= LeanGameStateStep.ROLLOUT:
+            raise ValueError(
+                "new_code is required if step is rollout, processed, or commented.")
+        else:
+            if self.new_code is not None:
+                raise ValueError(
+                    "new_code must be None if step is initialized.")
+
+        if self.step >= LeanGameStateStep.PROCESSED:
+            if None in [self.win, self.dead, self.tactic_state, self.valid_code]:
+                raise ValueError(
+                    "win, dead, tactic_state, and valid_code are required if step is processed or commented.")
+        else:
+            if [self.win, self.dead, self.tactic_state, self.valid_code].count(None) != 4:
+                raise ValueError(
+                    "win, dead, tactic_state, and valid_code must be None if step is initialized or rollout.")
+
+        if self.step >= LeanGameStateStep.COMMENTED:
+            if self.gen_comments is None:
+                raise ValueError(
+                    "gen_comments is required if step is commented.")
+        else:
+            if self.gen_comments is not None:
+                raise ValueError(
+                    "gen_comments must be None if step is initialized, rollout, or processed.")
+
     def __hash__(self) -> int:
-        return hash(
-            (self.problem, self.old_code, self.old_tactic_state, self.comment, self.depth, self.header,
-             self.rollout_done, self.processed, self.new_code, self.win, self.dead, self.tactic_state, self.valid_code)
-        )
+        return hash(str(self.human_json()))
 
     def add_child(self, action: int, child: 'LeanGameState'):
-        if not self.processed:
+        if not (self.step >= LeanGameStateStep.PROCESSED):
             raise LeanGameStateError(
                 "Cannot add a child to a LeanGameState if it has not been processed.")
         self.children[action] = child
 
     def terminal(self) -> bool:
-        if not self.processed:
+        if not (self.step >= LeanGameStateStep.PROCESSED):
             raise LeanGameStateError(
                 "Cannot check if a LeanGameState is terminal if it has not been processed.")
         return self.win or self.dead
@@ -194,33 +216,37 @@ class LeanGameState:
                 res += "[Missing newline]\n"
             return res
 
-        if self.rollout_done:
-            if self.processed:
-                status_code = "Fully processed\n"
-            else:
-                status_code = "Rollout done\n"
-        else:
+        if self.step == LeanGameStateStep.INITIALIZED:
             status_code = "Just initialized\n"
+        elif self.step == LeanGameStateStep.ROLLOUT:
+            status_code = "Rollout done\n"
+        elif self.step == LeanGameStateStep.PROCESSED:
+            status_code = "Fully processed\n"
+        elif self.step == LeanGameStateStep.COMMENTED:
+            status_code = "Commented\n"
 
         res += fancy_field("Status", status_code)
         res += fancy_field("Header", self.header)
         res += fancy_field("Problem", self.problem)
         res += fancy_field("Old Code", self.old_code)
         res += fancy_field("Comment", self.comment)
-        if self.processed:
-            res += fancy_field("Valid Truncation of New Code", self.valid_code)
-        elif self.rollout_done:
+        if self.step == LeanGameStateStep.INITIALIZED:
+            res += fancy_field("[New Code will be here]", "\n")
+        elif self.step == LeanGameStateStep.ROLLOUT:
             res += fancy_field("Completed Rollout without Truncation",
                                self.new_code)
         else:
-            res += fancy_field("[New Code will be here]", "\n")
+            res += fancy_field("Valid Truncation of New Code", self.valid_code)
+
+        if self.step == LeanGameStateStep.COMMENTED:
+            res += fancy_field("Generated Comments",
+                               '\n'.join(self.gen_comments))
 
         res += fancy_field("Old Tactic State", self.old_tactic_state)
-        if self.processed:
+        if (self.step >= LeanGameStateStep.PROCESSED):
             res += fancy_field("New Tactic State", self.tactic_state)
 
-        res += fancy_field("Meta", f"Processed: {self.processed}, Rollout Done: {self.rollout_done}\n"
-                           f"Win: {self.win}, Dead: {self.dead}\n"
+        res += fancy_field("Meta", f"Win: {self.win}, Dead: {self.dead}\n"
                            f"Depth: {self.depth} Number of Children: {len(self.children)}\n")
         return res
 
@@ -229,31 +255,42 @@ class LeanGameState:
         Returns a JSON representation of the game state.
         This is meant to be stored alongside game data
         by the workers so that we can debug easier.
+
+        This is also useful for sending LeanGameStates to processes;
+        we probably don't want all the references floating around.
         """
         return {
+            "step": self.step,
             "problem": self.problem,
             "old_code": self.old_code,
             "old_tactic_state": self.old_tactic_state,
             "comment": self.comment,
             "depth": self.depth,
             "header": self.header,
-            "rollout_done": self.rollout_done,
-            "processed": self.processed,
             "new_code": self.new_code,
             "win": self.win,
+            "dead": self.dead,
             "tactic_state": self.tactic_state,
             "valid_code": self.valid_code,
+            "gen_comments": self.gen_comments
         }
 
+    @classmethod
+    def from_json(cls, json: dict) -> 'LeanGameState':
+        """
+        Returns a LeanGameState from a JSON representation.
+        """
+        return cls(**json)
+
     def __str__(self) -> str:
-        return f"LeanGameState({self.problem}, {self.code}, processed = {self.processed})"
+        return f"LeanGameState({self.problem}, {self.code}, step = {self.step})"
 
     def pre_LLM_rollout(self) -> str:
         """
         This function is called before the LLM rollout is done.
         It generates a prompt for the LLM.
         """
-        if self.rollout_done:
+        if (self.step >= LeanGameStateStep.ROLLOUT):
             raise LeanGameStateError(
                 "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
 
@@ -265,26 +302,13 @@ class LeanGameState:
         """
         This function is called after the LLM rollout is done.
         """
-        if self.rollout_done:
+        if (self.step >= LeanGameStateStep.ROLLOUT):
             raise LeanGameStateError(
                 "Should not LLM-post-process a LeanGameState that has already had an LLM rollout.")
         if new_code.endswith('```'):
             new_code = new_code[:-3]
         self.new_code = new_code
-        self.rollout_done = True
-
-    def pre_policy_value(self) -> str:
-        """
-        This function is called before the policy value network is called.
-        It generates a prompt for the policy value network.
-        """
-        if not self.processed:
-            raise LeanGameStateError(
-                "Should not pre-process a LeanGameState that has not been processed.")
-
-        # TODO: make this better.
-
-        return 'Complete the following Lean 4 code.\n```lean\n' + self.header + self.problem + self.old_code + self.comment + self.new_code
+        self.step = LeanGameStateStep.ROLLOUT
 
     def pre_process(self) -> str:
         """
@@ -292,7 +316,7 @@ class LeanGameState:
         It prepares a string query for the lean 4 verifier.
         """
 
-        if self.processed:
+        if (self.step >= LeanGameStateStep.PROCESSED):
             raise LeanGameStateError(
                 "Should not pre-process a LeanGameState that has already been processed.")
 
@@ -422,7 +446,7 @@ class LeanGameState:
             The result of the Lean 4 verification.
 
         """
-        self.processed = True
+        (self.step >= LeanGameStateStep.PROCESSED) = True
 
         if repl_result.get('system_error', False):
             self.tactic_state = ""
@@ -472,6 +496,29 @@ class LeanGameState:
         self.dead = False
         self.win = False
 
+    def post_comments(self, gen_comments: List[str]):
+        """
+        This function is called after the comments are generated.
+        """
+        if (self.step >= LeanGameStateStep.COMMENTED):
+            raise LeanGameStateError(
+                "Should not post-comments a LeanGameState that has already been commented.")
+        self.gen_comments = gen_comments
+        self.step = LeanGameStateStep.COMMENTED
+
+    # def pre_policy_value(self) -> str:
+        # """
+        # This function is called before the policy value network is called.
+        # It generates a prompt for the policy value network.
+        # """
+        # if not (self.step >= LeanGameStateStep.PROCESSED):
+        #     raise LeanGameStateError(
+        #         "Should not pre-process a LeanGameState that has not been processed.")
+
+        # # TODO: make this better.
+
+        # return 'Complete the following Lean 4 code.\n```lean\n' + self.header + self.problem + self.old_code + self.comment + self.new_code
+
     def code(self) -> str:
         """
         Returns the full code of the state.
@@ -482,7 +529,7 @@ class LeanGameState:
         str
             The full code of the state.
         """
-        if not self.processed:
+        if not (self.step >= LeanGameStateStep.PROCESSED):
             raise LeanGameStateError(
                 "Cannot get the code of a LeanGameState that has not been processed.")
         return ''.join(
@@ -515,7 +562,7 @@ class LeanGame(Game[LeanGameState]):
     """
 
     def __init__(self,
-                 comment_seeds: List[str],
+                 num_comment_seeds: int,
                  max_depth: Optional[int] = 50,
                  max_completion_len: int = 4000):
         """
@@ -530,15 +577,14 @@ class LeanGame(Game[LeanGameState]):
 
         Parameters
         ----------
-        comment_seeds: List[str]
-            The list of comments that can be used as actions.
+        num_comment_seeds: int
+            The number of comment seeds.
         max_depth: Optional[int]
             The maximum depth of the proof.
         max_completion_len: int
             The maximum length of the completion.
         """
-        self.comment_seeds = comment_seeds or []
-        self.num_comment_seeds = len(comment_seeds)
+        self.num_comment_seeds = num_comment_seeds
         self.max_depth = max_depth
 
         self.max_completion_len = max_completion_len
@@ -581,6 +627,13 @@ class LeanGame(Game[LeanGameState]):
         """
         Returns the next state of the game given a current state and action.
         Requires that the state is non-terminal and action is legal.
+
+        Parameters
+        ----------
+        state: LeanGameState
+            The current state of the game.
+        action: int
+            The action to be taken.
         """
 
         if action in state.children:
@@ -591,11 +644,11 @@ class LeanGame(Game[LeanGameState]):
             raise LeanGameStateError(
                 "Cannot get the next state of a LeanGameState that has not been processed.")
 
+        comment = state.generated_comments[action]
+
         if state.terminal():
             raise LeanGameStateError(
                 "Cannot get the next state of a terminal LeanGameState.")
-
-        comment = self.comment_seeds[action]
 
         new_state = LeanGameState(
             problem=state.problem,

@@ -8,6 +8,34 @@ from typing import Dict
 from vllm import LLM, SamplingParams
 
 
+def suggest_comments_prompts(lean_game_dict: Dict, num: int = 5) -> str:
+    """
+    Generate a prompt for the policy-value worker to suggest comments.
+    """
+    res = """This is a partial Lean 4 proof.
+```lean4
+"""
+    res += lean_game_dict['header'] + \
+        lean_game_dict['problem'] + lean_game_dict['old_code']
+    res += """
+```
+Here is the tactic state at this point:
+```lean4
+"""
+    res += lean_game_dict['tactic_state']
+    res += f"""
+```
+Please summarize the current tactic state of the proof. Then, please discuss whether or not the proof is on the right track; are we making progress? Are we stuck? Are we going in the wrong direction or repeating ourselves?
+"""
+
+    # We should call the LLM now.
+
+    res_2 = f"""Now, please suggest {num} ideas to complete the proof. Please delimit each idea with <IDEA></IDEA> tags.
+Finally, rate the likelihood that this proof will succeed on a scale of 1 (very unlikely) to 10 (very likely). Please delimit this rating with <RATING></RATING> tags.
+"""
+    return [res, res_2]
+
+
 def main(
         task_id: int,
         num_tasks: int,
@@ -49,7 +77,7 @@ def main(
         #   'worker_id': int, # The worker task id that generated this task.
         #   'task_id': int, # The specific completion task id of this task.
         #   'task_input': str # The task to complete, a string prompt.
-        #   'task': str # Should always be 'policy_value'
+        #   'task': dict
         # }
         while len(my_tasks) < policy_value_batch_size:
             try:
