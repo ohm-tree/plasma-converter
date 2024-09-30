@@ -166,18 +166,23 @@ if __name__ == "__main__":
 
         if all([not v for v in workers_alive.values()]):
             # All workers are done
+            print("All workers are done.")
             break
         if any([not v for v in completion_alive.values()]):
             # One of the completion processes has died
+            print("One of the completion processes has died.")
             break
         if any([not v for v in lean_alive.values()]):
             # One of the lean processes has died
+            print("One of the lean processes has died.")
             break
         if any([not v for v in policy_value_alive.values()]):
             # One of the policy_value processes has died
+            print("One of the policy_value processes has died.")
             break
         if any([not v for v in context_alive.values()]):
             # One of the context processes has died
+            print("One of the context processes has died.")
             break
 
         time.sleep(1)

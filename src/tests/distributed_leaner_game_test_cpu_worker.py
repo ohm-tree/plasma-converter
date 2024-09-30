@@ -33,9 +33,9 @@ def main(
     json_name: str,
     master_queue: multiprocessing.Queue,
     worker_queue: multiprocessing.Queue,
-    completion_queue: multiprocessing.Queue,
-    lean_queue: multiprocessing.Queue,
-    context_queue: multiprocessing.Queue
+    global_completion_queue: multiprocessing.Queue,
+    global_lean_queue: multiprocessing.Queue,
+    global_context_queue: multiprocessing.Queue
 ):
 
     # give myself a custom logging file.
@@ -65,7 +65,7 @@ def main(
             tactic_state=tactic_state
         )
 
-        context_queue.put(
+        global_context_queue.put(
             {
                 'mcts_worker_id': task_id,
                 # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
@@ -108,7 +108,7 @@ def main(
             #   'task': str # The task to complete, a string prompt.
             #   'type': str # Should be 'completion'
             # }
-            completion_queue.put({
+            global_completion_queue.put({
                 'mcts_worker_id': task_id,
                 # In this test, we will only have one completion task ever and the cpu workers will spin on the outputs.
                 'completion_task_id': 0,
@@ -140,7 +140,7 @@ def main(
             #   'type': str # Should be 'lean'
             # }
 
-            lean_queue.put({
+            global_lean_queue.put({
                 'mcts_worker_id': task_id,
                 # In this test, we will only have one lean task ever and the cpu workers will spin on the outputs.
                 'lean_task_id': 0,
@@ -163,7 +163,7 @@ def main(
             assert lean_output['lean_task_id'] == 0
             state.post_process(lean_output['result'])
 
-            context_queue.put(
+            global_context_queue.put(
                 {
                     'mcts_worker_id': task_id,
                     # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
@@ -193,8 +193,8 @@ def main(
                 f"Received value: {context_output['task_output']['value']}")
 
         # save the human printout to a file
-        os.makedirs("outputs", exist_ok=True)
-        with open(f"outputs/{problem['name']}.txt", 'w') as file:
+        os.makedirs("outputs/distributed_run/", exist_ok=True)
+        with open(f"outputs/distributed_run/{problem['name']}.txt", 'w') as file:
             file.write(state.human_printout())
 
         logger.info(f"Finished problem {problem['name']} result: {state.win}")
