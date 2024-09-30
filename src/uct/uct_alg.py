@@ -17,7 +17,7 @@ from src.uct.uct_node import UCTNode
 
 def uct_search(
     worker_id: int,
-    queue: multiprocessing.Queue,
+    worker_queue: multiprocessing.Queue,
     completion_queue: multiprocessing.Queue,
     context_queue: multiprocessing.Queue,
     lean_queue: multiprocessing.Queue,
@@ -86,8 +86,8 @@ def uct_search(
 
         # Load any results from the completion queue, lean queue, and context_queue.
         # and enqueue them all to the lean_queue and context_queue.
-        while not queue.empty():
-            result = queue.get()
+        while not worker_queue.empty():
+            result = worker_queue.get()
             if result['type'] == 'completion':
                 # Find the node that requested this completion.
                 node: UCTNode = completion_waiting[result['task_id']]

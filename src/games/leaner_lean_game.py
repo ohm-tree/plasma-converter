@@ -302,9 +302,9 @@ class LeanGameState:
             raise LeanGameStateError(
                 "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
 
-        return 'Complete the following Lean 4 code.\nHere is a hint:\n' + self.comment + \
+        return 'Complete the following Lean 4 code.\nHere is a hint:\n' + self.comment.strip() + \
             '\nThe tactic state is:\n' + \
-            self.old_tactic_state+'\n```lean\n' + self.header + self.problem + \
+            self.old_tactic_state.strip()+'\n```lean\n' + self.header + self.problem + \
             self.old_code
 
     def post_LLM_rollout(self, new_code: str):

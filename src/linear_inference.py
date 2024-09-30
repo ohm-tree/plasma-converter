@@ -13,14 +13,16 @@ from src.workers.policy_value_worker import policy_value_main as policy_value_pr
 
 # todo: make this a config file.
 distributed_config = {
-    'num_worker_procs': 24,
-    'num_completion_procs': 2,
-    'num_context_procs': 1,
+    'num_worker_procs': 122,
+    'num_completion_procs': 1,
+    'num_context_procs': 2,
     'num_policy_value_procs': 1,
     'num_lean_procs': 24,
 }
 
 json_name = "config"  # todo: make this a config file.
+timestamp = time.strftime("%Y%m%d-%H%M%S")
+run_name = "linear_inference_" + timestamp
 
 if __name__ == "__main__":
     # task-specific queues
@@ -59,6 +61,7 @@ if __name__ == "__main__":
 
     # Create inference processes
     inference_procs = [multiprocessing.Process(target=inference_process, kwargs={
+        'run_name': run_name,
         'task_id': i,
         'num_tasks': distributed_config['num_worker_procs'],
         'json_name': json_name,
@@ -71,6 +74,7 @@ if __name__ == "__main__":
     ) for i in range(distributed_config['num_worker_procs'])]
 
     completion_procs = [multiprocessing.Process(target=completion_process, kwargs={
+        'run_name': run_name,
         'completion_worker_id': i,
         'num_completion_workers': distributed_config['num_completion_procs'],
         'json_name': json_name,
@@ -79,7 +83,7 @@ if __name__ == "__main__":
         'completion_queue': completion_queues[i],
         'worker_queues': worker_queues,
         'global_completion_queue': global_completion_queue,
-        'completion_batch_size': 100,
+        'completion_batch_size': 100,  # These run super fast.
         'custom_eos': ["\n", "```"]
     }
     )
@@ -88,6 +92,7 @@ if __name__ == "__main__":
     gpu_offset = 2 * distributed_config['num_completion_procs']
 
     policy_value_procs = [multiprocessing.Process(target=policy_value_process, kwargs={
+        'run_name': run_name,
         'policy_value_worker_id': i,
         'num_policy_value_workers': distributed_config['num_policy_value_procs'],
         'json_name': json_name,
@@ -96,13 +101,14 @@ if __name__ == "__main__":
         'policy_value_queue': policy_value_queues[i],
         'worker_queues': worker_queues,
         'global_policy_value_queue': global_policy_value_queue,
-        'policy_value_batch_size': 100
+        'policy_value_batch_size': 40
     })
         for i in range(distributed_config['num_policy_value_procs'])]
 
     gpu_offset += 2 * distributed_config['num_policy_value_procs']
 
     context_procs = [multiprocessing.Process(target=context_process, kwargs={
+        'run_name': run_name,
         'context_worker_id': i,
         'num_context_workers': distributed_config['num_context_procs'],
         'json_name': json_name,
@@ -111,11 +117,12 @@ if __name__ == "__main__":
         'context_queue': context_queues[i],
         'global_context_queue': global_context_queue,
         'global_policy_value_queue': global_policy_value_queue,
-        'context_batch_size': 100
+        'context_batch_size': 40
     })
         for i in range(distributed_config['num_context_procs'])]
 
     lean_procs = [multiprocessing.Process(target=lean_process, kwargs={
+        'run_name': run_name,
         'task_id': i,
         'num_tasks': distributed_config['num_lean_procs'],
         'json_name': json_name,

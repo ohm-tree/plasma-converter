@@ -104,6 +104,7 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
 
 
 def context_main(
+        run_name: str,
         context_worker_id: int,
         num_context_workers: int,
         json_name: str,
@@ -122,10 +123,11 @@ def context_main(
     """
 
     # give myself a custom logging file.
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(f"logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(f"logs/context_worker_{context_worker_id}.log")
+    fh = logging.FileHandler(
+        f"logs/{run_name}/context_worker_{context_worker_id}.log")
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
@@ -150,7 +152,7 @@ def context_main(
               tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
-        max_tokens=4096,
+        max_tokens=1024,
         temperature=0.0,
         top_k=1,
         top_p=1.0
@@ -163,7 +165,7 @@ def context_main(
     while True:
         # check my personal queue for blood.
         # found_blood = False
-        # kill = False
+        kill = False
         while True:
             try:
                 blood = context_queue.get_nowait()
@@ -195,6 +197,14 @@ def context_main(
         #   'task_input': dict # The task to complete, which is a lean_game_dict.
         #   'type': dict
         # }
+        try:
+            new_task = global_context_queue.get(timeout=30)
+        except queue.Empty:
+            pass
+        else:
+            assert new_task['type'] == 'context'
+            my_tasks.append(new_task)
+
         while len(my_tasks) < context_batch_size:
             try:
                 new_task = global_context_queue.get_nowait()
@@ -202,31 +212,31 @@ def context_main(
                 break
             assert new_task['type'] == 'context'
             my_tasks.append(new_task)
-        logger.info(f"Received {len(my_tasks)} tasks.")
+
+        logger.info(f"Context Worker Received {len(my_tasks)} tasks.")
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
-            time.sleep(1)
-        else:
-            # We have tasks to complete.
-            input_data = [
-                construct_context(my_tasks[i]['task_input'])
-                for i in range(len(my_tasks))
-            ]
-            outputs = llm.generate(
-                input_data,
-                sampling_params=sampling_params
-            )
+            continue
+        # We have tasks to complete.
+        input_data = [
+            construct_context(my_tasks[i]['task_input'])
+            for i in range(len(my_tasks))
+        ]
+        outputs = llm.generate(
+            input_data,
+            sampling_params=sampling_params
+        )
 
-            for i in range(len(outputs)):
-                result = {
-                    'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
-                    'task_id': my_tasks[i]['task_id'],
-                    'task_input': my_tasks[i]['task_input'],
-                    'task_context': outputs[i].outputs[0].text,
-                    'type': 'policy_value'
-                }
-                logger.info(str(result))
-                global_policy_value_queue.put(result)
+        for i in range(len(outputs)):
+            result = {
+                'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
+                'task_id': my_tasks[i]['task_id'],
+                'task_input': my_tasks[i]['task_input'],
+                'task_context': outputs[i].outputs[0].text,
+                'type': 'policy_value'
+            }
+            logger.info(str(result))
+            global_policy_value_queue.put(result)
     # send a signal to the master queue that we are dead.
     master_queue.put({
         'name': 'context',
@@ -242,6 +252,7 @@ def context_main(
 
 
 def policy_value_main(
+        run_name: str,
         policy_value_worker_id: int,
         num_policy_value_workers: int,
         json_name: str,
@@ -260,11 +271,11 @@ def policy_value_main(
     """
 
     # give myself a custom logging file.
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(f"logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
-        f"logs/policy_value_worker_{policy_value_worker_id}.log")
+        f"logs/{run_name}/policy_value_worker_{policy_value_worker_id}.log")
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
@@ -289,7 +300,7 @@ def policy_value_main(
               tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
-        max_tokens=4096,
+        max_tokens=512,
         temperature=0.0,
         top_k=1,
         top_p=1.0
@@ -317,7 +328,7 @@ def policy_value_main(
                 # bloodline = time.time()
 
         if kill:
-            logger.info("Kill signal received. Dying.")
+            logger.fatal("Kill signal received. Dying.")
             break
         # if ((not found_blood) and time.time() < bloodline + 60 * 15):
         #     # If I haven't received a signal that other processes are
@@ -334,6 +345,13 @@ def policy_value_main(
         #   'task_input': str # The task to complete, a string prompt.
         #   'type': dict
         # }
+        try:
+            new_task = global_policy_value_queue.get(timeout=30)
+        except queue.Empty:
+            pass
+        else:
+            assert new_task['type'] == 'policy_value'
+            my_tasks.append(new_task)
         while len(my_tasks) < policy_value_batch_size:
             try:
                 new_task = global_policy_value_queue.get_nowait()
@@ -342,37 +360,36 @@ def policy_value_main(
             assert new_task['type'] == 'policy_value'
             my_tasks.append(new_task)
 
-        logger.info(f"Received {len(my_tasks)} tasks.")
+        logger.info(f"PV Worker received {len(my_tasks)} tasks.")
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
-            time.sleep(1)
-        else:
-            # We have tasks to complete.
-            input_data = [
-                policy_value_suggest_comments(
-                    my_tasks[i]['task_input'],
-                    my_tasks[i]['task_context']
-                )
-                for i in range(len(my_tasks))
-            ]
-            outputs = llm.generate(
-                input_data,
-                sampling_params=sampling_params
+            continue
+        # We have tasks to complete.
+        input_data = [
+            policy_value_suggest_comments(
+                my_tasks[i]['task_input'],
+                my_tasks[i]['task_context']
             )
+            for i in range(len(my_tasks))
+        ]
+        outputs = llm.generate(
+            input_data,
+            sampling_params=sampling_params
+        )
 
-            for i in range(len(outputs)):
-                res = parse_policy_value_output(
-                    outputs[i].outputs[0].text, logger)
+        for i in range(len(outputs)):
+            res = parse_policy_value_output(
+                outputs[i].outputs[0].text, logger)
 
-                result = {
-                    'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
-                    'task_id': my_tasks[i]['task_id'],
-                    'task_output': res,
-                    'type': 'policy_value'
-                }
-                logger.info(str(result))
+            result = {
+                'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
+                'task_id': my_tasks[i]['task_id'],
+                'task_output': res,
+                'type': 'policy_value'
+            }
+            logger.info(str(result))
 
-                worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
+            worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
 
     # send a signal to the master queue that we are dead.
     master_queue.put({

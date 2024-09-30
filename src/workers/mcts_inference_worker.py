@@ -28,6 +28,7 @@ with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
 
 
 def main(
+    run_name: str,
     task_id: int,
     num_tasks: int,
     json_name: str,
@@ -39,13 +40,13 @@ def main(
 ):
 
     # give myself a custom logging file.
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(f"logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
-        f"logs/distributed_leaner_game_test_cpu_worker_{task_id}.log")
+        f"logs/{run_name}/mcts_inference_worker_{task_id}.log")
     logger.addHandler(fh)
-    logger.info(f"Starting distributed_leaner_game_test_cpu_worker {task_id}.")
+    logger.info(f"Starting mcts_inference_worker {task_id}.")
 
     for current_problem in range(task_id, len(data), num_tasks):
         logger.info(f"Worker {task_id} working on problem {current_problem}")
@@ -90,8 +91,9 @@ def main(
         assert context_output['task_id'] == 0
         state.post_comments(context_output['task_output']['comments'])
         logger.info(
-            f"Received policy: {context_output['task_output']['policy']}")
-        logger.info("Received value: {context_output['task_output']['value']}")
+            f"MCTS Inference Worker Received policy: {context_output['task_output']['policy']}")
+        logger.info(
+            f"MCTS Inference Worker Received value: {context_output['task_output']['value']}")
         # first, we need to comment the state right away.
 
         while not game.is_terminal(state):
@@ -188,9 +190,9 @@ def main(
             assert context_output['task_id'] == 0
             state.post_comments(context_output['task_output']['comments'])
             logger.info(
-                f"Received policy: {context_output['task_output']['policy']}")
+                f"MCTS Inference Worker Received policy: {context_output['task_output']['policy']}")
             logger.info(
-                f"Received value: {context_output['task_output']['value']}")
+                f"MCTS Inference Worker Received value: {context_output['task_output']['value']}")
 
         # save the human printout to a file
         os.makedirs("outputs", exist_ok=True)

@@ -11,6 +11,7 @@ from vllm import LLM, SamplingParams
 
 
 def main(
+        run_name: str,
         completion_worker_id: int,
         num_completion_workers: int,
         json_name: str,
@@ -27,11 +28,11 @@ def main(
     """
 
     # give myself a custom logging file.
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(f"logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
-        f"logs/completion_worker_{completion_worker_id}.log")
+        f"logs/{run_name}/completion_worker_{completion_worker_id}.log")
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
@@ -89,7 +90,7 @@ def main(
     #         "You probably need to add a new device to the list of supported devices.")
 
     sampling_params = SamplingParams(
-        max_tokens=4096,
+        max_tokens=512,
         temperature=0.0,
         top_k=1,
         top_p=1.0,
@@ -115,41 +116,47 @@ def main(
         #   'task': str # The task to complete, a string prompt.
         #   'type': str # Should be 'completion'
         # }
+        try:
+            new_task = global_completion_queue.get(timeout=30)
+        except queue.Empty:
+            pass
+        else:
+            assert new_task['type'] == 'completion'
+            my_tasks.append(new_task)
+
         while len(my_tasks) < completion_batch_size:
             try:
-                my_tasks.append(global_completion_queue.get_nowait())
+                task = global_completion_queue.get_nowait()
             except queue.Empty:
                 break
-
-        for task in my_tasks:
             assert task['type'] == 'completion'
+            my_tasks.append(task)
 
         logger.info(
             f"Worker {completion_worker_id} received {len(my_tasks)} tasks.")
 
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
-            time.sleep(1)
-        else:
-            # We have tasks to complete.
-            input_data = [
-                my_tasks[i]['task']
-                for i in range(len(my_tasks))
-            ]
-            outputs = llm.generate(
-                input_data,
-                sampling_params=sampling_params
-            )
-            for i in range(len(outputs)):
-                result = {
-                    'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
-                    'completion_task_id': my_tasks[i]['completion_task_id'],
-                    'output': outputs[i].outputs[0].text,
-                    'type': 'completion'
-                }
-                logger.info(str(result))
+            continue
+        # We have tasks to complete.
+        input_data = [
+            my_tasks[i]['task']
+            for i in range(len(my_tasks))
+        ]
+        outputs = llm.generate(
+            input_data,
+            sampling_params=sampling_params
+        )
+        for i in range(len(outputs)):
+            result = {
+                'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
+                'completion_task_id': my_tasks[i]['completion_task_id'],
+                'output': outputs[i].outputs[0].text,
+                'type': 'completion'
+            }
+            logger.info(str(result))
 
-                worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
+            worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
 
     destroy_model_parallel()
     destroy_distributed_environment()

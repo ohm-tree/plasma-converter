@@ -8,23 +8,24 @@ It also contains a larger function which generates a dataset of self-play games.
 """
 
 import multiprocessing
+import queue
 from typing import Any, List, Tuple
 
 import numpy as np
 from tqdm import tqdm
 
-from src.games.game import Game, GameState
+from src.games.leaner_lean_game import LeanGame, LeanGameState
 from src.policies.policy import Policy
 from src.uct.uct_alg import uct_search
 from src.uct.uct_node import UCTNode
 
 
-def self_play(worker_id: int, state: GameState, game: Game, num_iters: int,
-              queue: multiprocessing.Queue,
+def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: int,
+              worker_queue: multiprocessing.Queue,
               completion_queue: multiprocessing.Queue,
               context_queue: multiprocessing.Queue,
               lean_queue: multiprocessing.Queue,
-              ) -> Tuple[List[GameState], List[np.ndarray], float]:
+              ) -> Tuple[List[LeanGameState], List[np.ndarray], float]:
     """
     Play a game using a policy, and return the game states, action distributions, and final reward.
     """
@@ -33,6 +34,32 @@ def self_play(worker_id: int, state: GameState, game: Game, num_iters: int,
     distributions: List[np.ndarray] = []
 
     move_count = 0
+
+    # Edge case: on the very first move, the completions are not available yet.
+    # Send those in.
+
+    context_queue.put(
+        {
+            'mcts_worker_id': worker_id,
+            'task_id': 0,
+            'task_input': state.pre_comments(),
+            'type': 'context'
+        }
+    )
+
+    context_output = None
+    while context_output is None:
+        try:
+            context_output = worker_queue.get_nowait()
+        except queue.Empty:
+            context_output = None
+            pass
+
+    assert context_output['type'] == 'policy_value'
+    assert context_output['task_id'] == 0
+    state.post_comments(context_output['task_output']['comments'])
+
+    # first, we need to comment the state right away.
 
     while not game.is_terminal(state):
         states.append(state)
@@ -46,7 +73,7 @@ def self_play(worker_id: int, state: GameState, game: Game, num_iters: int,
 
         distribution, _ = uct_search(
             worker_id,
-            queue=queue,
+            worker_queue=worker_queue,
             completion_queue=completion_queue,
             context_queue=context_queue,
             lean_queue=lean_queue,

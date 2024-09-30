@@ -93,21 +93,23 @@ def setup_repl():
 
 
 def main(
+        run_name: str,
         task_id: int,
         num_tasks: int,
         json_name: str,
         master_queue: multiprocessing.Queue,
-        worker_queues: Dict[int, multiprocessing.Queue],
         lean_queue: multiprocessing.Queue,
+        worker_queues: Dict[int, multiprocessing.Queue],
+        global_lean_queue: multiprocessing.Queue,
 ):
     """
     Entry point for the lean worker process.
     """
     # give myself a custom logging file.
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(f"logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(f"logs/lean_worker_{task_id}.log")
+    fh = logging.FileHandler(f"logs/{run_name}/lean_worker_{task_id}.log")
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
@@ -119,14 +121,15 @@ def main(
         # check for kill signals from the master queue.
         try:
             kill_signal = master_queue.get_nowait()
-            print(f"Worker {task_id} received kill signal: {kill_signal}")
+            logger.fatal(
+                f"Worker {task_id} received kill signal: {kill_signal}")
             if kill_signal == "kill":
                 break
         except queue.Empty:
             pass
 
         try:
-            input_data = lean_queue.get(timeout=3)
+            input_data = global_lean_queue.get(timeout=30)
             # tasks should take the form
             # {
             #   'mcts_worker_id': int, # The worker task id that generated this task.
@@ -136,38 +139,38 @@ def main(
             # }
             assert input_data['type'] == 'lean'
 
+        except queue.Empty:
+            continue
+
+        result = send_code_read_json({
+            "cmd": input_data['task'],
+            "allTactics": True,
+            "tactics": True,
+            "env": 0
+        }, _child=child)
+        # if result is error, try restarting the repl.
+        if 'system_error' in result:
+            logger.error(
+                f"Error in send_code_read_json: {result['system_error']}")
+            try:
+                child.close()
+            except:
+                pass
+            child = setup_repl()
             result = send_code_read_json({
                 "cmd": input_data['task'],
                 "allTactics": True,
                 "tactics": True,
                 "env": 0
             }, _child=child)
-            # if result is error, try restarting the repl.
-            if 'system_error' in result:
-                logger.error(
-                    f"Error in send_code_read_json: {result['system_error']}")
-                try:
-                    child.close()
-                except:
-                    pass
-                child = setup_repl()
-                result = send_code_read_json({
-                    "cmd": input_data['task'],
-                    "allTactics": True,
-                    "tactics": True,
-                    "env": 0
-                }, _child=child)
 
-            result = {
-                'mcts_worker_id': input_data['mcts_worker_id'],
-                'lean_task_id': input_data['lean_task_id'],
-                'result': result,
-                'type': 'lean'
-            }
-            worker_queues[input_data['mcts_worker_id']].put(
-                result
-            )
-            logger.info(str(result))
-
-        except queue.Empty:
-            time.sleep(1)
+        result = {
+            'mcts_worker_id': input_data['mcts_worker_id'],
+            'lean_task_id': input_data['lean_task_id'],
+            'result': result,
+            'type': 'lean'
+        }
+        worker_queues[input_data['mcts_worker_id']].put(
+            result
+        )
+        logger.info(str(result))
