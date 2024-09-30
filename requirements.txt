@@ -13,3 +13,6 @@ accelerate==0.33.0
 # Jupyter notebooks
 jupyter==1.1.1
 jupyterlab==4.2.5
+
+# training runs
+wandb
