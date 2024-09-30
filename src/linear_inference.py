@@ -5,11 +5,11 @@ In this file, we will let a human play a game of Lean (using modal).
 import multiprocessing
 import time
 
-from src.completion_worker import main as completion_process  # lean_worker entry point
-from src.lean_worker import main as lean_process  # lean_worker entry point
-from src.policy_value_worker import context_main as context_process
-from src.policy_value_worker import policy_value_main as policy_value_process
-from src.tests.distributed_leaner_game_test_cpu_worker import main as inference_process
+from src.workers.completion_worker import main as completion_process
+from src.workers.lean_worker import main as lean_process  # lean_worker entry point
+from src.workers.linear_inference_worker import main as inference_process
+from src.workers.policy_value_worker import context_main as context_process
+from src.workers.policy_value_worker import policy_value_main as policy_value_process
 
 # todo: make this a config file.
 distributed_config = {
