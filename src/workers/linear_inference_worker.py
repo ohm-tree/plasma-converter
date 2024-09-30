@@ -2,29 +2,7 @@
 In this file, we will let a human play a game of Lean (using modal).
 """
 
-import json
-import logging
 import multiprocessing
-import os
-import queue
-import time
-
-from src.games.leaner_lean_game import LeanGame, LeanGameState
-
-# setup logging
-logging.basicConfig(level=logging.INFO)
-
-
-HOME_DIR = os.path.expanduser('~')
-print("HOME_DIR", HOME_DIR)
-
-with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
-    # Each line in the file is a separate JSON object
-    data = [json.loads(line.strip()) for line in file.readlines()]
-
-# comments = None
-# with open("src/sample-data/comments.txt", 'r') as file:
-#     comments = [line.strip() for line in file.readlines()]
 
 
 def main(
@@ -38,6 +16,20 @@ def main(
     global_lean_queue: multiprocessing.Queue,
     global_context_queue: multiprocessing.Queue
 ):
+    import json
+    import logging
+    import os
+    import queue
+    import time
+
+    from src.games.leaner_lean_game import LeanGame, LeanGameState
+
+    HOME_DIR = os.path.expanduser('~')
+    print("HOME_DIR", HOME_DIR)
+
+    with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
+        # Each line in the file is a separate JSON object
+        data = [json.loads(line.strip()) for line in file.readlines()]
 
     # give myself a custom logging file.
     os.makedirs(f"logs/{run_name}", exist_ok=True)

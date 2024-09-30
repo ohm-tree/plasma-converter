@@ -2,29 +2,7 @@
 In this file, we will let a human play a game of Lean (using modal).
 """
 
-import json
-import logging
 import multiprocessing
-import os
-import queue
-import time
-
-from src.games.leaner_lean_game import LeanGame, LeanGameState
-
-# setup logging
-logging.basicConfig(level=logging.INFO)
-
-
-HOME_DIR = os.path.expanduser('~')
-print("HOME_DIR", HOME_DIR)
-
-with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
-    # Each line in the file is a separate JSON object
-    data = [json.loads(line.strip()) for line in file.readlines()]
-
-# comments = None
-# with open("src/sample-data/comments.txt", 'r') as file:
-#     comments = [line.strip() for line in file.readlines()]
 
 
 def main(
@@ -34,19 +12,38 @@ def main(
     json_name: str,
     master_queue: multiprocessing.Queue,
     worker_queue: multiprocessing.Queue,
-    completion_queue: multiprocessing.Queue,
-    lean_queue: multiprocessing.Queue,
-    context_queue: multiprocessing.Queue
+    global_completion_queue: multiprocessing.Queue,
+    global_lean_queue: multiprocessing.Queue,
+    global_context_queue: multiprocessing.Queue
 ):
+    import json
+    import logging
+    import os
+
+    import numpy as np
+
+    from src.games.leaner_lean_game import LeanGame, LeanGameState
+    from src.train.self_play import self_play
+
+    HOME_DIR = os.path.expanduser('~')
+    print("HOME_DIR", HOME_DIR)
+
+    with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
+        # Each line in the file is a separate JSON object
+        data = [json.loads(line.strip()) for line in file.readlines()]
+
+    # comments = None
+    # with open("src/sample-data/comments.txt", 'r') as file:
+    #     comments = [line.strip() for line in file.readlines()]
 
     # give myself a custom logging file.
     os.makedirs(f"logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
-        f"logs/{run_name}/mcts_inference_worker_{task_id}.log")
+        f"logs/{run_name}/linear_inference_worker_{task_id}.log")
     logger.addHandler(fh)
-    logger.info(f"Starting mcts_inference_worker {task_id}.")
+    logger.info(f"Starting linear_inference_worker {task_id}.")
 
     for current_problem in range(task_id, len(data), num_tasks):
         logger.info(f"Worker {task_id} working on problem {current_problem}")
@@ -66,140 +63,36 @@ def main(
             tactic_state=tactic_state
         )
 
-        context_queue.put(
-            {
-                'mcts_worker_id': task_id,
-                # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
-                'task_id': 0,
-                'task_input': state.pre_comments(),
-                'type': 'context'
-            }
+        states, distributions, rewards = self_play(
+            worker_id=task_id,
+            state=state,
+            game=game,
+            num_iters=100,
+            worker_queue=worker_queue,
+            completion_queue=global_completion_queue,
+            context_queue=global_context_queue,
+            lean_queue=global_lean_queue
         )
 
-        time_to_context = -time.time()
-        context_output = None
-        while context_output is None:
-            try:
-                context_output = worker_queue.get_nowait()
-            except queue.Empty:
-                context_output = None
-                pass
+        game_data_path = f"data/{run_name}/games/{task_id}"
 
-        time_to_context += time.time()
-        logger.info(f"Time to context: {time_to_context}")
-        assert context_output['type'] == 'policy_value'
-        assert context_output['task_id'] == 0
-        state.post_comments(context_output['task_output']['comments'])
-        logger.info(
-            f"MCTS Inference Worker Received policy: {context_output['task_output']['policy']}")
-        logger.info(
-            f"MCTS Inference Worker Received value: {context_output['task_output']['value']}")
-        # first, we need to comment the state right away.
+        LeanGameState.saves(states, os.path.join(
+            game_data_path, f"{problem['name']}_states.npy"))
 
-        while not game.is_terminal(state):
-            logger.info(state.human_printout())
-            action = 0
-            state = game.next_state(state, action)
-
-            input_data = state.pre_LLM_rollout()
-
-            # tasks should take the form
-            # {
-            #   'worker_id': int, # The worker task id that generated this task.
-            #   'completion_task_id': int, # The specific completion task id of this task.
-            #   'task': str # The task to complete, a string prompt.
-            #   'type': str # Should be 'completion'
-            # }
-            completion_queue.put({
-                'mcts_worker_id': task_id,
-                # In this test, we will only have one completion task ever and the cpu workers will spin on the outputs.
-                'completion_task_id': 0,
-                'task': input_data,
-                'type': 'completion'
-            })
-            time_to_completion = -time.time()
-            completion_output = None
-            while completion_output is None:
-                try:
-                    completion_output = worker_queue.get_nowait()
-                except queue.Empty:
-                    completion_output = None
-                    pass
-
-            time_to_completion += time.time()
-            logger.info(f"Time to completion: {time_to_completion}")
-            assert completion_output['type'] == 'completion'
-            assert completion_output['completion_task_id'] == 0
-
-            output = completion_output['output'] + "\n"
-            state.post_LLM_rollout(output)
-            lean4_input = state.pre_process()
-            # tasks should take the form
-            # {
-            #   'worker_id': int, # The worker task id that generated this task.
-            #   'lean_task_id': int, # The specific lean task id of this task.
-            #   'task': str # The task to complete, a string prompt.
-            #   'type': str # Should be 'lean'
-            # }
-
-            lean_queue.put({
-                'mcts_worker_id': task_id,
-                # In this test, we will only have one lean task ever and the cpu workers will spin on the outputs.
-                'lean_task_id': 0,
-                'task': lean4_input,
-                'type': 'lean'
-            })
-
-            time_to_lean = -time.time()
-            lean_output = None
-            while lean_output is None:
-                try:
-                    lean_output = worker_queue.get_nowait()
-                except queue.Empty:
-                    lean_output = None
-                    pass
-
-            time_to_lean += time.time()
-            logger.info(f"Time to lean: {time_to_lean}")
-            assert lean_output['type'] == 'lean'
-            assert lean_output['lean_task_id'] == 0
-            state.post_process(lean_output['result'])
-
-            context_queue.put(
-                {
-                    'mcts_worker_id': task_id,
-                    # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
-                    'task_id': 0,
-                    'task_input': state.pre_comments(),
-                    'type': 'context'
-                }
-            )
-
-            time_to_context = -time.time()
-            context_output = None
-            while context_output is None:
-                try:
-                    context_output = worker_queue.get_nowait()
-                except queue.Empty:
-                    context_output = None
-                    pass
-
-            time_to_context += time.time()
-            logger.info(f"Time to context: {time_to_context}")
-            assert context_output['type'] == 'policy_value'
-            assert context_output['task_id'] == 0
-            state.post_comments(context_output['task_output']['comments'])
-            logger.info(
-                f"MCTS Inference Worker Received policy: {context_output['task_output']['policy']}")
-            logger.info(
-                f"MCTS Inference Worker Received value: {context_output['task_output']['value']}")
+        with open(os.path.join(game_data_path, f"{problem['name']}_distributions.npy"), "wb") as file:
+            # Don't allow pickle, I want this to be a numpy array for sure.
+            np.save(file, distributions, allow_pickle=False)
+        with open(os.path.join(game_data_path, f"{problem['name']}_outcomes.npy"), "wb") as file:
+            # Don't allow pickle, I want this to be a numpy array for sure.
+            np.save(file, rewards, allow_pickle=False)
 
         # save the human printout to a file
-        os.makedirs("outputs", exist_ok=True)
-        with open(f"outputs/{problem['name']}.txt", 'w') as file:
-            file.write(state.human_printout())
+        os.makedirs(f"outputs/{run_name}/", exist_ok=True)
+        with open(f"outputs/{run_name}/{problem['name']}.txt", 'w') as file:
+            file.write(states[-1].human_printout())
 
         logger.info(f"Finished problem {problem['name']} result: {state.win}")
+
     # tell the master queue that we are done with all tasks.
     master_queue.put(
         {

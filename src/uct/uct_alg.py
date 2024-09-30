@@ -40,48 +40,54 @@ def uct_search(
     completion_waiting: Dict[int, LeanGameState] = {}
     context_waiting: Dict[int, LeanGameState] = {}
     lean_waiting: Dict[int, LeanGameState] = {}
+    iters = 0
 
-    for _ in range(num_iters):
-        # greedily select leaf with given exploration parameter
-        leaf: UCTNode = root.select_leaf_no_virtual_loss(c)
+    while True:
+        if iters >= num_iters and len(completion_waiting) == 0 and len(context_waiting) == 0 and len(lean_waiting) == 0:
+            break
+        if iters < num_iters:
+            # greedily select leaf with given exploration parameter
+            leaf: UCTNode = root.select_leaf_no_virtual_loss(c)
 
-        if leaf.is_terminal:
-            root.select_leaf(c)  # Apply the virtual loss this time.
-
-            # compute the value estimate of the player at the terminal leaf
-            value_estimate: float = game.reward(leaf.game_state)
-            # Immediately backup the value estimate along the path to the root
-            leaf.backup(value_estimate)
-
-        else:
-            if hash(leaf) in completion_waiting:
-                # This annoys us, because
-                # it is an already-visited node.
-                # We simply yield control from this process for a
-                # bit while we wait for the lean worker to finish.
-                time.sleep(10)
-            else:
+            if leaf.is_terminal:
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
-                # Add the child priors and value estimate to the completion queue!
-                # tasks should take the form
-                # {
-                #   'worker_id': int, # The worker task id that generated this task.
-                #   'completion_task_id': int, # The specific completion task id of this task.
-                #   'task': str # The task to complete, a string prompt.
-                # }
+                # compute the value estimate of the player at the terminal leaf
+                value_estimate: float = game.reward(leaf.game_state)
+                # Immediately backup the value estimate along the path to the root
+                leaf.backup(value_estimate)
+                iters += 1
 
-                state: LeanGameState = leaf.game_state
+            else:
+                if hash(leaf) in completion_waiting:
+                    # This annoys us, because
+                    # it is an already-visited node.
+                    # We simply yield control from this process for a
+                    # bit while we wait for the lean worker to finish.
+                    time.sleep(10)
+                else:
+                    root.select_leaf(c)  # Apply the virtual loss this time.
 
-                completion_queue.put(
-                    {
-                        'mcts_worker_id': worker_id,
-                        'completion_task_id': hash(leaf),
-                        'task': state.pre_LLM_rollout(),
-                        'type': 'completion'
-                    }
-                )
-                completion_waiting[hash(leaf)] = leaf.game_state
+                    # Add the child priors and value estimate to the completion queue!
+                    # tasks should take the form
+                    # {
+                    #   'worker_id': int, # The worker task id that generated this task.
+                    #   'completion_task_id': int, # The specific completion task id of this task.
+                    #   'task': str # The task to complete, a string prompt.
+                    # }
+
+                    state: LeanGameState = leaf.game_state
+
+                    completion_queue.put(
+                        {
+                            'mcts_worker_id': worker_id,
+                            'completion_task_id': hash(leaf),
+                            'task': state.pre_LLM_rollout(),
+                            'type': 'completion'
+                        }
+                    )
+                    completion_waiting[hash(leaf)] = leaf.game_state
+                    iters += 1
         # Check for completed leaves.
 
         # Load any results from the completion queue, lean queue, and context_queue.
