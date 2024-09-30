@@ -11,8 +11,7 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from src.games.lean_game import LeanGame, LeanGameState
-from src.policies.policy import Policy
+from src.games.leaner_lean_game import LeanGame, LeanGameState
 from src.uct.uct_node import UCTNode
 
 
@@ -20,10 +19,10 @@ def uct_search(
     worker_id: int,
     queue: multiprocessing.Queue,
     completion_queue: multiprocessing.Queue,
-    policy_value_queue: multiprocessing.Queue,
+    context_queue: multiprocessing.Queue,
     lean_queue: multiprocessing.Queue,
     game: LeanGame,
-    game_state: LeanGameState,
+    root: UCTNode,
     num_iters: int,
     c: float = 1.0,
     train: bool = True,
@@ -37,10 +36,9 @@ def uct_search(
     """
 
     # set root action to -1 so we can identify it and add noise
-    root = UCTNode(game, game_state, -1, init_type=init_type)
 
     completion_waiting: Dict[int, LeanGameState] = {}
-    policy_value_waiting: Dict[int, LeanGameState] = {}
+    context_waiting: Dict[int, LeanGameState] = {}
     lean_waiting: Dict[int, LeanGameState] = {}
 
     for _ in range(num_iters):
@@ -73,64 +71,72 @@ def uct_search(
                 #   'task': str # The task to complete, a string prompt.
                 # }
 
+                state: LeanGameState = leaf.game_state
+
                 completion_queue.put(
                     {
-                        'worker_id': worker_id,
-                        'task_id': hash(leaf),
-                        'task_input': leaf.game_state.pre_LLM_rollout(),
-                        'task': 'completion'
+                        'mcts_worker_id': worker_id,
+                        'completion_task_id': hash(leaf),
+                        'task': state.pre_LLM_rollout(),
+                        'type': 'completion'
                     }
                 )
                 completion_waiting[hash(leaf)] = leaf.game_state
         # Check for completed leaves.
 
-        # Load any results from the completion queue, lean queue, and policy_value_queue.
-        # and enqueue them all to the lean_queue and policy_value_queue.
+        # Load any results from the completion queue, lean queue, and context_queue.
+        # and enqueue them all to the lean_queue and context_queue.
         while not queue.empty():
             result = queue.get()
-            if result['task'] == 'completion':
+            if result['type'] == 'completion':
                 # Find the node that requested this completion.
                 node: UCTNode = completion_waiting[result['task_id']]
                 # Update the node with the completion.
-                node.game_state.post_LLM_rollout(result['output'])
+                state: LeanGameState = node.game_state
+                state.post_LLM_rollout(result['output'])
 
                 # Enqueue the node to the lean queue.
                 lean_queue.put(
                     {
-                        'worker_id': worker_id,
-                        'task_id': hash(node),
-                        'task_input': node.pre_process(),
-                        'task': 'lean'
+                        'mcts_worker_id': worker_id,
+                        'lean_task_id': hash(node),
+                        'task': state.pre_process(),
+                        'type': 'lean'
                     }
                 )
 
-                # Enqueue the node to the policy_value_queue.
-                policy_value_queue.put(
+                # Enqueue the node to the context_queue.
+                context_queue.put(
                     {
-                        'worker_id': worker_id,
+                        'mcts_worker_id': worker_id,
                         'task_id': hash(node),
-                        'task_input': node.pre_policy_value(),
-                        'task': 'policy_value'
+                        'task_input': state.human_json(),
+                        'type': 'policy_value'
                     }
                 )
                 completion_waiting.pop(result['task_id'])
 
-            elif result['task'] == 'policy_value':
+            elif result['type'] == 'policy_value':
                 # Find the node that requested this policy value.
-                node: UCTNode = policy_value_waiting[result['task_id']]
+                node: UCTNode = context_waiting[result['task_id']]
                 # Update the node with the policy value.
-                node.expand(result['policy'], result['value'], train)
-                node.backup(result['value'])
+                state: LeanGameState = node.game_state
+                state.post_comments(result['task_output']['comments'])
+
+                node.expand(result['task_output']['policy'],
+                            result['task_output']['value'], train)
+                node.backup(result['task_output']['value'])
 
                 completion_waiting.pop(result['task_id'])
 
-            elif result['task'] == 'lean':
+            elif result['type'] == 'lean':
                 # Find the node that requested this lean.
                 node: UCTNode = lean_waiting[result['task_id']]
 
                 # Update the node with the lean.
                 node.is_processed = True
-                node.game_state.post_process(result['output'])
+                state: LeanGameState = node.game_state
+                state.post_process(result['output'])
 
                 completion_waiting.pop(result['task_id'])
 

@@ -54,6 +54,21 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
                               num: int = 5) -> Dict:
     """
     Parse the output of the policy-value worker into a dict.
+
+    Parameters:
+    ----------
+    output: str
+        The output of the policy-value worker.
+    logger: logging.Logger
+        The logger to log any warnings.
+    num: int
+        The number of comments that the LLM should have generated.
+        The output will contain num + 1 comments, where the first comment is the empty string.
+
+    Returns:
+    -------
+    res: Dict
+        A dictionary containing the rating, comments, policy, and value.
     """
     res = {}
 
@@ -65,20 +80,23 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
         res['rating'] = 5  # default to 5 if the rating is not a number.
 
     idea_outputs = output.split("<IDEA>")
-    res['comments'] = []
+    res['comments'] = [""]
     for i in range(1, max(len(idea_outputs), num + 1)):
         idea = idea_outputs[i].split("</IDEA>")[0]
         res['comments'].append(idea)
 
-    if len(res['comments']) < num:
+    if len(res['comments']) < num + 1:
         # Default to empty strings if there are not enough comments.
         logger.warning(
-            f"Number of comments is less than expected: {len(res['comments'])}")
-        res['comments'] += [""] * (num - len(res['comments']))
+            f"Number of comments is less than expected: {len(res['comments'] - 1)}")
+        res['comments'] += [""] * (num + 1 - len(res['comments']))
+
+    # pre-pend the empty comment.
 
     # TODO: for now, we will just return a uniform distribution over the ideas.
-    res['policy'] = [1.0 / num for _ in range(num)]
+    res['policy'] = [1.0 / (num + 1) for _ in range(num + 1)]
     res['value'] = res['rating'] / 10.0
+
     return res
 
 
@@ -274,6 +292,7 @@ def policy_value_main(
                     'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
                     'task_id': my_tasks[i]['task_id'],
                     'task_output': res,
+                    'type': 'policy_value'
                 }
 
                 worker_queues[my_tasks[i]['mcts_worker_id']].put(result)

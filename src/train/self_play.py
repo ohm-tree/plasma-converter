@@ -15,12 +15,14 @@ from tqdm import tqdm
 
 from src.games.game import Game, GameState
 from src.policies.policy import Policy
+from src.uct.uct_alg import uct_search
+from src.uct.uct_node import UCTNode
 
 
-def self_play(state: GameState, game: Game, policy: Policy,
+def self_play(worker_id: int, state: GameState, game: Game, num_iters: int,
               queue: multiprocessing.Queue,
               completion_queue: multiprocessing.Queue,
-              policy_value_queue: multiprocessing.Queue,
+              context_queue: multiprocessing.Queue,
               lean_queue: multiprocessing.Queue,
               ) -> Tuple[List[GameState], List[np.ndarray], float]:
     """
@@ -39,7 +41,21 @@ def self_play(state: GameState, game: Game, policy: Policy,
         TODO: Fast Playouts would be implemented here.
         """
 
-        distribution, _ = policy.action(game, state)
+        # TODO: subtree reuse.
+        root = UCTNode(game, state, -1, init_type="zero")
+
+        distribution, _ = uct_search(
+            worker_id,
+            queue=queue,
+            completion_queue=completion_queue,
+            context_queue=context_queue,
+            lean_queue=lean_queue,
+            game=game,
+            root=root,
+            num_iters=num_iters
+        )
+
+        # TODO: more configurations possible for uct_search, not used right now.
 
         """
         TODO: In MCTS algorithms, people sometimes change up the temperature right here,

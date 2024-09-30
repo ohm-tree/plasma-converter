@@ -290,7 +290,7 @@ class LeanGameState:
         This function is called before the LLM rollout is done.
         It generates a prompt for the LLM.
         """
-        if (self.step >= LeanGameStateStep.ROLLOUT):
+        if self.step != LeanGameStateStep.INITIALIZED:
             raise LeanGameStateError(
                 "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
 
@@ -302,7 +302,7 @@ class LeanGameState:
         """
         This function is called after the LLM rollout is done.
         """
-        if (self.step >= LeanGameStateStep.ROLLOUT):
+        if self.step != LeanGameStateStep.ROLLOUT:
             raise LeanGameStateError(
                 "Should not LLM-post-process a LeanGameState that has already had an LLM rollout.")
         if new_code.endswith('```'):
@@ -316,7 +316,7 @@ class LeanGameState:
         It prepares a string query for the lean 4 verifier.
         """
 
-        if (self.step >= LeanGameStateStep.PROCESSED):
+        if self.step != LeanGameStateStep.ROLLOUT:
             raise LeanGameStateError(
                 "Should not pre-process a LeanGameState that has already been processed.")
 
@@ -446,7 +446,10 @@ class LeanGameState:
             The result of the Lean 4 verification.
 
         """
-        (self.step >= LeanGameStateStep.PROCESSED) = True
+        if self.step != LeanGameStateStep.ROLLOUT:
+            raise LeanGameStateError(
+                "Should not post-process a LeanGameState that has not been rolled out.")
+        self.step = LeanGameStateStep.PROCESSED
 
         if repl_result.get('system_error', False):
             self.tactic_state = ""
@@ -500,7 +503,7 @@ class LeanGameState:
         """
         This function is called after the comments are generated.
         """
-        if (self.step >= LeanGameStateStep.COMMENTED):
+        if self.step != LeanGameStateStep.PROCESSED:
             raise LeanGameStateError(
                 "Should not post-comments a LeanGameState that has already been commented.")
         self.gen_comments = gen_comments

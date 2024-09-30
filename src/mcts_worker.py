@@ -9,7 +9,7 @@ import sys
 import numpy as np
 import torch
 
-from src.games.lean_game import LeanGame, LeanGameState
+from src.games.leaner_lean_game import LeanGame, LeanGameState
 from src.networks.prover_llm import ProverLLM
 from src.policies.network_policy import NetworkPolicy
 from src.policies.random_policy import RandomPolicy
@@ -71,7 +71,7 @@ def main(
         json_name: str,
         queue: multiprocessing.Queue,
         completion_queue: multiprocessing.Queue,
-        policy_value_queue: multiprocessing.Queue,
+        context_queue: multiprocessing.Queue,
         lean_queue: multiprocessing.Queue,
 ):
     """
@@ -83,8 +83,8 @@ def main(
         The queue to receive finished tasks from the other processes
     completion_queue: multiprocessing.Queue
         The queue to send requests to the completion process
-    policy_value_queue: multiprocessing.Queue
-        The queue to send requests to the policy value process
+    context_queue: multiprocessing.Queue
+        The queue to send requests to the context process
     lean_queue: multiprocessing.Queue
         The queue to send requests to the lean process
     task_id: int
@@ -135,20 +135,20 @@ def main(
         if model_iter == NUM_ITERS:
             logging.info("All models have been created. Exiting...")
             break
-        if model_iter == 0:
-            logging.info("No models found. Using Random Policy.")
-            network_policy = RandomPolicy()
-        else:
-            logging.info(f"Loading model from {model_iter - 1}.")
-            model_file = os.path.join(
-                model_path, f"{RUN_NAME}_{model_iter - 1}.pt")
-            state_dict = torch.load(model_file)
-            model = ProverLLM()
-            model.load_state_dict(state_dict)
-            network_policy = NetworkPolicy(model)
+        # if model_iter == 0:
+        #     logging.info("No models found. Using Random Policy.")
+            # network_policy = RandomPolicy()
+        # else:
+        #     logging.info(f"Loading model from {model_iter - 1}.")
+            # model_file = os.path.join(
+            #     model_path, f"{RUN_NAME}_{model_iter - 1}.pt")
+            # state_dict = torch.load(model_file)
+            # model = ProverLLM()
+            # model.load_state_dict(state_dict)
+            # network_policy = NetworkPolicy(model)
 
-        policy = UCTPolicy(
-            network_policy, num_iters=UCT_TRAVERSALS)
+        # policy = UCTPolicy(
+        #     network_policy, num_iters=UCT_TRAVERSALS)
 
         # load a random game.
         game, start_state = load_random_game()
@@ -157,10 +157,11 @@ def main(
         print("start_state", start_state)
 
         states, distributions, rewards = self_play(
-            start_state, game, policy,
+            task_id,
+            start_state, game, UCT_TRAVERSALS,
             queue,
             completion_queue,
-            policy_value_queue,
+            context_queue,
             lean_queue
         )
 
