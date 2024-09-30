@@ -2,15 +2,8 @@
 In this file, we will let a human play a game of Lean (using modal).
 """
 
-import json
 import multiprocessing
-import os
 import time
-from typing import Optional
-
-import pexpect
-from tqdm import tqdm
-from vllm import LLM, SamplingParams
 
 from src.completion_worker import main as completion_process  # lean_worker entry point
 from src.lean_worker import main as lean_process  # lean_worker entry point
@@ -30,8 +23,17 @@ distributed_config = {
 json_name = "config"  # todo: make this a config file.
 
 if __name__ == "__main__":
+    # task-specific queues
     worker_queues = {i: multiprocessing.Queue()
                      for i in range(distributed_config['num_worker_procs'])}
+    completion_queues = {i: multiprocessing.Queue()
+                         for i in range(distributed_config['num_completion_procs'])}
+    policy_value_queues = {i: multiprocessing.Queue()
+                           for i in range(distributed_config['num_policy_value_procs'])}
+    context_queues = {i: multiprocessing.Queue()
+                      for i in range(distributed_config['num_context_procs'])}
+    lean_queues = {i: multiprocessing.Queue()
+                   for i in range(distributed_config['num_lean_procs'])}
 
     # Policy_value and completion queues are batched. One idea is to assign a many-to-one mapping
     # between worker processes and completion/policy_value processes, such that each
@@ -44,26 +46,27 @@ if __name__ == "__main__":
     #   2. Collect new tasks from the completion/policy_value queue until either there are no tasks
     #      left on the queue (a timeout occurs) or we have collected COMPLETION_BATCH_SIZE or
     #      POLICY_VALUE_BATCH_SIZE tasks.
-    completion_queue = multiprocessing.Queue()
-    context_queue = multiprocessing.Queue()
-    policy_value_queue = multiprocessing.Queue()
+    global_completion_queue = multiprocessing.Queue()
+    global_context_queue = multiprocessing.Queue()
+    global_policy_value_queue = multiprocessing.Queue()
 
     # There is one global queue for lean repl queries, because such queries are not batched.
-    lean_queue = multiprocessing.Queue()
+    global_lean_queue = multiprocessing.Queue()
 
-    # There is one global queue for master queries. These are used to signal to workers that
-    # they should terminate.
+    # There is one global queue for master queries. It is used to tell the master
+    # process that you are finished working.
     master_queue = multiprocessing.Queue()
 
     # Create inference processes
     inference_procs = [multiprocessing.Process(target=inference_process, kwargs={
-        'worker_queue': worker_queues[i],
-        'completion_queue': completion_queue,
-        'lean_queue': lean_queue,
-        'context_queue': context_queue,
         'task_id': i,
         'num_tasks': distributed_config['num_worker_procs'],
-        'json_name': json_name
+        'json_name': json_name,
+        'master_queue': master_queue,
+        'worker_queue': worker_queues[i],
+        'global_completion_queue': global_completion_queue,
+        'global_lean_queue': global_lean_queue,
+        'global_context_queue': global_context_queue,
     }
     ) for i in range(distributed_config['num_worker_procs'])]
 
@@ -73,8 +76,9 @@ if __name__ == "__main__":
         'json_name': json_name,
         'gpu_set': [2 * i, 2 * i + 1],
         'master_queue': master_queue,
+        'completion_queue': completion_queues[i],
         'worker_queues': worker_queues,
-        'completion_queue': completion_queue,
+        'global_completion_queue': global_completion_queue,
         'completion_batch_size': 100,
         'custom_eos': ["\n", "```"]
     }
@@ -89,8 +93,9 @@ if __name__ == "__main__":
         'json_name': json_name,
         'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
         'master_queue': master_queue,
+        'policy_value_queue': policy_value_queues[i],
         'worker_queues': worker_queues,
-        'policy_value_queue': policy_value_queue,
+        'global_policy_value_queue': global_policy_value_queue,
         'policy_value_batch_size': 100
     })
         for i in range(distributed_config['num_policy_value_procs'])]
@@ -103,8 +108,9 @@ if __name__ == "__main__":
         'json_name': json_name,
         'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
         'master_queue': master_queue,
-        'context_queue': context_queue,
-        'policy_value_queue': policy_value_queue,
+        'context_queue': context_queues[i],
+        'global_context_queue': global_context_queue,
+        'global_policy_value_queue': global_policy_value_queue,
         'context_batch_size': 100
     })
         for i in range(distributed_config['num_context_procs'])]
@@ -114,8 +120,9 @@ if __name__ == "__main__":
         'num_tasks': distributed_config['num_lean_procs'],
         'json_name': json_name,
         'master_queue': master_queue,
+        'lean_queue': lean_queues[i],
         'worker_queues': worker_queues,
-        'lean_queue': lean_queue
+        'global_lean_queue': global_lean_queue
     }
     )
         for i in range(distributed_config['num_lean_procs'])]
@@ -124,9 +131,73 @@ if __name__ == "__main__":
     for w in inference_procs + completion_procs + lean_procs + policy_value_procs + context_procs:
         w.start()
 
-    # Wait for one hour then terminate all
-    time.sleep(3600)
+    workers_alive = {i: True for i in range(
+        distributed_config['num_worker_procs'])}
+    completion_alive = {i: True for i in range(
+        distributed_config['num_completion_procs'])}
+    lean_alive = {i: True for i in range(distributed_config['num_lean_procs'])}
+    policy_value_alive = {i: True for i in range(
+        distributed_config['num_policy_value_procs'])}
+    context_alive = {i: True for i in range(
+        distributed_config['num_context_procs'])}
+
+    while True:
+        # check if all the processes are still alive
+        for i, w in enumerate(inference_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                workers_alive[i] = False
+        for i, w in enumerate(completion_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                completion_alive[i] = False
+        for i, w in enumerate(lean_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                lean_alive[i] = False
+        for i, w in enumerate(policy_value_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                policy_value_alive[i] = False
+        for i, w in enumerate(context_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                context_alive[i] = False
+
+        if all([not v for v in workers_alive.values()]):
+            # All workers are done
+            break
+        if any([not v for v in completion_alive.values()]):
+            # One of the completion processes has died
+            break
+        if any([not v for v in lean_alive.values()]):
+            # One of the lean processes has died
+            break
+        if any([not v for v in policy_value_alive.values()]):
+            # One of the policy_value processes has died
+            break
+        if any([not v for v in context_alive.values()]):
+            # One of the context processes has died
+            break
+
+        time.sleep(1)
+
+    # Send kill signals to all processes
+    for q in worker_queues.values():
+        q.put("kill")
+    for q in completion_queues.values():
+        q.put("kill")
+    for q in lean_queues.values():
+        q.put("kill")
+    for q in policy_value_queues.values():
+        q.put("kill")
+    for q in context_queues.values():
+        q.put("kill")
+    print("All kill signals sent.")
+
+    # Wait for 5 minutes, then force kill all processes
+    time.sleep(300)
     for w in inference_procs + completion_procs + lean_procs + policy_value_procs + context_procs:
         w.terminate()
-
-    print("All processes have been terminated.")
+        w.join()
+    print("All processes terminated.")

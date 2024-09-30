@@ -110,7 +110,8 @@ def context_main(
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         context_queue: multiprocessing.Queue,
-        policy_value_queue: multiprocessing.Queue,
+        global_context_queue: multiprocessing.Queue,
+        global_policy_value_queue: multiprocessing.Queue,
         context_batch_size: int,
 ):
     """
@@ -131,7 +132,13 @@ def context_main(
     logger.info(f"Starting context worker {context_worker_id}.")
 
     # Set up vllm stuff.
+    import gc
+
     from vllm import LLM, SamplingParams
+    from vllm.distributed.parallel_state import (
+        destroy_distributed_environment,
+        destroy_model_parallel,
+    )
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
@@ -151,16 +158,34 @@ def context_main(
 
     logger.info("Context worker initialized.")
 
+    # bloodline = time.time()
+
     while True:
-        # check for kill signals from the master queue.
-        try:
-            kill_signal = master_queue.get_nowait()
-            print(
-                f"Worker {context_worker_id} received kill signal: {kill_signal}")
-            if kill_signal == "kill":
+        # check my personal queue for blood.
+        # found_blood = False
+        # kill = False
+        while True:
+            try:
+                blood = context_queue.get_nowait()
+            except queue.Empty:
                 break
-        except queue.Empty:
-            pass
+            else:
+                if blood == 'kill':
+                    # found_blood = False
+                    kill = True
+                    break
+                # found_blood = True
+                # bloodline = time.time()
+
+        if kill:
+            logger.info("Kill signal received. Dying.")
+            break
+        # if ((not found_blood) and time.time() < bloodline + 60 * 15):
+        #     # If I haven't received a signal that other processes are
+        #     # alive in the last 15 minutes, I should die.
+        #     if not found_blood:
+        #         logger.info("No blood found. Dying.")
+        #         break
 
         my_tasks = []
         # tasks should take the form
@@ -172,7 +197,7 @@ def context_main(
         # }
         while len(my_tasks) < context_batch_size:
             try:
-                new_task = context_queue.get_nowait()
+                new_task = global_context_queue.get_nowait()
             except queue.Empty:
                 break
             assert new_task['type'] == 'context'
@@ -201,7 +226,19 @@ def context_main(
                     'type': 'policy_value'
                 }
                 logger.info(str(result))
-                policy_value_queue.put(result)
+                global_policy_value_queue.put(result)
+    # send a signal to the master queue that we are dead.
+    master_queue.put({
+        'name': 'context',
+        'worker_id': context_worker_id,
+        'type': 'dead'
+    })
+
+    destroy_model_parallel()
+    destroy_distributed_environment()
+    del llm.llm_engine.model_executor
+    del llm
+    gc.collect()
 
 
 def policy_value_main(
@@ -210,8 +247,9 @@ def policy_value_main(
         json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
-        worker_queues: Dict[int, multiprocessing.Queue],
         policy_value_queue: multiprocessing.Queue,
+        worker_queues: Dict[int, multiprocessing.Queue],
+        global_policy_value_queue: multiprocessing.Queue,
         policy_value_batch_size: int,
 ):
     """
@@ -233,7 +271,13 @@ def policy_value_main(
     logger.info(f"Starting policy-value worker {policy_value_worker_id}.")
 
     # Set up vllm stuff.
+    import gc
+
     from vllm import LLM, SamplingParams
+    from vllm.distributed.parallel_state import (
+        destroy_distributed_environment,
+        destroy_model_parallel,
+    )
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
@@ -253,16 +297,34 @@ def policy_value_main(
 
     logger.info("Policy-value worker initialized.")
 
+    # bloodline = time.time()
+
     while True:
-        # check for kill signals from the master queue.
-        try:
-            kill_signal = master_queue.get_nowait()
-            print(
-                f"Worker {policy_value_worker_id} received kill signal: {kill_signal}")
-            if kill_signal == "kill":
+        # check my personal queue for blood.
+        # found_blood = False
+        kill = False
+        while True:
+            try:
+                blood = policy_value_queue.get_nowait()
+            except queue.Empty:
                 break
-        except queue.Empty:
-            pass
+            else:
+                if blood == 'kill':
+                    # found_blood = False
+                    kill = True
+                    break
+                # found_blood = True
+                # bloodline = time.time()
+
+        if kill:
+            logger.info("Kill signal received. Dying.")
+            break
+        # if ((not found_blood) and time.time() < bloodline + 60 * 15):
+        #     # If I haven't received a signal that other processes are
+        #     # alive in the last 15 minutes, I should die.
+        #     if not found_blood:
+        #         logger.info("No blood found. Dying.")
+        #         break
 
         my_tasks = []
         # tasks should take the form
@@ -274,7 +336,7 @@ def policy_value_main(
         # }
         while len(my_tasks) < policy_value_batch_size:
             try:
-                new_task = policy_value_queue.get_nowait()
+                new_task = global_policy_value_queue.get_nowait()
             except queue.Empty:
                 break
             assert new_task['type'] == 'policy_value'
@@ -311,3 +373,16 @@ def policy_value_main(
                 logger.info(str(result))
 
                 worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
+
+    # send a signal to the master queue that we are dead.
+    master_queue.put({
+        'name': 'policy_value',
+        'worker_id': policy_value_worker_id,
+        'type': 'dead'
+    })
+
+    destroy_model_parallel()
+    destroy_distributed_environment()
+    del llm.llm_engine.model_executor
+    del llm
+    gc.collect()

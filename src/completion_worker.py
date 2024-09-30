@@ -16,8 +16,9 @@ def main(
         json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
-        worker_queues: Dict[int, multiprocessing.Queue],
         completion_queue: multiprocessing.Queue,
+        worker_queues: Dict[int, multiprocessing.Queue],
+        global_completion_queue: multiprocessing.Queue,
         completion_batch_size: int,
         custom_eos: list
 ):
@@ -66,7 +67,13 @@ def main(
     #         raise ValueError("Not enough Tesla V100-SXM2-16GB GPUs available.")
 
     # Set up vllm stuff.
+    import gc
+
     from vllm import LLM, SamplingParams
+    from vllm.distributed.parallel_state import (
+        destroy_distributed_environment,
+        destroy_model_parallel,
+    )
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
@@ -92,7 +99,7 @@ def main(
     while True:
         # check for kill signals from the master queue.
         try:
-            kill_signal = master_queue.get_nowait()
+            kill_signal = completion_queue.get_nowait()
             print(
                 f"Worker {completion_worker_id} received kill signal: {kill_signal}")
             if kill_signal == "kill":
@@ -110,7 +117,7 @@ def main(
         # }
         while len(my_tasks) < completion_batch_size:
             try:
-                my_tasks.append(completion_queue.get_nowait())
+                my_tasks.append(global_completion_queue.get_nowait())
             except queue.Empty:
                 break
 
@@ -143,3 +150,9 @@ def main(
                 logger.info(str(result))
 
                 worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
+
+    destroy_model_parallel()
+    destroy_distributed_environment()
+    del llm.llm_engine.model_executor
+    del llm
+    gc.collect()

@@ -27,14 +27,16 @@ with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
 #     comments = [line.strip() for line in file.readlines()]
 
 
-def main(worker_queue: multiprocessing.Queue,
-         completion_queue: multiprocessing.Queue,
-         lean_queue: multiprocessing.Queue,
-         context_queue: multiprocessing.Queue,
-         task_id: int,
-         num_tasks: int,
-         json_name: str
-         ):
+def main(
+    task_id: int,
+    num_tasks: int,
+    json_name: str,
+    master_queue: multiprocessing.Queue,
+    worker_queue: multiprocessing.Queue,
+    completion_queue: multiprocessing.Queue,
+    lean_queue: multiprocessing.Queue,
+    context_queue: multiprocessing.Queue
+):
 
     # give myself a custom logging file.
     os.makedirs("logs", exist_ok=True)
@@ -196,3 +198,11 @@ def main(worker_queue: multiprocessing.Queue,
             file.write(state.human_printout())
 
         logger.info(f"Finished problem {problem['name']} result: {state.win}")
+    # tell the master queue that we are done with all tasks.
+    master_queue.put(
+        {
+            'mcts_worker_id': task_id,
+            'task_id': 0,
+            'type': 'done'
+        }
+    )
