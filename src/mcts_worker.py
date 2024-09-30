@@ -23,12 +23,15 @@ def setup_logging(task_id, run_name):
         filename=f'logs/{run_name}_x{task_id}.log', level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s')
 
+
 def ensure_directory_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
+
 def load_random_game():
     return load_game(random.randint(0, 244))
+
 
 def load_game(problem_idx):  # TODO: change to problem id?
     # load the problem json
@@ -63,13 +66,13 @@ def load_game(problem_idx):  # TODO: change to problem id?
 
 
 def main(
+        task_id: int,
+        num_tasks: int,
+        json_name: str,
         queue: multiprocessing.Queue,
         completion_queue: multiprocessing.Queue,
         policy_value_queue: multiprocessing.Queue,
         lean_queue: multiprocessing.Queue,
-        task_id: int,
-        num_tasks: int,
-        json_name: str
 ):
     """
     Entry point for the mcts worker.
@@ -91,7 +94,6 @@ def main(
     json_name: str
         The name of the json file to load the configuration from
     """
-
 
     with open(f"config/{json_name}.json", "r") as f:
         config = json.load(f)

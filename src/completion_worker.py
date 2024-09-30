@@ -4,16 +4,17 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Dict
+from typing import Dict, List
 
 # import torch
 from vllm import LLM, SamplingParams
 
 
 def main(
-        task_id: int,
-        num_tasks: int,
+        completion_worker_id: int,
+        num_completion_workers: int,
         json_name: str,
+        gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         worker_queues: Dict[int, multiprocessing.Queue],
         completion_queue: multiprocessing.Queue,
@@ -28,9 +29,10 @@ def main(
     os.makedirs("logs", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(f"logs/completion_worker_{task_id}.log")
+    fh = logging.FileHandler(
+        f"logs/completion_worker_{completion_worker_id}.log")
     logger.addHandler(fh)
-    logger.info(f"Starting completion worker {task_id}.")
+    logger.info(f"Starting completion worker {completion_worker_id}.")
 
     # detect the type of gpus available.
     # If there is at least one A100 80GB or H100,
@@ -47,7 +49,7 @@ def main(
     #     else:
     #         device_counts[device_name] = 1
 
-    # print(f"Worker {task_id} detected the following devices: {device_counts}")
+    # print(f"Worker {completion_worker_id} detected the following devices: {device_counts}")
 
     # if "A100-SXM4-80GB" in device_counts or "H100-SXM4-80GB" in device_counts:
     #     tensor_parallel_size = 1
@@ -61,12 +63,18 @@ def main(
     #     else:
     #         raise ValueError("Not enough Tesla V100-SXM2-16GB GPUs available.")
 
-    #     # TODO: stuff all of the configs into a config file.
+    # Set up vllm stuff.
+    from vllm import LLM, SamplingParams
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
+
+    # TODO: stuff all of the configs into a config file.
     llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
               max_num_batched_tokens=8192,
               trust_remote_code=True,
               dtype="float16",
-              tensor_parallel_size=4)
+              tensor_parallel_size=len(gpu_set))
+
     # else:
     #     raise ValueError(
     #         "You probably need to add a new device to the list of supported devices.")
@@ -83,7 +91,8 @@ def main(
         # check for kill signals from the master queue.
         try:
             kill_signal = master_queue.get_nowait()
-            print(f"Worker {task_id} received kill signal: {kill_signal}")
+            print(
+                f"Worker {completion_worker_id} received kill signal: {kill_signal}")
             if kill_signal == "kill":
                 break
         except queue.Empty:
@@ -92,7 +101,7 @@ def main(
         my_tasks = []
         # tasks should take the form
         # {
-        #   'worker_id': int, # The worker task id that generated this task.
+        #   'mcts_worker_id': int, # The worker task id that generated this task.
         #   'completion_task_id': int, # The specific completion task id of this task.
         #   'task': str # The task to complete, a string prompt.
         #   'type': str # Should be 'completion'
@@ -121,6 +130,7 @@ def main(
             )
             for i in range(len(outputs)):
                 result = {
+                    'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
                     'completion_task_id': my_tasks[i]['completion_task_id'],
                     'output': outputs[i].outputs[0].text,
                     'type': 'completion'

@@ -122,7 +122,7 @@ def main(
             input_data = lean_queue.get(timeout=3)
             # tasks should take the form
             # {
-            #   'worker_id': int, # The worker task id that generated this task.
+            #   'mcts_worker_id': int, # The worker task id that generated this task.
             #   'lean_task_id': int, # The specific lean task id of this task.
             #   'task': str # The task to complete, a string prompt.
             #   'type': str # Should be 'lean'
@@ -151,8 +151,9 @@ def main(
                     "env": 0
                 })
 
-            worker_queues[input_data['worker_id']].put(
+            worker_queues[input_data['mcts_worker_id']].put(
                 {
+                    'mcts_worker_id': input_data['mcts_worker_id'],
                     'lean_task_id': input_data['lean_task_id'],
                     'result': result,
                     'type': 'lean'

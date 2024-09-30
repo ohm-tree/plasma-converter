@@ -4,14 +4,14 @@ import time
 from src.completion_worker import main as completion_process  # lean_worker entry point
 from src.lean_worker import main as lean_process  # lean_worker entry point
 from src.mcts_worker import main as worker_process  # lean_worker entry point
-from src.policy_value_worker import (
-    main as policy_value_process,  # lean_worker entry point
-)
+from src.policy_value_worker import context_main as context_process
+from src.policy_value_worker import policy_value_main as policy_value_process
 
 # todo: make this a config file.
 distributed_config = {
     'num_worker_procs': 4,
     'num_completion_procs': 1,
+    'num_context_procs': 1,
     'num_policy_value_procs': 1,
     'num_lean_procs': 1,
 }
@@ -33,6 +33,7 @@ if __name__ == "__main__":
     #      left on the queue (a timeout occurs) or we have collected COMPLETION_BATCH_SIZE or
     #      POLICY_VALUE_BATCH_SIZE tasks.
     completion_queue = multiprocessing.Queue()
+    context_queue = multiprocessing.Queue()
     policy_value_queue = multiprocessing.Queue()
 
     # There is one global queue for lean repl queries, because such queries are not batched.
@@ -44,30 +45,58 @@ if __name__ == "__main__":
 
     # Create worker processes
     worker_procs = [multiprocessing.Process(target=worker_process, kwargs={
-        'queue': worker_queues[i],
-        'completion_queue': completion_queue,
-        'policy_value_queue': policy_value_queue,
-        'lean_queue': lean_queue,
         'task_id': i,
         'num_tasks': distributed_config['num_worker_procs'],
-        'json_name': json_name
+        'json_name': json_name,
+        'queue': worker_queues[i],
+        'completion_queue': completion_queue,
+        'context_queue': context_queue,
+        'lean_queue': lean_queue,
     }
     ) for i in range(distributed_config['num_worker_procs'])]
 
     completion_procs = [multiprocessing.Process(target=completion_process, kwargs={
-        'task_id': i,
-        'num_tasks': distributed_config['num_completion_procs'],
+        'completion_worker_id': i,
+        'num_completion_workers': distributed_config['num_completion_procs'],
         'json_name': json_name,
+        'gpu_set': [2 * i, 2 * i + 1],
         'master_queue': completion_queue,
         'worker_queues': worker_queues,
         'completion_queue': completion_queue,
-        'completion_batch_size': 100
+        'completion_batch_size': 100,
+        'custom_eos': ["\n", "```"]
     }
     )
         for i in range(distributed_config['num_completion_procs'])]
 
-    policy_value_procs = [multiprocessing.Process(target=policy_value_process, args=(policy_value_queue,))
-                          for _ in range(distributed_config['num_policy_value_procs'])]
+    gpu_offset = 2 * distributed_config['num_completion_procs']
+
+    policy_value_procs = [multiprocessing.Process(target=policy_value_process, kwargs={
+        'policy_value_worker_id': i,
+        'num_policy_value_workers': distributed_config['num_policy_value_procs'],
+        'json_name': json_name,
+        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+        'master_queue': policy_value_queue,
+        'worker_queues': worker_queues,
+        'context_queue': context_queue,
+        'policy_value_queue': policy_value_queue,
+        'policy_value_batch_size': 100
+    })
+        for i in range(distributed_config['num_policy_value_procs'])]
+
+    gpu_offset += 2 * distributed_config['num_policy_value_procs']
+
+    context_procs = [multiprocessing.Process(target=context_process, kwargs={
+        'context_worker_id': i,
+        'num_context_workers': distributed_config['num_context_procs'],
+        'json_name': json_name,
+        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+        'master_queue': context_queue,
+        'context_queue': context_queue,
+        'policy_value_queue': policy_value_queue,
+        'context_batch_size': 100
+    })
+        for i in range(distributed_config['num_context_procs'])]
 
     lean_procs = [multiprocessing.Process(target=lean_process, kwargs={
         'task_id': i,
