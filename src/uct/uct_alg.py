@@ -104,17 +104,29 @@ def uct_search(
                         'type': 'lean'
                     }
                 )
+                lean_waiting[hash(node)] = node.game_state
+                completion_waiting.pop(result['task_id'])
+
+            elif result['type'] == 'lean':
+                # Find the node that requested this lean.
+                node: UCTNode = lean_waiting[result['task_id']]
+
+                # Update the node with the lean.
+                node.is_processed = True
+                state: LeanGameState = node.game_state
+                state.post_process(result['output'])
 
                 # Enqueue the node to the context_queue.
                 context_queue.put(
                     {
                         'mcts_worker_id': worker_id,
                         'task_id': hash(node),
-                        'task_input': state.human_json(),
-                        'type': 'policy_value'
+                        'task_input': state.pre_comments(),
+                        'type': 'context'
                     }
                 )
-                completion_waiting.pop(result['task_id'])
+                context_waiting[hash(node)] = node.game_state
+                lean_waiting.pop(result['task_id'])
 
             elif result['type'] == 'policy_value':
                 # Find the node that requested this policy value.
@@ -127,18 +139,7 @@ def uct_search(
                             result['task_output']['value'], train)
                 node.backup(result['task_output']['value'])
 
-                completion_waiting.pop(result['task_id'])
-
-            elif result['type'] == 'lean':
-                # Find the node that requested this lean.
-                node: UCTNode = lean_waiting[result['task_id']]
-
-                # Update the node with the lean.
-                node.is_processed = True
-                state: LeanGameState = node.game_state
-                state.post_process(result['output'])
-
-                completion_waiting.pop(result['task_id'])
+                context_waiting.pop(result['task_id'])
 
     print("Number visits", [i.item()
           for i in root.child_number_visits if i > 0])

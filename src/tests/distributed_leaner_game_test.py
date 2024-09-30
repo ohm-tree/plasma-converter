@@ -14,18 +14,17 @@ from vllm import LLM, SamplingParams
 
 from src.completion_worker import main as completion_process  # lean_worker entry point
 from src.lean_worker import main as lean_process  # lean_worker entry point
-from src.tests.distributed_leaner_game_test_cpu_worker import (
-    main as inference_process,  # lean_worker entry point
-)
-
-# set "VLLM_LOGGING_LEVEL" to "WARNING" to suppress logging
-os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
+from src.policy_value_worker import context_main as context_process
+from src.policy_value_worker import policy_value_main as policy_value_process
+from src.tests.distributed_leaner_game_test_cpu_worker import main as inference_process
 
 # todo: make this a config file.
 distributed_config = {
-    'num_worker_procs': 24,
+    'num_worker_procs': 1,
     'num_completion_procs': 1,
-    'num_lean_procs': 24,
+    'num_context_procs': 1,
+    'num_policy_value_procs': 1,
+    'num_lean_procs': 1,
 }
 
 json_name = "config"  # todo: make this a config file.
@@ -46,6 +45,8 @@ if __name__ == "__main__":
     #      left on the queue (a timeout occurs) or we have collected COMPLETION_BATCH_SIZE or
     #      POLICY_VALUE_BATCH_SIZE tasks.
     completion_queue = multiprocessing.Queue()
+    context_queue = multiprocessing.Queue()
+    policy_value_queue = multiprocessing.Queue()
 
     # There is one global queue for lean repl queries, because such queries are not batched.
     lean_queue = multiprocessing.Queue()
@@ -59,6 +60,7 @@ if __name__ == "__main__":
         'worker_queue': worker_queues[i],
         'completion_queue': completion_queue,
         'lean_queue': lean_queue,
+        'context_queue': context_queue,
         'task_id': i,
         'num_tasks': distributed_config['num_worker_procs'],
         'json_name': json_name
@@ -66,23 +68,52 @@ if __name__ == "__main__":
     ) for i in range(distributed_config['num_worker_procs'])]
 
     completion_procs = [multiprocessing.Process(target=completion_process, kwargs={
-        'task_id': i,
-        'num_tasks': distributed_config['num_completion_procs'],
+        'completion_worker_id': i,
+        'num_completion_workers': distributed_config['num_completion_procs'],
         'json_name': json_name,
+        'gpu_set': [2 * i, 2 * i + 1],
         'master_queue': master_queue,
         'worker_queues': worker_queues,
         'completion_queue': completion_queue,
         'completion_batch_size': 100,
-        'custom_eos': ['\n', '```'],
+        'custom_eos': ["\n", "```"]
     }
     )
         for i in range(distributed_config['num_completion_procs'])]
+
+    gpu_offset = 2 * distributed_config['num_completion_procs']
+
+    policy_value_procs = [multiprocessing.Process(target=policy_value_process, kwargs={
+        'policy_value_worker_id': i,
+        'num_policy_value_workers': distributed_config['num_policy_value_procs'],
+        'json_name': json_name,
+        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+        'master_queue': master_queue,
+        'worker_queues': worker_queues,
+        'policy_value_queue': policy_value_queue,
+        'policy_value_batch_size': 100
+    })
+        for i in range(distributed_config['num_policy_value_procs'])]
+
+    gpu_offset += 2 * distributed_config['num_policy_value_procs']
+
+    context_procs = [multiprocessing.Process(target=context_process, kwargs={
+        'context_worker_id': i,
+        'num_context_workers': distributed_config['num_context_procs'],
+        'json_name': json_name,
+        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+        'master_queue': master_queue,
+        'context_queue': context_queue,
+        'policy_value_queue': policy_value_queue,
+        'context_batch_size': 100
+    })
+        for i in range(distributed_config['num_context_procs'])]
 
     lean_procs = [multiprocessing.Process(target=lean_process, kwargs={
         'task_id': i,
         'num_tasks': distributed_config['num_lean_procs'],
         'json_name': json_name,
-        'master_queue': lean_queue,
+        'master_queue': master_queue,
         'worker_queues': worker_queues,
         'lean_queue': lean_queue
     }
@@ -90,12 +121,12 @@ if __name__ == "__main__":
         for i in range(distributed_config['num_lean_procs'])]
 
     # Start all processes
-    for w in inference_procs + completion_procs + lean_procs:
+    for w in inference_procs + completion_procs + lean_procs + policy_value_procs + context_procs:
         w.start()
 
     # Wait for one hour then terminate all
     time.sleep(3600)
-    for w in inference_procs + completion_procs + lean_procs:
+    for w in inference_procs + completion_procs + lean_procs + policy_value_procs + context_procs:
         w.terminate()
 
     print("All processes have been terminated.")

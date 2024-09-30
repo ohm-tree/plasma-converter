@@ -10,14 +10,15 @@ from src.policy_value_worker import policy_value_main as policy_value_process
 # todo: make this a config file.
 distributed_config = {
     'num_worker_procs': 4,
-    'num_completion_procs': 1,
+    'num_completion_procs': 2,
     'num_context_procs': 1,
     'num_policy_value_procs': 1,
     'num_lean_procs': 1,
 }
 json_name = "config"  # todo: make this a config file.
 
-if __name__ == "__main__":
+
+def main():
     worker_queues = {i: multiprocessing.Queue()
                      for i in range(distributed_config['num_worker_procs'])}
 
@@ -60,7 +61,7 @@ if __name__ == "__main__":
         'num_completion_workers': distributed_config['num_completion_procs'],
         'json_name': json_name,
         'gpu_set': [2 * i, 2 * i + 1],
-        'master_queue': completion_queue,
+        'master_queue': master_queue,
         'worker_queues': worker_queues,
         'completion_queue': completion_queue,
         'completion_batch_size': 100,
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         'num_policy_value_workers': distributed_config['num_policy_value_procs'],
         'json_name': json_name,
         'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
-        'master_queue': policy_value_queue,
+        'master_queue': master_queue,
         'worker_queues': worker_queues,
         'context_queue': context_queue,
         'policy_value_queue': policy_value_queue,
@@ -91,7 +92,7 @@ if __name__ == "__main__":
         'num_context_workers': distributed_config['num_context_procs'],
         'json_name': json_name,
         'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
-        'master_queue': context_queue,
+        'master_queue': master_queue,
         'context_queue': context_queue,
         'policy_value_queue': policy_value_queue,
         'context_batch_size': 100
@@ -102,7 +103,7 @@ if __name__ == "__main__":
         'task_id': i,
         'num_tasks': distributed_config['num_lean_procs'],
         'json_name': json_name,
-        'master_queue': lean_queue,
+        'master_queue': master_queue,
         'worker_queues': worker_queues,
         'lean_queue': lean_queue
     }
@@ -119,3 +120,7 @@ if __name__ == "__main__":
         w.terminate()
 
     print("All processes have been terminated.")
+
+
+if __name__ == "__main__":
+    main()

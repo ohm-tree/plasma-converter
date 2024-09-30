@@ -22,14 +22,15 @@ with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
     # Each line in the file is a separate JSON object
     data = [json.loads(line.strip()) for line in file.readlines()]
 
-comments = None
-with open("src/sample-data/comments.txt", 'r') as file:
-    comments = [line.strip() for line in file.readlines()]
+# comments = None
+# with open("src/sample-data/comments.txt", 'r') as file:
+#     comments = [line.strip() for line in file.readlines()]
 
 
 def main(worker_queue: multiprocessing.Queue,
          completion_queue: multiprocessing.Queue,
          lean_queue: multiprocessing.Queue,
+         context_queue: multiprocessing.Queue,
          task_id: int,
          num_tasks: int,
          json_name: str
@@ -53,13 +54,43 @@ def main(worker_queue: multiprocessing.Queue,
         tactic_state = problem['goal']
 
         game: LeanGame = LeanGame(
-            comment_seeds=comments,
+            # comment_seeds=comments,
+            num_comment_seeds=6,
             max_depth=20
         )
         state: LeanGameState = game.start_state(
             problem=PROBLEM_STATEMENT,
             tactic_state=tactic_state
         )
+
+        context_queue.put(
+            {
+                'mcts_worker_id': task_id,
+                # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
+                'task_id': 0,
+                'task_input': state.pre_comments(),
+                'type': 'context'
+            }
+        )
+
+        time_to_context = -time.time()
+        context_output = None
+        while context_output is None:
+            try:
+                context_output = worker_queue.get_nowait()
+            except queue.Empty:
+                context_output = None
+                pass
+
+        time_to_context += time.time()
+        logger.info(f"Time to context: {time_to_context}")
+        assert context_output['type'] == 'policy_value'
+        assert context_output['task_id'] == 0
+        state.post_comments(context_output['task_output']['comments'])
+        logger.info(
+            f"Received policy: {context_output['task_output']['policy']}")
+        logger.info("Received value: {context_output['task_output']['value']}")
+        # first, we need to comment the state right away.
 
         while not game.is_terminal(state):
             logger.info(state.human_printout())
@@ -76,7 +107,7 @@ def main(worker_queue: multiprocessing.Queue,
             #   'type': str # Should be 'completion'
             # }
             completion_queue.put({
-                'worker_id': task_id,
+                'mcts_worker_id': task_id,
                 # In this test, we will only have one completion task ever and the cpu workers will spin on the outputs.
                 'completion_task_id': 0,
                 'task': input_data,
@@ -108,7 +139,7 @@ def main(worker_queue: multiprocessing.Queue,
             # }
 
             lean_queue.put({
-                'worker_id': task_id,
+                'mcts_worker_id': task_id,
                 # In this test, we will only have one lean task ever and the cpu workers will spin on the outputs.
                 'lean_task_id': 0,
                 'task': lean4_input,
@@ -116,18 +147,49 @@ def main(worker_queue: multiprocessing.Queue,
             })
 
             time_to_lean = -time.time()
-            lean4_output = None
-            while lean4_output is None:
+            lean_output = None
+            while lean_output is None:
                 try:
-                    lean4_output = worker_queue.get_nowait()
+                    lean_output = worker_queue.get_nowait()
                 except queue.Empty:
-                    lean_4_output = None
+                    lean_output = None
                     pass
+
             time_to_lean += time.time()
             logger.info(f"Time to lean: {time_to_lean}")
-            assert lean4_output['type'] == 'lean'
-            assert lean4_output['lean_task_id'] == 0
-            state.post_process(lean4_output)
+            assert lean_output['type'] == 'lean'
+            assert lean_output['lean_task_id'] == 0
+            state.post_process(lean_output['result'])
+
+            context_queue.put(
+                {
+                    'mcts_worker_id': task_id,
+                    # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
+                    'task_id': 0,
+                    'task_input': state.pre_comments(),
+                    'type': 'context'
+                }
+            )
+
+            time_to_context = -time.time()
+            context_output = None
+            while context_output is None:
+                try:
+                    context_output = worker_queue.get_nowait()
+                except queue.Empty:
+                    context_output = None
+                    pass
+
+            time_to_context += time.time()
+            logger.info(f"Time to context: {time_to_context}")
+            assert context_output['type'] == 'policy_value'
+            assert context_output['task_id'] == 0
+            state.post_comments(context_output['task_output']['comments'])
+            logger.info(
+                f"Received policy: {context_output['task_output']['policy']}")
+            logger.info(
+                f"Received value: {context_output['task_output']['value']}")
+
         # save the human printout to a file
         os.makedirs("outputs", exist_ok=True)
         with open(f"outputs/{problem['name']}.txt", 'w') as file:

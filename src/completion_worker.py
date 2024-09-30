@@ -31,6 +31,8 @@ def main(
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
         f"logs/completion_worker_{completion_worker_id}.log")
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info(f"Starting completion worker {completion_worker_id}.")
 
@@ -136,4 +138,4 @@ def main(
                     'type': 'completion'
                 }
 
-                worker_queues[my_tasks[i]['worker_id']].put(result)
+                worker_queues[my_tasks[i]['mcts_worker_id']].put(result)

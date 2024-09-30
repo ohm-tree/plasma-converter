@@ -82,7 +82,9 @@ def setup_repl():
             "allTactics": True,
             "tactics": True,
         },
-        _child=child
+        _child=child,
+        timeout_start=30,
+        timeout_finish=30
     )
     return child
 
@@ -103,6 +105,8 @@ def main(
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(f"logs/lean_worker_{task_id}.log")
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info(f"Starting lean worker {task_id}.")
 
@@ -134,7 +138,7 @@ def main(
                 "allTactics": True,
                 "tactics": True,
                 "env": 0
-            })
+            }, _child=child)
             # if result is error, try restarting the repl.
             if 'system_error' in result:
                 logger.error(
@@ -149,16 +153,18 @@ def main(
                     "allTactics": True,
                     "tactics": True,
                     "env": 0
-                })
+                }, _child=child)
 
+            result = {
+                'mcts_worker_id': input_data['mcts_worker_id'],
+                'lean_task_id': input_data['lean_task_id'],
+                'result': result,
+                'type': 'lean'
+            }
             worker_queues[input_data['mcts_worker_id']].put(
-                {
-                    'mcts_worker_id': input_data['mcts_worker_id'],
-                    'lean_task_id': input_data['lean_task_id'],
-                    'result': result,
-                    'type': 'lean'
-                }
+                result
             )
+            logger.info(str(result))
 
         except queue.Empty:
             time.sleep(1)

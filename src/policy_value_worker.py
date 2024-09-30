@@ -72,6 +72,9 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
     """
     res = {}
 
+    # We truncated the first <IDEA> for prompting purposes...
+    output = "<IDEA>" + output
+
     rating_output = output.split("<RATING>")[1]
     try:
         res['rating'] = int(rating_output.split("</RATING>")[0])
@@ -81,14 +84,14 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
 
     idea_outputs = output.split("<IDEA>")
     res['comments'] = [""]
-    for i in range(1, max(len(idea_outputs), num + 1)):
+    for i in range(1, min(len(idea_outputs), num + 1)):
         idea = idea_outputs[i].split("</IDEA>")[0]
         res['comments'].append(idea)
 
     if len(res['comments']) < num + 1:
         # Default to empty strings if there are not enough comments.
         logger.warning(
-            f"Number of comments is less than expected: {len(res['comments'] - 1)}")
+            f"Number of comments is less than expected: {len(res['comments']) - 1}")
         res['comments'] += [""] * (num + 1 - len(res['comments']))
 
     # pre-pend the empty comment.
@@ -122,6 +125,8 @@ def context_main(
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(f"logs/context_worker_{context_worker_id}.log")
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info(f"Starting context worker {context_worker_id}.")
 
@@ -143,6 +148,8 @@ def context_main(
         top_k=1,
         top_p=1.0
     )
+
+    logger.info("Context worker initialized.")
 
     while True:
         # check for kill signals from the master queue.
@@ -170,7 +177,7 @@ def context_main(
                 break
             assert new_task['type'] == 'context'
             my_tasks.append(new_task)
-
+        logger.info(f"Received {len(my_tasks)} tasks.")
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
             time.sleep(1)
@@ -193,6 +200,7 @@ def context_main(
                     'task_context': outputs[i].outputs[0].text,
                     'type': 'policy_value'
                 }
+                logger.info(str(result))
                 policy_value_queue.put(result)
 
 
@@ -219,6 +227,8 @@ def policy_value_main(
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
         f"logs/policy_value_worker_{policy_value_worker_id}.log")
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info(f"Starting policy-value worker {policy_value_worker_id}.")
 
@@ -240,6 +250,8 @@ def policy_value_main(
         top_k=1,
         top_p=1.0
     )
+
+    logger.info("Policy-value worker initialized.")
 
     while True:
         # check for kill signals from the master queue.
@@ -268,6 +280,7 @@ def policy_value_main(
             assert new_task['type'] == 'policy_value'
             my_tasks.append(new_task)
 
+        logger.info(f"Received {len(my_tasks)} tasks.")
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
             time.sleep(1)
@@ -286,7 +299,8 @@ def policy_value_main(
             )
 
             for i in range(len(outputs)):
-                res = parse_policy_value_output(outputs[i].outputs[0].text)
+                res = parse_policy_value_output(
+                    outputs[i].outputs[0].text, logger)
 
                 result = {
                     'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
@@ -294,5 +308,6 @@ def policy_value_main(
                     'task_output': res,
                     'type': 'policy_value'
                 }
+                logger.info(str(result))
 
                 worker_queues[my_tasks[i]['mcts_worker_id']].put(result)

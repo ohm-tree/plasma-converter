@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+from enum import IntEnum
 from pprint import pprint
 from typing import Callable, List, Optional
 
@@ -39,7 +40,7 @@ class LeanGameStateError(Exception):
     pass
 
 
-class LeanGameStateStep(Enum):
+class LeanGameStateStep(IntEnum):
     INITIALIZED = 0
     ROLLOUT = 1
     PROCESSED = 2
@@ -163,8 +164,9 @@ class LeanGameState:
             raise ValueError("None is not allowed for any required fields.")
 
         if self.step >= LeanGameStateStep.ROLLOUT:
-            raise ValueError(
-                "new_code is required if step is rollout, processed, or commented.")
+            if self.new_code is None:
+                raise ValueError(
+                    "new_code is required if step is rollout, processed, or commented.")
         else:
             if self.new_code is not None:
                 raise ValueError(
@@ -192,12 +194,18 @@ class LeanGameState:
         return hash(str(self.human_json()))
 
     def add_child(self, action: int, child: 'LeanGameState'):
-        if not (self.step >= LeanGameStateStep.PROCESSED):
+        if not (self.step >= LeanGameStateStep.COMMENTED):
             raise LeanGameStateError(
                 "Cannot add a child to a LeanGameState if it has not been processed.")
         self.children[action] = child
 
     def terminal(self) -> bool:
+        """
+        We should be able to check if we're terminal
+        even if we haven't done the PV or comment generation
+        yet; this is useful because I have a lot of while not state.terminal()
+        loops in the code.
+        """
         if not (self.step >= LeanGameStateStep.PROCESSED):
             raise LeanGameStateError(
                 "Cannot check if a LeanGameState is terminal if it has not been processed.")
@@ -302,7 +310,7 @@ class LeanGameState:
         """
         This function is called after the LLM rollout is done.
         """
-        if self.step != LeanGameStateStep.ROLLOUT:
+        if self.step != LeanGameStateStep.INITIALIZED:
             raise LeanGameStateError(
                 "Should not LLM-post-process a LeanGameState that has already had an LLM rollout.")
         if new_code.endswith('```'):
@@ -499,6 +507,16 @@ class LeanGameState:
         self.dead = False
         self.win = False
 
+    def pre_comments(self) -> dict:
+        """
+        This function is called before the comments are generated.
+        """
+        if self.step != LeanGameStateStep.PROCESSED:
+            raise LeanGameStateError(
+                "Should not pre-comments a LeanGameState that has not been processed.")
+
+        return self.human_json()
+
     def post_comments(self, gen_comments: List[str]):
         """
         This function is called after the comments are generated.
@@ -611,14 +629,13 @@ class LeanGame(Game[LeanGameState]):
         """
 
         return LeanGameState(
+            step=LeanGameStateStep.PROCESSED,
             problem=problem,
             old_code="",
             old_tactic_state="",
             comment="",
             depth=0,
             header=header,
-            rollout_done=True,
-            processed=True,
             new_code="",
             win=False,
             dead=False,
@@ -643,25 +660,24 @@ class LeanGame(Game[LeanGameState]):
             # We've already computed this child, and we can return the cached result.
             return state.children[action]
 
-        if not state.processed:
+        if not state.step >= LeanGameStateStep.COMMENTED:
             raise LeanGameStateError(
                 "Cannot get the next state of a LeanGameState that has not been processed.")
 
-        comment = state.generated_comments[action]
+        comment = state.gen_comments[action]
 
         if state.terminal():
             raise LeanGameStateError(
                 "Cannot get the next state of a terminal LeanGameState.")
 
         new_state = LeanGameState(
+            step=LeanGameStateStep.INITIALIZED,
             problem=state.problem,
             old_code=state.code(),
             old_tactic_state=state.tactic_state,
             comment=comment,
             depth=state.depth + 1,
             header=state.header,
-            rollout_done=False,
-            processed=False,
         )
 
         state.add_child(action, new_state)
