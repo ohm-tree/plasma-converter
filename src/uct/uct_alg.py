@@ -11,7 +11,7 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from src.games.leaner_lean_game import LeanGame, LeanGameState
+from src.games.lean_game import LeanGame, LeanGameState
 from src.uct.uct_node import UCTNode
 
 

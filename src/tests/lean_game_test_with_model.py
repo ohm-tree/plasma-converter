@@ -21,7 +21,7 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
-def load_problem_minif2f(problem_name = "algebra_bleqa_apbon2msqrtableqambsqon8b"):
+def load_problem_minif2f(problem_name="algebra_bleqa_apbon2msqrtableqambsqon8b"):
     data = None
     with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
         # Each line in the file is a separate JSON object
@@ -29,6 +29,7 @@ def load_problem_minif2f(problem_name = "algebra_bleqa_apbon2msqrtableqambsqon8b
     for problem in data:
         if problem['name'] == problem_name:
             return problem
+
 
 problem = load_problem_minif2f()
 

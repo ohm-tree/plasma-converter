@@ -22,7 +22,7 @@ def main(
     import queue
     import time
 
-    from src.games.leaner_lean_game import LeanGame, LeanGameState
+    from src.games.lean_game import LeanGame, LeanGameState
 
     HOME_DIR = os.path.expanduser('~')
     print("HOME_DIR", HOME_DIR)

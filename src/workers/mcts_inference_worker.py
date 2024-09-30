@@ -22,7 +22,7 @@ def main(
 
     import numpy as np
 
-    from src.games.leaner_lean_game import LeanGame, LeanGameState
+    from src.games.lean_game import LeanGame, LeanGameState
     from src.train.self_play import self_play
 
     HOME_DIR = os.path.expanduser('~')

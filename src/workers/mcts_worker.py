@@ -9,7 +9,7 @@ import sys
 import numpy as np
 import torch
 
-from src.games.leaner_lean_game import LeanGame, LeanGameState
+from src.games.lean_game import LeanGame, LeanGameState
 from src.networks.prover_llm import ProverLLM
 from src.policies.network_policy import NetworkPolicy
 from src.policies.random_policy import RandomPolicy

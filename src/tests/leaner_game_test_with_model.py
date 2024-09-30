@@ -11,7 +11,7 @@ import pexpect
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
 
-from src.games.leaner_lean_game import LeanGame, LeanGameState
+from src.games.lean_game import LeanGame, LeanGameState
 
 # set "VLLM_LOGGING_LEVEL" to "WARNING" to suppress logging
 os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
