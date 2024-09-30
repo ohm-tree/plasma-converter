@@ -15,14 +15,19 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
-def send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optional[pexpect.spawn] = None, kill=False):
+def send_code_read_json(cmd, timeout_start=300, timeout_cat=300, timeout_finish=300, _child: Optional[pexpect.spawn] = None, kill=False):
     try:
-        return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_finish=timeout_finish, _child=_child, kill=kill)
+        return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, _child=_child, kill=kill)
     except Exception as e:
         return {'system_error': str(e)}
 
 
-def _send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optional[pexpect.spawn] = None, kill=False):
+def _send_code_read_json(cmd, timeout_start=300, timeout_cat=300, timeout_finish=300, _child: Optional[pexpect.spawn] = None, kill=False):
+    """
+    Note that there's actually no reason to make the timeouts super short. Timeouts aren't usually indicative
+    of buggy code, they're just due to variance in the time it takes to run the code. So, we can just set them
+    to be very long.
+    """
     if _child is None:
         child = pexpect.spawn(
             f"{DEFAULT_LAKE_PATH} exe repl",
@@ -35,7 +40,7 @@ def _send_code_read_json(cmd, timeout_start=30, timeout_finish=30, _child: Optio
     child.send(cmd_json + "\r\n")
     # Read the input itself.
     # This should be printed instantly, so timeout is set to 1 second.
-    child.expect_exact(cmd_json + "\r\n", timeout=20)
+    child.expect_exact(cmd_json + "\r\n", timeout=timeout_cat)
     assert child.after.decode('utf-8') == cmd_json + "\r\n"
     # print("Sent code to Lean4 REPL.")
 
@@ -82,9 +87,7 @@ def setup_repl():
             "allTactics": True,
             "tactics": True,
         },
-        _child=child,
-        timeout_start=30,
-        timeout_finish=30
+        _child=child
     )
     return child
 
