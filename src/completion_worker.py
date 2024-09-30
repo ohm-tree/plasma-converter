@@ -117,6 +117,9 @@ def main(
         for task in my_tasks:
             assert task['type'] == 'completion'
 
+        logger.info(
+            f"Worker {completion_worker_id} received {len(my_tasks)} tasks.")
+
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
             time.sleep(1)
@@ -137,5 +140,6 @@ def main(
                     'output': outputs[i].outputs[0].text,
                     'type': 'completion'
                 }
+                logger.info(str(result))
 
                 worker_queues[my_tasks[i]['mcts_worker_id']].put(result)

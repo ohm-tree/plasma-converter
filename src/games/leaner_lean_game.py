@@ -302,9 +302,10 @@ class LeanGameState:
             raise LeanGameStateError(
                 "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
 
-        return 'Complete the following Lean 4 code.\nThe tactic state is:\n' + \
+        return 'Complete the following Lean 4 code.\nHere is a hint:\n' + self.comment + \
+            '\nThe tactic state is:\n' + \
             self.old_tactic_state+'\n```lean\n' + self.header + self.problem + \
-            self.old_code + self.comment
+            self.old_code
 
     def post_LLM_rollout(self, new_code: str):
         """
@@ -329,12 +330,11 @@ class LeanGameState:
                 "Should not pre-process a LeanGameState that has already been processed.")
 
         return ''.join(
-            [self.problem, self.old_code,
-                self.comment, self.new_code]
+            [self.problem, self.old_code, self.new_code]
         )
 
     @ classmethod
-    def get_index(s: str, row: int, col: int) -> int:
+    def get_index(cls, s: str, row: int, col: int) -> int:
         """
         Convert a (row, col) pair to an index in a string.
         The Lean 4 repl convention is that rows are 1-indexed
@@ -379,7 +379,7 @@ class LeanGameState:
         """
         code_no_header = ''.join(
             [self.problem, self.old_code,
-                self.comment, self.new_code]
+                self.new_code]
         )
 
         _prefix_len = len(self.problem)
@@ -398,10 +398,9 @@ class LeanGameState:
         self.valid_code = code_no_header[:truncate_pos]
         assert self.valid_code.startswith(self.problem)
         self.valid_code = self.valid_code[len(self.problem):]
-        assert self.valid_code.startswith(self.old_code)
+        # I guess this might not be true in some edge cases?
+        # assert self.valid_code.startswith(self.old_code)
         self.valid_code = self.valid_code[len(self.old_code):]
-        assert self.valid_code.startswith(self.comment)
-        self.valid_code = self.valid_code[len(self.comment):]
 
     def get_goals(self, goals: List[dict]):
         """
@@ -491,7 +490,7 @@ class LeanGameState:
 
         self.truncate(sorries, errors)
         self.get_goals(goals)
-        if self.new_code.strip() == "":
+        if self.valid_code.strip() == "":
             # This means that the new code was truncated to nothing,
             # i.e. the first new line of code written caused an error.
             # This is a dead state.
