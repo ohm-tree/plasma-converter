@@ -157,7 +157,8 @@ def context_main(
     #           tensor_parallel_size=len(gpu_set))
     llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
             max_num_batched_tokens=8192,
-            trust_remote_code=True)
+            trust_remote_code=True,
+            tensor_parallel_size=len(gpu_set))
 
 
     sampling_params = SamplingParams(
@@ -314,7 +315,8 @@ def policy_value_main(
     #           tensor_parallel_size=len(gpu_set))
     llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
               max_num_batched_tokens=8192,
-              trust_remote_code=True)
+              trust_remote_code=True,
+                tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
         max_tokens=512,

@@ -13,11 +13,11 @@ from src.workers.policy_value_worker import policy_value_main as policy_value_pr
 
 # todo: make this a config file.
 distributed_config = {
-    'num_worker_procs': 20,
-    'num_completion_procs': 1,
-    'num_context_procs': 2,
-    'num_policy_value_procs': 1,
-    'num_lean_procs': 50,
+    'num_worker_procs': 163,
+    'num_completion_procs': 2,
+    'num_context_procs': 3,
+    'num_policy_value_procs': 3,
+    'num_lean_procs': 12,
 }
 
 json_name = "config"  # todo: make this a config file.
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         'completion_worker_id': i,
         'num_completion_workers': distributed_config['num_completion_procs'],
         'json_name': json_name,
-        'gpu_set': [2 * i, 2 * i + 1],
+        'gpu_set': [i],
         'master_queue': master_queue,
         'completion_queue': completion_queues[i],
         'worker_queues': worker_queues,
@@ -89,14 +89,14 @@ if __name__ == "__main__":
     )
         for i in range(distributed_config['num_completion_procs'])]
 
-    gpu_offset = 2 * distributed_config['num_completion_procs']
+    gpu_offset = distributed_config['num_completion_procs']
 
     policy_value_procs = [multiprocessing.Process(target=policy_value_process, kwargs={
         'run_name': run_name,
         'policy_value_worker_id': i,
         'num_policy_value_workers': distributed_config['num_policy_value_procs'],
         'json_name': json_name,
-        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+        'gpu_set': [gpu_offset + i],
         'master_queue': master_queue,
         'policy_value_queue': policy_value_queues[i],
         'worker_queues': worker_queues,
@@ -105,14 +105,14 @@ if __name__ == "__main__":
     })
         for i in range(distributed_config['num_policy_value_procs'])]
 
-    gpu_offset += 2 * distributed_config['num_policy_value_procs']
+    gpu_offset += distributed_config['num_policy_value_procs']
 
     context_procs = [multiprocessing.Process(target=context_process, kwargs={
         'run_name': run_name,
         'context_worker_id': i,
         'num_context_workers': distributed_config['num_context_procs'],
         'json_name': json_name,
-        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+        'gpu_set': [gpu_offset + i],
         'master_queue': master_queue,
         'context_queue': context_queues[i],
         'global_context_queue': global_context_queue,

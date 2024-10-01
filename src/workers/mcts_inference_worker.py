@@ -65,7 +65,7 @@ def main(
             worker_id=task_id,
             state=state,
             game=game,
-            num_iters=100,
+            num_iters=1000,
             logger=logger,
             worker_queue=worker_queue,
             global_completion_queue=global_completion_queue,
@@ -74,6 +74,7 @@ def main(
         )
 
         game_data_path = f"data/{run_name}/games/{task_id}"
+        os.makedirs(game_data_path, exist_ok=True)
 
         LeanGameState.saves(states, os.path.join(
             game_data_path, f"{problem['name']}_states.npy"))
@@ -90,7 +91,7 @@ def main(
         with open(f"outputs/{run_name}/{problem['name']}.txt", 'w') as file:
             file.write(states[-1].human_printout())
 
-        logger.info(f"Finished problem {problem['name']} result: {state.win}")
+        logger.info(f"Finished problem {problem['name']} result: {rewards[-1]}")
 
     # tell the master queue that we are done with all tasks.
     master_queue.put(

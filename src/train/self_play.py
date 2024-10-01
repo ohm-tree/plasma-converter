@@ -75,16 +75,14 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
     root.backup(context_output['task_output']['value'])
 
     root.is_processed = True
-
+    states.append(root.game_state)
     while not game.is_terminal(root.game_state):
-        states.append(root.game_state)
+        
         logger.info("Move: " + str(move_count))
         logger.info(root.game_state.human_printout())
-
         """
         TODO: Fast Playouts would be implemented here.
         """
-
 
         distribution, _ = uct_search(
             logger,
@@ -112,7 +110,7 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
         root = root.children[action]
         # set root parent to None so that it knows it is the root.
         root.root()
-
+        states.append(root.game_state)
         move_count += 1
 
     # The reward for all states in the tree is the reward of the final state.
