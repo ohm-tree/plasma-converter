@@ -39,9 +39,9 @@ def main(
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
-        f"logs/{run_name}/linear_inference_worker_{task_id}.log")
+        f"logs/{run_name}/mcts_inference_worker_{task_id}.log")
     logger.addHandler(fh)
-    logger.info(f"Starting linear_inference_worker {task_id}.")
+    logger.info(f"Starting mcts_inference_worker {task_id}.")
 
     for current_problem in range(task_id, len(data), num_tasks):
         logger.info(f"Worker {task_id} working on problem {current_problem}")
@@ -68,9 +68,9 @@ def main(
             num_iters=100,
             logger=logger,
             worker_queue=worker_queue,
-            completion_queue=global_completion_queue,
-            context_queue=global_context_queue,
-            lean_queue=global_lean_queue
+            global_completion_queue=global_completion_queue,
+            global_context_queue=global_context_queue,
+            global_lean_queue=global_lean_queue
         )
 
         game_data_path = f"data/{run_name}/games/{task_id}"

@@ -33,6 +33,9 @@ class UCTNode:
         # Whether the node has been expanded to its children
         self.is_expanded: bool = False
 
+        # Whether the node has been processed.
+        self.is_processed: bool = False
+
         # Cached values so that we don't need to recompute them every time
         self._action_mask = None
         self._is_terminal = None
@@ -46,6 +49,11 @@ class UCTNode:
         self.child_total_value: np.ndarray = np.zeros(num_actions)
         self.child_number_visits: np.ndarray = np.zeros(num_actions)
 
+        # Used iff you are the root.
+        if self.parent is None:
+            self.root_total_value: float = 0
+            self.root_number_visits: int = 0
+
         self.init_type = init_type
 
     def __hash__(self):
@@ -53,7 +61,22 @@ class UCTNode:
         Hash the node based on the game state.
         """
         return hash(self.game_state)
-    
+
+    def root(self):
+        """
+        Set the parent of the node to None.
+        """
+        if self.parent is not None:
+            # I was not originally the root, so actually I have some data to pass down.
+            self.root_total_value = self.total_value
+            self.root_number_visits = self.number_visits
+        else:
+            # I am the root, and I never had a parent, so I should initialize these values.
+            self.root_total_value = 0
+            self.root_number_visits = 0
+        self.parent = None
+        self.action = -1
+
     @property
     def action_mask(self):
         if self._action_mask is None:
@@ -68,19 +91,29 @@ class UCTNode:
 
     @property
     def number_visits(self):
+        if self.parent is None:
+            return self.root_number_visits
         return self.parent.child_number_visits[self.action]
 
     @number_visits.setter
     def number_visits(self, value):
-        self.parent.child_number_visits[self.action] = value
+        if self.parent is None:
+            self.root_number_visits = value
+        else:
+            self.parent.child_number_visits[self.action] = value
 
     @property
     def total_value(self):
+        if self.parent is None:
+            return self.root_total_value
         return self.parent.child_total_value[self.action]
 
     @total_value.setter
     def total_value(self, value):
-        self.parent.child_total_value[self.action] = value
+        if self.parent is None:
+            self.root_total_value = value
+        else:
+            self.parent.child_total_value[self.action] = value
 
     def child_Q(self):
         """
@@ -112,7 +145,11 @@ class UCTNode:
         current = self
 
         # iterate until either you reach an un-expanded node or a terminal state
-        while current.is_expanded and not current.is_terminal:
+        while (
+            current.is_expanded and
+            current.is_processed and
+            (not current.is_terminal)
+        ):
             current = current.best_child(c)
 
         return current
@@ -123,17 +160,25 @@ class UCTNode:
         """
         current = self
 
+        assert self.is_expanded, "Cannot select a leaf from an un-expanded node."
+        assert self.is_processed, "Cannot select a leaf from an un-processed node."
+        assert not self.is_terminal, "Cannot select a leaf from a terminal node."
+
         # iterate until either you reach an un-expanded node or a terminal state
-        while current.is_expanded and not current.is_terminal:
+        while (
+            current.is_expanded and
+            current.is_processed and
+            (not current.is_terminal)
+        ):
 
             # Add a virtual loss.
-            current.child_number_visits += 1
-            current.child_total_value -= 1
+            current.number_visits += 1
+            current.total_value -= 1
             current = current.best_child(c)
 
         # Add a virtual loss.
-        current.child_number_visits += 1
-        current.child_total_value -= 1
+        current.number_visits += 1
+        current.total_value -= 1
 
         return current
 

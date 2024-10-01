@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from src.games.lean_game import LeanGame, LeanGameState
+from src.games.lean_game import LeanGame, LeanGameState, LeanGameStateStep
 from src.uct.uct_node import UCTNode
 
 
@@ -20,9 +20,9 @@ def uct_search(
     logger: logging.Logger,
     worker_id: int,
     worker_queue: multiprocessing.Queue,
-    completion_queue: multiprocessing.Queue,
-    context_queue: multiprocessing.Queue,
-    lean_queue: multiprocessing.Queue,
+    global_completion_queue: multiprocessing.Queue,
+    global_context_queue: multiprocessing.Queue,
+    global_lean_queue: multiprocessing.Queue,
     game: LeanGame,
     root: UCTNode,
     num_iters: int,
@@ -49,13 +49,22 @@ def uct_search(
         logger.info(f"Number of completion_waiting: {len(completion_waiting)}")
         logger.info(f"Number of context_waiting: {len(context_waiting)}")
         logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
+
+        logger.info(f"Number visits: {root.child_number_visits}")
+        logger.info(f"Prior policy: {root.child_priors}")
+        logger.info(f"Q values: {root.child_Q()}")
+        logger.info(f"U values: {root.child_U()}")
+
         if iters >= num_iters and len(completion_waiting) == 0 and len(context_waiting) == 0 and len(lean_waiting) == 0:
             break
         if iters < num_iters:
             # greedily select leaf with given exploration parameter
             leaf: UCTNode = root.select_leaf_no_virtual_loss(c)
 
-            if leaf.is_terminal:
+            assert (not leaf.is_expanded) or (leaf.is_terminal)
+
+            # Problem: we don't know if a leaf is terminal until we lean4-verify it!
+            if leaf.game_state.step >= LeanGameStateStep.PROCESSED and leaf.is_terminal:
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
                 # compute the value estimate of the player at the terminal leaf
@@ -64,36 +73,38 @@ def uct_search(
                 leaf.backup(value_estimate)
                 iters += 1
 
+            elif hash(leaf) in completion_waiting or hash(leaf) in context_waiting or hash(leaf) in lean_waiting:
+                assert LeanGameStateStep.INITIALIZED <= leaf.game_state.step <= LeanGameStateStep.PROCESSED
+                # This annoys us, because
+                # it is an already-visited node.
+                # We simply yield control from this process for a
+                # bit while we wait for the lean worker to finish.
+                time.sleep(1)
             else:
-                if hash(leaf) in completion_waiting or hash(leaf) in context_waiting or hash(leaf) in lean_waiting:
-                    # This annoys us, because
-                    # it is an already-visited node.
-                    # We simply yield control from this process for a
-                    # bit while we wait for the lean worker to finish.
-                    time.sleep(10)
-                else:
-                    root.select_leaf(c)  # Apply the virtual loss this time.
+                # We have absolutely never seen this leaf before.
+                assert leaf.game_state.step == LeanGameStateStep.INITIALIZED
+                root.select_leaf(c)  # Apply the virtual loss this time.
 
-                    # Add the child priors and value estimate to the completion queue!
-                    # tasks should take the form
-                    # {
-                    #   'worker_id': int, # The worker task id that generated this task.
-                    #   'completion_task_id': int, # The specific completion task id of this task.
-                    #   'task': str # The task to complete, a string prompt.
-                    # }
+                # Add the child priors and value estimate to the completion queue!
+                # tasks should take the form
+                # {
+                #   'worker_id': int, # The worker task id that generated this task.
+                #   'completion_task_id': int, # The specific completion task id of this task.
+                #   'task': str # The task to complete, a string prompt.
+                # }
 
-                    state: LeanGameState = leaf.game_state
+                state: LeanGameState = leaf.game_state
 
-                    completion_queue.put(
-                        {
-                            'mcts_worker_id': worker_id,
-                            'completion_task_id': hash(leaf),
-                            'task': state.pre_LLM_rollout(),
-                            'type': 'completion'
-                        }
-                    )
-                    completion_waiting[hash(leaf)] = leaf.game_state
-                    iters += 1
+                global_completion_queue.put(
+                    {
+                        'mcts_worker_id': worker_id,
+                        'completion_task_id': hash(leaf),
+                        'task': state.pre_LLM_rollout(),
+                        'type': 'completion'
+                    }
+                )
+                completion_waiting[hash(leaf)] = leaf
+                iters += 1
         # Check for completed leaves.
 
         # Load any results from the completion queue, lean queue, and context_queue.
@@ -102,13 +113,13 @@ def uct_search(
             result = worker_queue.get()
             if result['type'] == 'completion':
                 # Find the node that requested this completion.
-                node: UCTNode = completion_waiting[result['task_id']]
+                node: UCTNode = completion_waiting.pop(result['completion_task_id'])
                 # Update the node with the completion.
                 state: LeanGameState = node.game_state
                 state.post_LLM_rollout(result['output'])
 
                 # Enqueue the node to the lean queue.
-                lean_queue.put(
+                global_lean_queue.put(
                     {
                         'mcts_worker_id': worker_id,
                         'lean_task_id': hash(node),
@@ -116,32 +127,37 @@ def uct_search(
                         'type': 'lean'
                     }
                 )
-                lean_waiting[hash(node)] = node.game_state
-                completion_waiting.pop(result['task_id'])
+                lean_waiting[hash(node)] = node
 
             elif result['type'] == 'lean':
                 # Find the node that requested this lean.
-                node: UCTNode = lean_waiting[result['task_id']]
+                node: UCTNode = lean_waiting.pop(result['lean_task_id'])
 
                 # Update the node with the lean.
                 state: LeanGameState = node.game_state
                 state.post_process(result['result'])
+                node.is_processed = True
 
-                # Enqueue the node to the context_queue.
-                context_queue.put(
-                    {
-                        'mcts_worker_id': worker_id,
-                        'task_id': hash(node),
-                        'task_input': state.pre_comments(),
-                        'type': 'context'
-                    }
-                )
-                context_waiting[hash(node)] = node.game_state
-                lean_waiting.pop(result['task_id'])
+                if node.is_terminal:
+                    # compute the value estimate of the player at the terminal leaf
+                    value_estimate: float = game.reward(state)
+                    # Immediately backup the value estimate along the path to the root
+                    node.backup(value_estimate)
+                else:
+                    # Enqueue the node to the context_queue.
+                    global_context_queue.put(
+                        {
+                            'mcts_worker_id': worker_id,
+                            'task_id': hash(node),
+                            'task_input': state.pre_comments(),
+                            'type': 'context'
+                        }
+                    )
+                    context_waiting[hash(node)] = node
 
             elif result['type'] == 'policy_value':
                 # Find the node that requested this policy value.
-                node: UCTNode = context_waiting[result['task_id']]
+                node: UCTNode = context_waiting.pop(result['task_id'])
                 # Update the node with the policy value.
                 state: LeanGameState = node.game_state
                 state.post_comments(result['task_output']['comments'])
@@ -151,19 +167,20 @@ def uct_search(
                     f"Received policy: {result['task_output']['policy']}")
                 logger.info(
                     f"Received value: {result['task_output']['value']}")
-
-                node.expand(result['task_output']['policy'],
+                policy = np.array(result['task_output']['policy'])
+                node.expand(policy,
                             result['task_output']['value'], train)
                 node.backup(result['task_output']['value'])
 
-                context_waiting.pop(result['task_id'])
-
-    print("Number visits", [i.item()
-          for i in root.child_number_visits if i > 0])
-    print("Prior policy", [i.item() for i in root.child_priors if i > 0])
-    print("Q values", [i.item() for i, j in zip(
-        root.child_Q(), root.child_number_visits) if j > 0])
-    print("U values", [i.item() for i, j in zip(
-        root.child_U(), root.child_number_visits) if j > 0])
-
+    # print("Number visits", [i.item()
+    #       for i in root.child_number_visits if i > 0])
+    # print("Prior policy", [i.item() for i in root.child_priors if i > 0])
+    # print("Q values", [i.item() for i, j in zip(
+    #     root.child_Q(), root.child_number_visits) if j > 0])
+    # print("U values", [i.item() for i, j in zip(
+    #     root.child_U(), root.child_number_visits) if j > 0])
+    print("Number visits", root.child_number_visits)
+    print("Prior policy", root.child_priors)
+    print("Q values", root.child_Q())
+    print("U values", root.child_U())
     return root.child_number_visits / np.sum(root.child_number_visits), root.child_Q()[root.child_number_visits.argmax()]

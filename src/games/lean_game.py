@@ -1,4 +1,6 @@
 import os
+import random
+import time
 from enum import IntEnum
 from typing import Callable, List, Optional
 
@@ -153,6 +155,9 @@ class LeanGameState:
         # so pointers to the children are stored here.
         self.children = {}
 
+        # This is just a unique identifier for the state.
+        self._id = hash(random.random() + time.time())
+
     def check_state(self) -> None:
         """
         Check that the state is valid.
@@ -188,7 +193,10 @@ class LeanGameState:
                     "gen_comments must be None if step is initialized, rollout, or processed.")
 
     def __hash__(self) -> int:
-        return hash(str(self.human_json()))
+        """
+        Hash the state based on the id.
+        """
+        return self._id
 
     def add_child(self, action: int, child: 'LeanGameState'):
         if not (self.step >= LeanGameStateStep.COMMENTED):
@@ -265,7 +273,7 @@ class LeanGameState:
         we probably don't want all the references floating around.
         """
         return {
-            "step": self.step,
+            # "step": self.step,
             "problem": self.problem,
             "old_code": self.old_code,
             "old_tactic_state": self.old_tactic_state,
@@ -712,4 +720,4 @@ class LeanGame(Game[LeanGameState]):
         """
         Returns a hash of the game state.
         """
-        return hash(state.code)
+        return hash(state.code())

@@ -24,9 +24,9 @@ from src.uct.uct_node import UCTNode
 def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: int,
               logger: logging.Logger,
               worker_queue: multiprocessing.Queue,
-              completion_queue: multiprocessing.Queue,
-              context_queue: multiprocessing.Queue,
-              lean_queue: multiprocessing.Queue,
+              global_completion_queue: multiprocessing.Queue,
+              global_context_queue: multiprocessing.Queue,
+              global_lean_queue: multiprocessing.Queue,
               ) -> Tuple[List[LeanGameState], List[np.ndarray], float]:
     """
     Play a game using a policy, and return the game states, action distributions, and final reward.
@@ -40,7 +40,7 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
     # Edge case: on the very first move, the completions are not available yet.
     # Send those in.
 
-    context_queue.put(
+    global_context_queue.put(
         {
             'mcts_worker_id': worker_id,
             'task_id': 0,
@@ -74,11 +74,12 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
                 context_output['task_output']['value'], train=True)
     root.backup(context_output['task_output']['value'])
 
+    root.is_processed = True
 
-    while not game.is_terminal(state):
+    while not game.is_terminal(root.game_state):
         states.append(root.game_state)
         logger.info("Move: " + str(move_count))
-        logger.info(state.human_printout())
+        logger.info(root.game_state.human_printout())
 
         """
         TODO: Fast Playouts would be implemented here.
@@ -89,9 +90,9 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
             logger,
             worker_id,
             worker_queue=worker_queue,
-            completion_queue=completion_queue,
-            context_queue=context_queue,
-            lean_queue=lean_queue,
+            global_completion_queue=global_completion_queue,
+            global_context_queue=global_context_queue,
+            global_lean_queue=global_lean_queue,
             game=game,
             root=root,
             num_iters=num_iters
@@ -109,11 +110,13 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
 
         action = np.random.choice(len(distribution), p=distribution)
         root = root.children[action]
+        # set root parent to None so that it knows it is the root.
+        root.root()
 
         move_count += 1
 
     # The reward for all states in the tree is the reward of the final state.
-    final_reward = game.reward(state)
+    final_reward = game.reward(root.game_state)
     logger.info(f"Game finished after {move_count} moves with reward: {final_reward}")
     rewards = [final_reward for _ in states]
     return states, distributions, rewards
