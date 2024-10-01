@@ -122,8 +122,13 @@ def context_main(
     and outputs a context for the policy-value worker to suggest comments.
     """
 
+    # I live in src/workers/
+    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
+    SRC_DIR = os.path.dirname(WORKER_DIR)
+    ROOT_DIR = os.path.dirname(SRC_DIR)
+
     # give myself a custom logging file.
-    os.makedirs(f"logs/{run_name}", exist_ok=True)
+    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
@@ -145,11 +150,15 @@ def context_main(
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
     # TODO: stuff all of the configs into a config file.
-    llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
-              max_num_batched_tokens=8192,
-              trust_remote_code=True,
-              dtype="float16",
-              tensor_parallel_size=len(gpu_set))
+    # llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
+    #           max_num_batched_tokens=8192,
+    #           trust_remote_code=True,
+    #           dtype="float16",
+    #           tensor_parallel_size=len(gpu_set))
+    llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
+            max_num_batched_tokens=8192,
+            trust_remote_code=True)
+
 
     sampling_params = SamplingParams(
         max_tokens=1024,
@@ -270,8 +279,13 @@ def policy_value_main(
     and outputs suggestions for the lean game dicts.
     """
 
+    # I live in src/workers/
+    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
+    SRC_DIR = os.path.dirname(WORKER_DIR)
+    ROOT_DIR = os.path.dirname(SRC_DIR)
+
     # give myself a custom logging file.
-    os.makedirs(f"logs/{run_name}", exist_ok=True)
+    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(
@@ -293,11 +307,14 @@ def policy_value_main(
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
     # TODO: stuff all of the configs into a config file.
+    # llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
+    #           max_num_batched_tokens=8192,
+    #           trust_remote_code=True,
+    #           dtype="float16",
+    #           tensor_parallel_size=len(gpu_set))
     llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
               max_num_batched_tokens=8192,
-              trust_remote_code=True,
-              dtype="float16",
-              tensor_parallel_size=len(gpu_set))
+              trust_remote_code=True)
 
     sampling_params = SamplingParams(
         max_tokens=512,

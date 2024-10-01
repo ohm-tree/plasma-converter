@@ -24,15 +24,17 @@ def main(
 
     from src.games.lean_game import LeanGame, LeanGameState
 
-    HOME_DIR = os.path.expanduser('~')
-    print("HOME_DIR", HOME_DIR)
+    # I live in src/workers/
+    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
+    SRC_DIR = os.path.dirname(WORKER_DIR)
+    ROOT_DIR = os.path.dirname(SRC_DIR)
 
-    with open(f"{HOME_DIR}/plasma-converter/datasets/minif2f.jsonl", 'r') as file:
+    with open(f"{ROOT_DIR}/datasets/minif2f.jsonl", 'r') as file:
         # Each line in the file is a separate JSON object
         data = [json.loads(line.strip()) for line in file.readlines()]
 
     # give myself a custom logging file.
-    os.makedirs(f"logs/{run_name}", exist_ok=True)
+    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(

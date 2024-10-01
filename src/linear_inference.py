@@ -6,17 +6,19 @@ import multiprocessing
 import time
 
 from src.workers.completion_worker import main as completion_process
+
+# from src.workers.policy_value_worker import context_main as context_process
+# from src.workers.policy_value_worker import policy_value_main as policy_value_process
+from src.workers.fast_pv_worker import policy_value_main as policy_value_process
 from src.workers.lean_worker import main as lean_process  # lean_worker entry point
 from src.workers.linear_inference_worker import main as inference_process
-from src.workers.policy_value_worker import context_main as context_process
-from src.workers.policy_value_worker import policy_value_main as policy_value_process
 
 # todo: make this a config file.
 distributed_config = {
     'num_worker_procs': 122,
-    'num_completion_procs': 1,
-    'num_context_procs': 2,
-    'num_policy_value_procs': 1,
+    'num_completion_procs': 2,
+    # 'num_context_procs': 2,
+    'num_policy_value_procs': 2,
     'num_lean_procs': 24,
 }
 
@@ -32,8 +34,9 @@ if __name__ == "__main__":
                          for i in range(distributed_config['num_completion_procs'])}
     policy_value_queues = {i: multiprocessing.Queue()
                            for i in range(distributed_config['num_policy_value_procs'])}
-    context_queues = {i: multiprocessing.Queue()
-                      for i in range(distributed_config['num_context_procs'])}
+    # context_queues = {i: multiprocessing.Queue()
+    #                   for i in range(distributed_config['num_context_procs'])}
+    context_queues = {}
     lean_queues = {i: multiprocessing.Queue()
                    for i in range(distributed_config['num_lean_procs'])}
 
@@ -49,7 +52,7 @@ if __name__ == "__main__":
     #      left on the queue (a timeout occurs) or we have collected COMPLETION_BATCH_SIZE or
     #      POLICY_VALUE_BATCH_SIZE tasks.
     global_completion_queue = multiprocessing.Queue()
-    global_context_queue = multiprocessing.Queue()
+    # global_context_queue = multiprocessing.Queue()
     global_policy_value_queue = multiprocessing.Queue()
 
     # There is one global queue for lean repl queries, because such queries are not batched.
@@ -69,7 +72,7 @@ if __name__ == "__main__":
         'worker_queue': worker_queues[i],
         'global_completion_queue': global_completion_queue,
         'global_lean_queue': global_lean_queue,
-        'global_context_queue': global_context_queue,
+        'global_context_queue': global_policy_value_queue, # This is now the PV queue for fast pv worker.
     }
     ) for i in range(distributed_config['num_worker_procs'])]
 
@@ -89,7 +92,7 @@ if __name__ == "__main__":
     )
         for i in range(distributed_config['num_completion_procs'])]
 
-    gpu_offset = 2 * distributed_config['num_completion_procs']
+    gpu_offset = distributed_config['num_completion_procs']
 
     policy_value_procs = [multiprocessing.Process(target=policy_value_process, kwargs={
         'run_name': run_name,
@@ -101,25 +104,26 @@ if __name__ == "__main__":
         'policy_value_queue': policy_value_queues[i],
         'worker_queues': worker_queues,
         'global_policy_value_queue': global_policy_value_queue,
-        'policy_value_batch_size': 40
+        'policy_value_batch_size': 100
     })
         for i in range(distributed_config['num_policy_value_procs'])]
 
-    gpu_offset += 2 * distributed_config['num_policy_value_procs']
+    gpu_offset += distributed_config['num_policy_value_procs']
 
-    context_procs = [multiprocessing.Process(target=context_process, kwargs={
-        'run_name': run_name,
-        'context_worker_id': i,
-        'num_context_workers': distributed_config['num_context_procs'],
-        'json_name': json_name,
-        'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
-        'master_queue': master_queue,
-        'context_queue': context_queues[i],
-        'global_context_queue': global_context_queue,
-        'global_policy_value_queue': global_policy_value_queue,
-        'context_batch_size': 40
-    })
-        for i in range(distributed_config['num_context_procs'])]
+    # context_procs = [multiprocessing.Process(target=context_process, kwargs={
+    #     'run_name': run_name,
+    #     'context_worker_id': i,
+    #     'num_context_workers': distributed_config['num_context_procs'],
+    #     'json_name': json_name,
+    #     'gpu_set': [gpu_offset + 2 * i, gpu_offset + 2 * i + 1],
+    #     'master_queue': master_queue,
+    #     'context_queue': context_queues[i],
+    #     'global_context_queue': global_context_queue,
+    #     'global_policy_value_queue': global_policy_value_queue,
+    #     'context_batch_size': 40
+    # })
+    #     for i in range(distributed_config['num_context_procs'])]
+    context_procs = []
 
     lean_procs = [multiprocessing.Process(target=lean_process, kwargs={
         'run_name': run_name,
@@ -145,8 +149,9 @@ if __name__ == "__main__":
     lean_alive = {i: True for i in range(distributed_config['num_lean_procs'])}
     policy_value_alive = {i: True for i in range(
         distributed_config['num_policy_value_procs'])}
-    context_alive = {i: True for i in range(
-        distributed_config['num_context_procs'])}
+    # context_alive = {i: True for i in range(
+    #     distributed_config['num_context_procs'])}
+    context_alive = {}
 
     while True:
         # check if all the processes are still alive

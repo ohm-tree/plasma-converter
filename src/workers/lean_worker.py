@@ -15,14 +15,14 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
-def send_code_read_json(cmd, timeout_start=300, timeout_cat=300, timeout_finish=300, _child: Optional[pexpect.spawn] = None, kill=False):
+def send_code_read_json(cmd, timeout_start=600, timeout_cat=600, timeout_finish=600, _child: Optional[pexpect.spawn] = None, kill=False):
     try:
         return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, _child=_child, kill=kill)
     except Exception as e:
         return {'system_error': str(e)}
 
 
-def _send_code_read_json(cmd, timeout_start=300, timeout_cat=300, timeout_finish=300, _child: Optional[pexpect.spawn] = None, kill=False):
+def _send_code_read_json(cmd, timeout_start=600, timeout_cat=600, timeout_finish=600, _child: Optional[pexpect.spawn] = None, kill=False):
     """
     Note that there's actually no reason to make the timeouts super short. Timeouts aren't usually indicative
     of buggy code, they're just due to variance in the time it takes to run the code. So, we can just set them
@@ -105,8 +105,14 @@ def main(
     """
     Entry point for the lean worker process.
     """
+
+    # I live in src/workers/
+    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
+    SRC_DIR = os.path.dirname(WORKER_DIR)
+    ROOT_DIR = os.path.dirname(SRC_DIR)
+
     # give myself a custom logging file.
-    os.makedirs(f"logs/{run_name}", exist_ok=True)
+    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(f"logs/{run_name}/lean_worker_{task_id}.log")
