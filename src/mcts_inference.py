@@ -13,16 +13,16 @@ from src.workers.policy_value_worker import policy_value_main as policy_value_pr
 
 # todo: make this a config file.
 distributed_config = {
-    'num_worker_procs': 122,
+    'num_worker_procs': 20,
     'num_completion_procs': 1,
     'num_context_procs': 2,
     'num_policy_value_procs': 1,
-    'num_lean_procs': 24,
+    'num_lean_procs': 50,
 }
 
 json_name = "config"  # todo: make this a config file.
 timestamp = time.strftime("%Y%m%d-%H%M%S")
-run_name = "linear_inference_" + timestamp
+run_name = "mcts_inference_" + timestamp
 
 if __name__ == "__main__":
     # task-specific queues

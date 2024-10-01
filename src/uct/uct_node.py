@@ -32,12 +32,10 @@ class UCTNode:
 
         # Whether the node has been expanded to its children
         self.is_expanded: bool = False
-        # Whether the node has been processed by the Lean verifier.
-        self.is_processed: bool = False
 
         # Cached values so that we don't need to recompute them every time
-        self.action_mask = self.game.action_mask(self.game_state)
-        self.is_terminal = self.game.is_terminal(self.game_state)
+        self._action_mask = None
+        self._is_terminal = None
 
         # The priors and values are obtained from a neural network every time you expand a node
         # The priors, total values, and number visits will be 0 on all illegal actions
@@ -55,6 +53,18 @@ class UCTNode:
         Hash the node based on the game state.
         """
         return hash(self.game_state)
+    
+    @property
+    def action_mask(self):
+        if self._action_mask is None:
+            self._action_mask = self.game.action_mask(self.game_state)
+        return self._action_mask
+    
+    @property
+    def is_terminal(self):
+        if self._is_terminal is None:
+            self._is_terminal = self.game.is_terminal(self.game_state)
+        return self._is_terminal
 
     @property
     def number_visits(self):
@@ -102,7 +112,7 @@ class UCTNode:
         current = self
 
         # iterate until either you reach an un-expanded node or a terminal state
-        while current.is_expanded and current.is_processed and not current.is_terminal:
+        while current.is_expanded and not current.is_terminal:
             current = current.best_child(c)
 
         return current
@@ -114,7 +124,7 @@ class UCTNode:
         current = self
 
         # iterate until either you reach an un-expanded node or a terminal state
-        while current.is_expanded and current.is_processed and not current.is_terminal:
+        while current.is_expanded and not current.is_terminal:
 
             # Add a virtual loss.
             current.child_number_visits += 1

@@ -5,6 +5,7 @@ This module contains functions for running the UCT algorithm.
 The code is adapted from https://www.moderndescartes.com/essays/deep_dive_mcts/.
 """
 
+import logging
 import multiprocessing
 import time
 from typing import Dict, Tuple
@@ -16,6 +17,7 @@ from src.uct.uct_node import UCTNode
 
 
 def uct_search(
+    logger: logging.Logger,
     worker_id: int,
     worker_queue: multiprocessing.Queue,
     completion_queue: multiprocessing.Queue,
@@ -43,6 +45,10 @@ def uct_search(
     iters = 0
 
     while True:
+        logger.info(f"Number of iterations: {iters}")
+        logger.info(f"Number of completion_waiting: {len(completion_waiting)}")
+        logger.info(f"Number of context_waiting: {len(context_waiting)}")
+        logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
         if iters >= num_iters and len(completion_waiting) == 0 and len(context_waiting) == 0 and len(lean_waiting) == 0:
             break
         if iters < num_iters:
@@ -59,7 +65,7 @@ def uct_search(
                 iters += 1
 
             else:
-                if hash(leaf) in completion_waiting:
+                if hash(leaf) in completion_waiting or hash(leaf) in context_waiting or hash(leaf) in lean_waiting:
                     # This annoys us, because
                     # it is an already-visited node.
                     # We simply yield control from this process for a
@@ -118,7 +124,6 @@ def uct_search(
                 node: UCTNode = lean_waiting[result['task_id']]
 
                 # Update the node with the lean.
-                node.is_processed = True
                 state: LeanGameState = node.game_state
                 state.post_process(result['result'])
 
@@ -140,6 +145,12 @@ def uct_search(
                 # Update the node with the policy value.
                 state: LeanGameState = node.game_state
                 state.post_comments(result['task_output']['comments'])
+
+                # first, we need to comment the state right away.
+                logger.info(
+                    f"Received policy: {result['task_output']['policy']}")
+                logger.info(
+                    f"Received value: {result['task_output']['value']}")
 
                 node.expand(result['task_output']['policy'],
                             result['task_output']['value'], train)

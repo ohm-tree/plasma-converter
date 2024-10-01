@@ -1,13 +1,5 @@
-import json
-import logging
 import multiprocessing
-import os
-import queue
-import time
 from typing import Dict, List
-
-# import torch
-from vllm import LLM, SamplingParams
 
 
 def main(
@@ -26,6 +18,9 @@ def main(
     """
     Entry point for the lean worker process.
     """
+    import logging
+    import os
+    import queue
 
     # I live in src/workers/
     WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -92,6 +87,7 @@ def main(
     llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
               max_num_batched_tokens=8192,
               trust_remote_code=True,
+              enforce_eager=True,
               tensor_parallel_size=len(gpu_set))
 
     # else:

@@ -1,9 +1,4 @@
-import json
-import logging
 import multiprocessing
-import os
-import queue
-import time
 from typing import Dict, List
 
 
@@ -39,6 +34,10 @@ def policy_value_main(
     Takes in contexts from the policy-value queue,
     and outputs suggestions for the lean game dicts.
     """
+
+    import logging
+    import os
+    import queue
 
     # I live in src/workers/
     WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -76,10 +75,11 @@ def policy_value_main(
     llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
               max_num_batched_tokens=8192,
               trust_remote_code=True,
+              enforce_eager=True,
               tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
-        temperature=1.7,
+        temperature=1,
         max_tokens=500,
         top_p=0.95,
         n=10,
@@ -157,7 +157,7 @@ def policy_value_main(
 
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
-            comments = [option.text for option in options]
+            comments = [''] + [option.text for option in options]
             policy = [len(options) - i for i, option in enumerate(options)]
             policy = [i / sum(policy) for i in policy]
             res = {

@@ -14,12 +14,14 @@ from src.workers.lean_worker import main as lean_process  # lean_worker entry po
 from src.workers.linear_inference_worker import main as inference_process
 
 # todo: make this a config file.
+# If you try to launch too many processes at the same time, you run into OS limitations.
+# The errors usually look like "filedescriptor out of range."
 distributed_config = {
-    'num_worker_procs': 122,
+    'num_worker_procs': 163,
     'num_completion_procs': 2,
     # 'num_context_procs': 2,
     'num_policy_value_procs': 2,
-    'num_lean_procs': 24,
+    'num_lean_procs': 12,
 }
 
 json_name = "config"  # todo: make this a config file.
@@ -75,7 +77,7 @@ if __name__ == "__main__":
         'global_context_queue': global_policy_value_queue, # This is now the PV queue for fast pv worker.
     }
     ) for i in range(distributed_config['num_worker_procs'])]
-
+    
     completion_procs = [multiprocessing.Process(target=completion_process, kwargs={
         'run_name': run_name,
         'completion_worker_id': i,
@@ -92,7 +94,7 @@ if __name__ == "__main__":
     )
         for i in range(distributed_config['num_completion_procs'])]
 
-    gpu_offset = distributed_config['num_completion_procs']
+    gpu_offset = 2 * distributed_config['num_completion_procs']
 
     policy_value_procs = [multiprocessing.Process(target=policy_value_process, kwargs={
         'run_name': run_name,
