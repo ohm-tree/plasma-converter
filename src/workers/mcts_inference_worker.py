@@ -89,7 +89,9 @@ def main(
         # save the human printout to a file
         os.makedirs(f"outputs/{run_name}/", exist_ok=True)
         with open(f"outputs/{run_name}/{problem['name']}.txt", 'w') as file:
-            file.write(states[-1].human_printout())
+            # write a human printout of each state in the game.
+            for i, state in enumerate(states):
+                file.write(state.human_printout())
 
         logger.info(f"Finished problem {problem['name']} result: {rewards[-1]}")
 

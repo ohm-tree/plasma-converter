@@ -463,7 +463,12 @@ class LeanGameState:
                 "Should not post-process a LeanGameState that has not been rolled out.")
         self.step = LeanGameStateStep.PROCESSED
 
-        if repl_result.get('system_error', False):
+        if (
+            'system_error' in repl_result
+            or 'sorries' not in repl_result
+            or 'tactics' not in repl_result
+            or 'messages' not in repl_result
+        ):
             self.tactic_state = ""
             self.valid_code = ""
             self.dead = True
