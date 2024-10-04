@@ -1,0 +1,29 @@
+run_name: mcts_inference_valid
+data_dir: /home/ubuntu/ohm-tree-IL/plasma-converter/datasets/minif2f.jsonl
+split: 'valid'
+
+worker:
+  num_procs: 163
+
+context:
+  num_procs: 3
+  batch_size: 40
+
+lean:
+  num_procs: 12
+
+completion:
+  num_procs: 2
+  batch_size: 100
+  max_num_batched_tokens: 8192
+  sampling:
+    max_tokens: 512
+    temperature: 0.0
+    top_k: 1
+    top_p: 1.0
+    stop: ["\n", "```"]
+
+policy_value:
+  num_procs: 3
+  type: fast
+  batch_size: 40

@@ -3,10 +3,9 @@ from typing import Dict, Optional
 
 
 def main(
+        config: dict,
         run_name: str,
         task_id: int,
-        num_tasks: int,
-        json_name: str,
         master_queue: multiprocessing.Queue,
         lean_queue: multiprocessing.Queue,
         worker_queues: Dict[int, multiprocessing.Queue],

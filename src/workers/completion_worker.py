@@ -3,17 +3,14 @@ from typing import Dict, List
 
 
 def main(
+        config: dict,
         run_name: str,
         completion_worker_id: int,
-        num_completion_workers: int,
-        json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         completion_queue: multiprocessing.Queue,
         worker_queues: Dict[int, multiprocessing.Queue],
         global_completion_queue: multiprocessing.Queue,
-        completion_batch_size: int,
-        custom_eos: list
 ):
     """
     Entry point for the lean worker process.
@@ -79,27 +76,14 @@ def main(
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
     # TODO: stuff all of the configs into a config file.
-    # llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
-    #           max_num_batched_tokens=8192,
-    #           trust_remote_code=True,
-    #           dtype="float16",
-    #           tensor_parallel_size=len(gpu_set))
-    llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
-              max_num_batched_tokens=8192,
+    llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
+              max_num_batched_tokens=config['max_num_batched_tokens'],
               trust_remote_code=True,
-              enforce_eager=True,
+              dtype="float16",
               tensor_parallel_size=len(gpu_set))
 
-    # else:
-    #     raise ValueError(
-    #         "You probably need to add a new device to the list of supported devices.")
-
     sampling_params = SamplingParams(
-        max_tokens=512,
-        temperature=0.0,
-        top_k=1,
-        top_p=1.0,
-        stop=custom_eos
+        **config['sampling']
     )
 
     while True:
@@ -129,7 +113,7 @@ def main(
             assert new_task['type'] == 'completion'
             my_tasks.append(new_task)
 
-        while len(my_tasks) < completion_batch_size:
+        while len(my_tasks) < config['batch_size']:
             try:
                 task = global_completion_queue.get_nowait()
             except queue.Empty:

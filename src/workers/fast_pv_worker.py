@@ -1,5 +1,6 @@
 import multiprocessing
 from typing import Dict, List
+import numpy as np
 
 
 def prompt(lean_game_dict: Dict) -> str:
@@ -17,16 +18,14 @@ def prompt(lean_game_dict: Dict) -> str:
     return res
 
 def policy_value_main(
+        config: dict,
         run_name: str,
         policy_value_worker_id: int,
-        num_policy_value_workers: int,
-        json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         policy_value_queue: multiprocessing.Queue,
         worker_queues: Dict[int, multiprocessing.Queue],
         global_policy_value_queue: multiprocessing.Queue,
-        policy_value_batch_size: int,
 ):
     """
     Entry point for the PV worker process.
@@ -67,16 +66,17 @@ def policy_value_main(
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
     # TODO: stuff all of the configs into a config file.
+    llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
+            seed=0,
+            max_num_batched_tokens=8192,
+            trust_remote_code=True,
+            dtype="float16",
+            tensor_parallel_size=len(gpu_set))
     # llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
     #           max_num_batched_tokens=8192,
     #           trust_remote_code=True,
-    #           dtype="float16",
+    #           enforce_eager=True,
     #           tensor_parallel_size=len(gpu_set))
-    llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
-              max_num_batched_tokens=8192,
-              trust_remote_code=True,
-              enforce_eager=True,
-              tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
         temperature=1,
@@ -133,7 +133,7 @@ def policy_value_main(
         else:
             assert new_task['type'] == 'context'
             my_tasks.append(new_task)
-        while len(my_tasks) < policy_value_batch_size:
+        while len(my_tasks) < config['batch_size']:
             try:
                 new_task = global_policy_value_queue.get_nowait()
             except queue.Empty:
@@ -157,9 +157,15 @@ def policy_value_main(
 
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
-            comments = [''] + [option.text for option in options]
-            policy = [len(options) - i for i, option in enumerate(options)]
-            policy = [i / sum(policy) for i in policy]
+
+            comments = np.array([option.text for option in options])
+            policy = np.array([option.cumulative_logprob for option in options])
+            unique_indices = [i==0 or comments[i]!=comments[i-1] for i in range(len(comments))]
+            comments = comments[unique_indices]
+            policy = policy[unique_indices]
+            policy = np.exp(policy)
+            policy /= policy.sum()
+
             res = {
                 'comments': comments,
                 'policy': policy,
