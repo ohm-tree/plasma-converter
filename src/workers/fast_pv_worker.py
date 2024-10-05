@@ -13,8 +13,12 @@ def prompt(lean_game_dict: Dict) -> str:
 
     res += lean_game_dict['header'] + \
         lean_game_dict['problem'] + lean_game_dict['old_code']
-    
+
     return res
+
+
+N = 5  # Number of completions to generate per task.
+
 
 def policy_value_main(
         run_name: str,
@@ -82,8 +86,8 @@ def policy_value_main(
         temperature=1,
         max_tokens=500,
         top_p=0.95,
-        n=10,
-        stop = ['\n']
+        n=N,  # N possible comments per completion.
+        stop=['\n']
     )
 
     logger.info("Policy-value worker initialized.")
@@ -146,7 +150,7 @@ def policy_value_main(
             # Spinlock, disappointing, but there's nothing to do.
             continue
         # We have tasks to complete.
-        
+
         model_inputs = [prompt(task['task_input']) for task in my_tasks]
 
         model_outputs = llm.generate(
@@ -158,7 +162,8 @@ def policy_value_main(
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
             comments = [''] + [option.text for option in options]
-            policy = [len(options) - i for i, option in enumerate(options)]
+            assert len(comments) == N + 1
+            policy = list(range(N + 1, 0, -1))
             policy = [i / sum(policy) for i in policy]
             res = {
                 'comments': comments,

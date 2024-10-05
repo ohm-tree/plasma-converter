@@ -93,7 +93,8 @@ def main(
             for i, state in enumerate(states):
                 file.write(state.human_printout())
 
-        logger.info(f"Finished problem {problem['name']} result: {rewards[-1]}")
+        logger.info(
+            f"Finished problem {problem['name']} result: {rewards[-1]}")
 
     # tell the master queue that we are done with all tasks.
     master_queue.put(
@@ -103,3 +104,6 @@ def main(
             'type': 'done'
         }
     )
+    logger.info(f"Finished all tasks.")
+    logger.removeHandler(fh)
+    fh.close()

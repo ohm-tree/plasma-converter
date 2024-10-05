@@ -22,22 +22,20 @@ def main(
     import time
 
     import pexpect
-        
+
     HOME_DIR = os.path.expanduser('~')
     DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
     DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
     LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
-
-    def send_code_read_json(cmd, timeout_start=600, timeout_cat=600, timeout_finish=600, _child: Optional[pexpect.spawn] = None, kill=False):
+    def send_code_read_json(cmd, timeout_start=60, timeout_cat=60, timeout_finish=60, _child: Optional[pexpect.spawn] = None, kill=False):
         try:
             return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, _child=_child, kill=kill)
         except Exception as e:
             return {'system_error': str(e)}
 
-
-    def _send_code_read_json(cmd, timeout_start=600, timeout_cat=600, timeout_finish=600, _child: Optional[pexpect.spawn] = None, kill=False):
+    def _send_code_read_json(cmd, timeout_start=60, timeout_cat=60, timeout_finish=60, _child: Optional[pexpect.spawn] = None, kill=False):
         """
         Note that there's actually no reason to make the timeouts super short. Timeouts aren't usually indicative
         of buggy code, they're just due to variance in the time it takes to run the code. So, we can just set them
@@ -89,24 +87,25 @@ def main(
             child.close()
         return json.loads(res)
 
-
     def setup_repl():
         child = pexpect.spawn(
             f"{DEFAULT_LAKE_PATH} exe repl",
             cwd=DEFAULT_LEAN_WORKSPACE)
 
         # Use the unprotected version to avoid error-loops.
+        # I *know* this can never fail, so we set timeouts massive.
         _send_code_read_json(
             {
                 "cmd": LEAN4_DEFAULT_HEADER,
                 "allTactics": True,
                 "tactics": True,
             },
-            _child=child
+            _child=child,
+            timeout_start=600,
+            timeout_cat=600,
+            timeout_finish=600
         )
         return child
-
-
 
     # I live in src/workers/
     WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -187,3 +186,5 @@ def main(
             result
         )
         logger.info(str(result))
+    print("Lean worker is dead.")
+    logger.info("Lean worker is dead.")
