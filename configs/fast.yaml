@@ -10,20 +10,14 @@ context:
   batch_size: 40
 
 lean:
-  num_procs: 12
+  num_procs: 24
 
-completion:
-  num_procs: 2
-  batch_size: 100
-  max_num_batched_tokens: 8192
+policy_value:
+  num_procs: 5
+  batch_size: 40
   sampling:
     max_tokens: 512
     temperature: 0.0
     top_k: 1
     top_p: 1.0
     stop: ["\n", "```"]
-
-policy_value:
-  num_procs: 3
-  type: fast
-  batch_size: 40
