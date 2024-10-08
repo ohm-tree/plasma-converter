@@ -27,11 +27,11 @@ def run_inference():
     # Assert that the config is valid
     fast_pv_active = (config['fast_policy_value']['num_procs'] > 0)
     pv_active = (config['policy_value']['num_procs'] >
-                 0 or config['completion']['num_procs'] > 0)
+                 0 or config['context']['num_procs'] > 0)
     if fast_pv_active:
         if pv_active:
             raise ValueError(
-                "fast_policy_value and policy_value/completion workers cannot be run at the same time.")
+                "fast_policy_value and policy_value/context workers cannot be run at the same time.")
         else:
             print("Running in fast PV mode.")
     else:
@@ -65,12 +65,12 @@ def run_inference():
     # Create inference processes
     gpu_offset = 0
     procs: Dict[str, List[multiprocessing.Process]] = {}
-    for worker_type, type_string, entrypoint, gpu in WORKER_TYPES_AND_STRINGS:
-        if config[proc_type]['num_procs'] > 0:
-            procs.update({proc_type: []})
-            for i in range(config[proc_type]['num_procs']):
-                procs[proc_type].append(multiprocessing.Process(target=entrypoint, kwargs={
-                    'config': config[proc_type],
+    for _, type_string, entrypoint, gpu in WORKER_TYPES_AND_STRINGS:
+        if config[type_string]['num_procs'] > 0:
+            procs.update({type_string: []})
+            for i in range(config[type_string]['num_procs']):
+                procs[type_string].append(multiprocessing.Process(target=entrypoint, kwargs={
+                    'config': config[type_string],
                     'run_name': run_name,
                     'task_id': i,
                     'queues': queues,
@@ -79,7 +79,7 @@ def run_inference():
                 )
 
         if gpu:
-            gpu_offset += config[proc_type]['num_procs']
+            gpu_offset += config[type_string]['num_procs']
 
     # These should all just be references, arranged in nice ways.
     all_procs: List[multiprocessing.Process] = []

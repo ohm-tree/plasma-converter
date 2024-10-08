@@ -163,13 +163,12 @@ class Worker(abc.ABC):
         self.enqueue(response_task, task.head_id)
 
     def spin_deque_task(self,
-                        task_type: TaskType,
+                        task_type: Union[TaskType, WorkerIdentifer],
                         timeout: Optional[int] = None,
                         batch_size: Optional[int] = None,
                         ) -> List[Union[WorkerTask, WorkerResponse]]:
         """
-        If batch_size is None, return a single task.
-
+        If batch_size is None, return all tasks available.
         If batch_size is not None, return a batch of tasks
         of size at most batch_size.
 
@@ -179,7 +178,7 @@ class Worker(abc.ABC):
         before returning; possibly returns fewer than batch_size tasks.
         """
         if batch_size is None:
-            batch_size = 1
+            batch_size = float('inf')
 
         my_tasks: List[Union[WorkerTask, WorkerResponse]] = []
         first = True
@@ -195,6 +194,10 @@ class Worker(abc.ABC):
             except queue.Empty:
                 break
             else:
+                if task == 'kill':
+                    self.logger.info(
+                        f"Received kill signal, terminating.")
+                    return my_tasks
                 if task.task_id.task_type not in self.worker_type.consumes:
                     raise ValueError(
                         f"I am a worker of type {self.worker_type}, got {task.task_id.task_type}"

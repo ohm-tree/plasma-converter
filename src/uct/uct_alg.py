@@ -5,26 +5,30 @@ This module contains functions for running the UCT algorithm.
 The code is adapted from https://www.moderndescartes.com/essays/deep_dive_mcts/.
 """
 
+from __future__ import annotations
+
 import logging
 import multiprocessing
 import time
-from typing import Dict, Tuple
+from typing import TYPE_CHECKING, Dict, Tuple
 
 import numpy as np
 
 from src.games.lean_game import LeanGame, LeanGameState, LeanGameStateStep
 from src.uct.uct_node import UCTNode
-from src.workers.mcts_inference_worker import (
-    CompletionTaskType,
-    LeanTaskType,
-    MCTSWorker,
-    MCTSWorkerType,
-    PolicyValueTaskType,
-)
+
+if TYPE_CHECKING:
+    from src.workers.mcts_inference_worker import (
+        CompletionTaskType,
+        LeanTaskType,
+        MCTSWorker,
+        MCTSWorkerType,
+        PolicyValueTaskType,
+    )
 
 
 def uct_search(
-    self: MCTSWorker,
+    self: "MCTSWorker",
     game: LeanGame,
     root: UCTNode,
     num_iters: int,
@@ -112,132 +116,29 @@ def uct_search(
                 iters += 1
         # Check for completed leaves.
 
-        # Load any results from the completion queue, lean queue, and context_queue.
-        # and enqueue them all to the lean_queue and context_queue.
-        if worker_queue.empty() and (iters >= num_iters or len(completion_waiting) + len(context_waiting) + len(lean_waiting) >= 10):
-            # just be patient i guess. don't clog up cpu spinning.
-            time.sleep(1)
-        while not worker_queue.empty():
-            activity = True
-            result = worker_queue.get()
-            node: UCTNode
-            time_init: float
-            if result['type'] == 'completion':
-                # Find the node that requested this completion.
-                node, time_init = completion_waiting.pop(
-                    result['completion_task_id'])
-
-                time_taken = time.time() - time_init
-
-                logger.info("Received completion output, took " +
-                            str(time_taken) + " seconds.")
-                sum_completion_time += time_taken
-                total_completion += 1
-
-                # Update the node with the completion.
-                state: LeanGameState = node.game_state
-                state.post_LLM_rollout(result['output'])
-
-                # Enqueue the node to the lean queue.
-                global_lean_queue.put(
-                    {
-                        'mcts_worker_id': worker_id,
-                        'lean_task_id': hash(node),
-                        'task': state.pre_process(),
-                        'type': 'lean'
-                    }
-                )
-                lean_waiting[hash(node)] = (node, time.time())
-
-            elif result['type'] == 'lean':
-                # Find the node that requested this lean.
-                node, time_init = lean_waiting.pop(result['lean_task_id'])
-
-                time_taken = time.time() - time_init
-
-                logger.info("Received lean output, took " +
-                            str(time_taken) + " seconds.")
-                sum_lean_time += time_taken
-                total_lean += 1
-
-                # Update the node with the lean.
-                state: LeanGameState = node.game_state
-                state.post_process(result['result'])
-                node.is_processed = True
-
-                if node.is_terminal:
-                    # compute the value estimate of the player at the terminal leaf
-                    value_estimate: float = game.reward(state)
-                    # Immediately backup the value estimate along the path to the root
-                    node.backup(value_estimate)
-
-                    if value_estimate == 1.0:
-                        logger.info(
-                            "We think we just won! Here was the lean output:")
-                        logger.info(result['result'])
-                        victorious_death = True
-                        winning_node = node
-
-                else:
-                    # Enqueue the node to the context_queue.
-                    global_context_queue.put(
-                        {
-                            'mcts_worker_id': worker_id,
-                            'task_id': hash(node),
-                            'task_input': state.pre_comments(),
-                            'type': 'context'
-                        }
-                    )
-                    context_waiting[hash(node)] = (node, time.time())
-
-            elif result['type'] == 'policy_value':
-                # Find the node that requested this policy value.
-                node, time_init = context_waiting.pop(result['task_id'])
-
-                time_taken = time.time() - time_init
-
-                logger.info("Received context output, took " +
-                            str(time_taken) + " seconds.")
-                sum_context_time += time_taken
-                total_context += 1
-
-                # Update the node with the policy value.
-                state: LeanGameState = node.game_state
-                state.post_comments(result['task_output']['comments'])
-
-                # first, we need to comment the state right away.
-                self.logger.info(
-                    f"Received policy: {result['task_output']['policy']}")
-                self.logger.info(
-                    f"Received value: {result['task_output']['value']}")
-                policy = np.array(result['task_output']['policy'])
-                node.expand(policy,
-                            result['task_output']['value'], train)
-                node.backup(result['task_output']['value'])
         if activity:
-            logger.info(f"Number of iterations: {iters}")
-            logger.info(
+            self.logger.info(f"Number of iterations: {iters}")
+            self.logger.info(
                 f"Number of completion_waiting: {len(completion_waiting)}")
-            logger.info(f"Number of context_waiting: {len(context_waiting)}")
-            logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
+            self.logger.info(
+                f"Number of context_waiting: {len(context_waiting)}")
+            self.logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
 
-            logger.info(f"Number visits: {root.child_number_visits}")
-            logger.info(f"Prior policy: {root.child_priors}")
-            logger.info(f"Q values: {root.child_Q()}")
-            logger.info(f"U values: {root.child_U()}")
+            self.logger.info(f"Number visits: {root.child_number_visits}")
+            self.logger.info(f"Prior policy: {root.child_priors}")
+            self.logger.info(f"Q values: {root.child_Q()}")
+            self.logger.info(f"U values: {root.child_U()}")
             if total_completion > 0:
-                logger.info(
+                self.logger.info(
                     f"Total completion time: {sum_completion_time}, average: {sum_completion_time / total_completion}")
             if total_context > 0:
-                logger.info(
+                self.logger.info(
                     f"Total context time: {sum_context_time}, average: {sum_context_time / total_context}")
             if total_lean > 0:
-                logger.info(
+                self.logger.info(
                     f"Total lean time: {sum_lean_time}, average: {sum_lean_time / total_lean}")
 
-            logger.info(
+            self.logger.info(
                 f"Dead time: {dead_time}, time elapsed: {time.time() - absolute_start_time}")
 
-        if not activity:
-            dead_time += time.time() - dead_time_start
     return root.child_number_visits / np.sum(root.child_number_visits), root.child_Q()[root.child_number_visits.argmax()], winning_node

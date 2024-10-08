@@ -77,8 +77,8 @@ def self_play(
         """
         TODO: Fast Playouts would be implemented here.
         """
-
-        distribution, _ = uct_search(
+        winning_node: UCTNode
+        distribution, _, winning_node = uct_search(
             self,
             game=game,
             root=root,
@@ -108,7 +108,8 @@ def self_play(
     # The reward for all states in the tree is the reward of the final state.
     if winning_node is not None:
         final_reward = game.reward(winning_node.game_state)
-        self.logger.info("Game finished early with reward: " + str(final_reward))
+        self.logger.info(
+            "Game finished early with reward: " + str(final_reward))
     else:
         final_reward = game.reward(root.game_state)
         self.logger.info(

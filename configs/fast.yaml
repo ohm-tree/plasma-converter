@@ -5,14 +5,14 @@ split: 'valid'
 worker:
   num_procs: 163
 
-context:
+completion:
   num_procs: 3
   batch_size: 40
 
 lean:
   num_procs: 24
 
-policy_value:
+fast_policy_value:
   num_procs: 5
   batch_size: 40
   sampling:
@@ -21,3 +21,9 @@ policy_value:
     top_k: 1
     top_p: 1.0
     stop: ["\n", "```"]
+
+policy_value:
+  num_procs: 0
+
+context:
+  num_procs: 0
