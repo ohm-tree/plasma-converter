@@ -83,7 +83,8 @@ def policy_value_main(
         max_tokens=500,
         top_p=0.95,
         n=10,
-        stop = ['\n']
+        stop = ['\n'],
+        logprobs=True
     )
 
     logger.info("Policy-value worker initialized.")
@@ -155,15 +156,13 @@ def policy_value_main(
             use_tqdm=False,
         )
 
-        print("model_outputs", model_outputs)
+        # print("model_outputs", model_outputs)
 
         for i in range(len(model_outputs)):
-            options = model_outputs[0].outputs[i]
-            # either this or model_outputs[i].outputs[0]
+            options = model_outputs[i].outputs
 
             comments = np.array([option.text for option in options])
             policy = np.array([option.cumulative_logprob for option in options])
-            print("policy", policy)
             unique_indices = [i==0 or comments[i]!=comments[i-1] for i in range(len(comments))]
             comments = comments[unique_indices]
             policy = policy[unique_indices]
