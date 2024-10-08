@@ -1,38 +1,39 @@
 """
-In this file, we will let a human play a game of Lean (using modal).
+In this file, we will let a human play a game of Lean.
 """
 
 import multiprocessing
+import json
+import logging
+import os
+
+import numpy as np
+
+from src.games.lean_game import LeanGame, LeanGameState
+from src.train.self_play import self_play
 
 
 def main(
+    config: dict,
     run_name: str,
     task_id: int,
-    num_tasks: int,
-    json_name: str,
     master_queue: multiprocessing.Queue,
     worker_queue: multiprocessing.Queue,
     global_completion_queue: multiprocessing.Queue,
     global_lean_queue: multiprocessing.Queue,
     global_context_queue: multiprocessing.Queue
 ):
-    import json
-    import logging
-    import os
-
-    import numpy as np
-
-    from src.games.lean_game import LeanGame, LeanGameState
-    from src.train.self_play import self_play
-
     # I live in src/workers/
     WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
     SRC_DIR = os.path.dirname(WORKER_DIR)
     ROOT_DIR = os.path.dirname(SRC_DIR)
 
-    with open(f"{ROOT_DIR}/datasets/minif2f.jsonl", 'r') as file:
-        # Each line in the file is a separate JSON object
-        data = [json.loads(line.strip()) for line in file.readlines()]
+    with open(config['data_dir'], 'r') as file:
+        data = [
+            json.loads(line.strip()) 
+            for line in file.readlines() 
+            if json.loads(line.strip()).get('split') == config['split']
+        ]
 
     # give myself a custom logging file.
     os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
@@ -43,7 +44,7 @@ def main(
     logger.addHandler(fh)
     logger.info(f"Starting mcts_inference_worker {task_id}.")
 
-    for current_problem in range(task_id, len(data), num_tasks):
+    for current_problem in range(task_id, len(data), config['worker']['num_procs']):
         logger.info(f"Worker {task_id} working on problem {current_problem}")
         problem = data[current_problem]
         informal_prefix = problem['informal_prefix']

@@ -104,16 +104,14 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
 
 
 def context_main(
+        config: dict,
         run_name: str,
         context_worker_id: int,
-        num_context_workers: int,
-        json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         context_queue: multiprocessing.Queue,
         global_context_queue: multiprocessing.Queue,
         global_policy_value_queue: multiprocessing.Queue,
-        context_batch_size: int,
 ):
     """
     Entry point for the context worker process.
@@ -214,7 +212,7 @@ def context_main(
             assert new_task['type'] == 'context'
             my_tasks.append(new_task)
 
-        while len(my_tasks) < context_batch_size:
+        while len(my_tasks) < config['batch_size']:
             try:
                 new_task = global_context_queue.get_nowait()
             except queue.Empty:
@@ -261,10 +259,9 @@ def context_main(
 
 
 def policy_value_main(
+        config: dict,
         run_name: str,
         policy_value_worker_id: int,
-        num_policy_value_workers: int,
-        json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         policy_value_queue: multiprocessing.Queue,

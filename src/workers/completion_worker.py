@@ -3,17 +3,14 @@ from typing import Dict, List
 
 
 def main(
+        config: dict,
         run_name: str,
         completion_worker_id: int,
-        num_completion_workers: int,
-        json_name: str,
         gpu_set: List[int],
         master_queue: multiprocessing.Queue,
         completion_queue: multiprocessing.Queue,
         worker_queues: Dict[int, multiprocessing.Queue],
         global_completion_queue: multiprocessing.Queue,
-        completion_batch_size: int,
-        custom_eos: list
 ):
     """
     Entry point for the lean worker process.
@@ -92,16 +89,8 @@ def main(
               swap_space=16
               )
 
-    # else:
-    #     raise ValueError(
-    #         "You probably need to add a new device to the list of supported devices.")
-
     sampling_params = SamplingParams(
-        max_tokens=512,
-        temperature=0.0,
-        top_k=1,
-        top_p=1.0,
-        stop=custom_eos
+        **config['sampling']
     )
 
     while True:
@@ -131,7 +120,7 @@ def main(
             assert new_task['type'] == 'completion'
             my_tasks.append(new_task)
 
-        while len(my_tasks) < completion_batch_size:
+        while len(my_tasks) < config['batch_size']:
             try:
                 task = global_completion_queue.get_nowait()
             except queue.Empty:

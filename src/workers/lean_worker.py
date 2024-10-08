@@ -3,10 +3,9 @@ from typing import Dict, Optional
 
 
 def main(
+        config: dict,
         run_name: str,
         task_id: int,
-        num_tasks: int,
-        json_name: str,
         master_queue: multiprocessing.Queue,
         lean_queue: multiprocessing.Queue,
         worker_queues: Dict[int, multiprocessing.Queue],
@@ -43,7 +42,7 @@ def main(
         """
 
         cmd_json = json.dumps(cmd)
-        # print(cmd_json)
+        print("cmd_json", cmd_json)
         child.send(cmd_json + "\r\n")
         # Read the input itself.
         # This should be printed instantly, so timeout is set to 1 second.
