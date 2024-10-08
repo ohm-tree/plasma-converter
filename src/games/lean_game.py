@@ -6,11 +6,7 @@ from typing import Callable, List, Optional
 
 import numpy as np
 
-from src.games.game import LeanGame
-
-# from src.networks.prover_llm import ProverLLM
-
-############################################# Spaghetti Code from DeepSeek (TODO: Rewrite) #############################################
+from src.games.game import Game
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
@@ -30,9 +26,6 @@ class AttrDict(dict):
 
     def __delattr__(self, name):
         del self[name]
-
-
-############################################# Lean Game Formalism #############################################
 
 
 class LeanGameStateError(Exception):
@@ -535,19 +528,6 @@ class LeanGameState:
         self.gen_comments = gen_comments
         self.step = LeanGameStateStep.COMMENTED
 
-    # def pre_policy_value(self) -> str:
-        # """
-        # This function is called before the policy value network is called.
-        # It generates a prompt for the policy value network.
-        # """
-        # if not (self.step >= LeanGameStateStep.PROCESSED):
-        #     raise LeanGameStateError(
-        #         "Should not pre-process a LeanGameState that has not been processed.")
-
-        # # TODO: make this better.
-
-        # return 'Complete the following Lean 4 code.\n```lean\n' + self.header + self.problem + self.old_code + self.comment + self.new_code
-
     def code(self) -> str:
         """
         Returns the full code of the state.
@@ -584,7 +564,7 @@ class LeanGameState:
         return [cls(**state) for state in states]
 
 
-class LeanGame(LeanGame[LeanGameState]):
+class LeanGame(Game[LeanGameState]):
     """
     The LeanGame class implements the game logic
     for a Lean 4 proof assistant game.

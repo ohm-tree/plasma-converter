@@ -14,15 +14,17 @@ import numpy as np
 
 from src.games.lean_game import LeanGame, LeanGameState, LeanGameStateStep
 from src.uct.uct_node import UCTNode
+from src.workers.mcts_inference_worker import (
+    CompletionTaskType,
+    LeanTaskType,
+    MCTSWorker,
+    MCTSWorkerType,
+    PolicyValueTaskType,
+)
 
 
 def uct_search(
-    logger: logging.Logger,
-    worker_id: int,
-    worker_queue: multiprocessing.Queue,
-    global_completion_queue: multiprocessing.Queue,
-    global_context_queue: multiprocessing.Queue,
-    global_lean_queue: multiprocessing.Queue,
+    self: MCTSWorker,
     game: LeanGame,
     root: UCTNode,
     num_iters: int,
@@ -45,15 +47,16 @@ def uct_search(
     iters = 0
 
     while True:
-        logger.info(f"Number of iterations: {iters}")
-        logger.info(f"Number of completion_waiting: {len(completion_waiting)}")
-        logger.info(f"Number of context_waiting: {len(context_waiting)}")
-        logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
+        self.logger.info(f"Number of iterations: {iters}")
+        self.logger.info(
+            f"Number of completion_waiting: {len(completion_waiting)}")
+        self.logger.info(f"Number of context_waiting: {len(context_waiting)}")
+        self.logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
 
-        logger.info(f"Number visits: {root.child_number_visits}")
-        logger.info(f"Prior policy: {root.child_priors}")
-        logger.info(f"Q values: {root.child_Q()}")
-        logger.info(f"U values: {root.child_U()}")
+        self.logger.info(f"Number visits: {root.child_number_visits}")
+        self.logger.info(f"Prior policy: {root.child_priors}")
+        self.logger.info(f"Q values: {root.child_Q()}")
+        self.logger.info(f"U values: {root.child_U()}")
 
         if iters >= num_iters and len(completion_waiting) == 0 and len(context_waiting) == 0 and len(lean_waiting) == 0:
             break
@@ -95,13 +98,10 @@ def uct_search(
 
                 state: LeanGameState = leaf.game_state
 
-                global_completion_queue.put(
-                    {
-                        'mcts_worker_id': worker_id,
-                        'completion_task_id': hash(leaf),
-                        'task': state.pre_LLM_rollout(),
-                        'type': 'completion'
-                    }
+                self.enqueue_task(
+                    obj=state.pre_LLM_rollout(),
+                    task_idx=hash(leaf),
+                    task_type=CompletionTaskType
                 )
                 completion_waiting[hash(leaf)] = leaf
                 iters += 1
@@ -109,11 +109,13 @@ def uct_search(
 
         # Load any results from the completion queue, lean queue, and context_queue.
         # and enqueue them all to the lean_queue and context_queue.
+
         while not worker_queue.empty():
             result = worker_queue.get()
             if result['type'] == 'completion':
                 # Find the node that requested this completion.
-                node: UCTNode = completion_waiting.pop(result['completion_task_id'])
+                node: UCTNode = completion_waiting.pop(
+                    result['completion_task_id'])
                 # Update the node with the completion.
                 state: LeanGameState = node.game_state
                 state.post_LLM_rollout(result['output'])
@@ -163,9 +165,9 @@ def uct_search(
                 state.post_comments(result['task_output']['comments'])
 
                 # first, we need to comment the state right away.
-                logger.info(
+                self.logger.info(
                     f"Received policy: {result['task_output']['policy']}")
-                logger.info(
+                self.logger.info(
                     f"Received value: {result['task_output']['value']}")
                 policy = np.array(result['task_output']['policy'])
                 node.expand(policy,
