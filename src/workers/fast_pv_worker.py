@@ -17,7 +17,7 @@ def prompt(lean_game_dict: Dict) -> str:
     return res
 
 
-N = 5  # Number of completions to generate per task.
+N = 20  # Number of completions to generate per task.
 
 
 def policy_value_main(
@@ -79,12 +79,13 @@ def policy_value_main(
     llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
               max_num_batched_tokens=8192,
               trust_remote_code=True,
-              enforce_eager=True,
+              swap_space=16,
+              #   enforce_eager=True,
               tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
         temperature=1,
-        max_tokens=500,
+        max_tokens=300,
         top_p=0.95,
         n=N,  # N possible comments per completion.
         stop=['\n']
@@ -193,3 +194,5 @@ def policy_value_main(
     del llm.llm_engine.model_executor
     del llm
     gc.collect()
+
+    print(f"Policy-value worker {policy_value_worker_id} is dead.")

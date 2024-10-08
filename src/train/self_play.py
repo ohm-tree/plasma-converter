@@ -77,14 +77,14 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
     root.is_processed = True
     states.append(root.game_state)
     while not game.is_terminal(root.game_state):
-        
+
         logger.info("Move: " + str(move_count))
         logger.info(root.game_state.human_printout())
         """
         TODO: Fast Playouts would be implemented here.
         """
 
-        distribution, _ = uct_search(
+        distribution, _, winning_node = uct_search(
             logger,
             worker_id,
             worker_queue=worker_queue,
@@ -103,6 +103,9 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
         to sharpen the training distribution. This is something we could try.
         """
 
+        if winning_node is not None:
+            root = winning_node
+            break
         distributions.append(distribution)
         logger.info(f"Action distribution: {distribution}")
 
@@ -114,7 +117,12 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
         move_count += 1
 
     # The reward for all states in the tree is the reward of the final state.
-    final_reward = game.reward(root.game_state)
-    logger.info(f"Game finished after {move_count} moves with reward: {final_reward}")
+    if winning_node is not None:
+        final_reward = game.reward(winning_node.game_state)
+        logger.info("Game finished early with reward: " + str(final_reward))
+    else:
+        final_reward = game.reward(root.game_state)
+        logger.info(
+            f"Game finished after {move_count} moves with reward: {final_reward}")
     rewards = [final_reward for _ in states]
     return states, distributions, rewards

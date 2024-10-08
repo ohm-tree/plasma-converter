@@ -16,7 +16,7 @@ HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
 DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
+LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
 class AttrDict(dict):
@@ -248,7 +248,7 @@ class LeanGameState:
         elif self.step == LeanGameStateStep.ROLLOUT:
             res += fancy_field("Completed Rollout without Truncation",
                                self.new_code)
-        else:
+        if self.step == LeanGameStateStep.PROCESSED:
             res += fancy_field("Valid Truncation of New Code", self.valid_code)
 
         if self.step == LeanGameStateStep.COMMENTED:
@@ -467,22 +467,30 @@ class LeanGameState:
                 "Should not post-process a LeanGameState that has not been rolled out.")
         self.step = LeanGameStateStep.PROCESSED
 
-        if 'system_error' in repl_result:
+        if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
             self.tactic_state = ""
             self.valid_code = ""
             self.dead = True
             self.win = False
             return
 
-        sorries = repl_result.get('sorries', [])
-        tactics = repl_result.get('tactics', [])
+        # 'sorries' has never been part of a repl_result
+        # if 'sorries' in repl_result:
+            # raise ValueError(
+            # "Unexpected key 'sorries' in repl_result.")
+
+            # tactics = repl_result.get('tactics', [])
 
         errors = []
         warnings = []
         infos = []
         goals = []
+        sorries = repl_result.get('sorries', [])
 
-        complete = not sorries
+        if len(sorries) > 0:
+            complete = False
+
+        complete = False
         for m in repl_result.get('messages', []):
             if m['severity'] == 'error':
                 complete = False
@@ -491,11 +499,27 @@ class LeanGameState:
                 else:
                     errors.append(m)
             elif m['severity'] == 'warning':
-                if "declaration uses 'sorry'" in m['data'] or 'failed' in m['data']:
+                if "declaration uses 'sorry'" in m['data']:
+                    sorries.append(m)
                     complete = False
+                if 'failed' in m['data']:
+                    complete = False
+
                 warnings.append(m)
+                # There exist some warnings that are not errors.
+                # The most common is "'variables' has been replaced by 'variable' in lean 4"
+                #
+                # if not ("declaration uses 'sorry'" in m['data'] or 'failed' in m['data']):
+                #     raise ValueError(
+                #         f"Unexpected warning: {m['data']}")
+                # complete = False
+                warnings.append(m)
+
             elif m['severity'] == 'info':
                 infos.append(m)
+            else:
+                raise ValueError(
+                    f"Unexpected severity: {m['severity']}")
 
         self.truncate(sorries, errors)
         self.get_goals(goals)
@@ -508,6 +532,8 @@ class LeanGameState:
             return
 
         if complete:
+            print("Marked as complete!")
+            print(repl_result)
             self.dead = False
             self.win = True
             return

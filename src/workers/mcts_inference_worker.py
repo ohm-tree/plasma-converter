@@ -53,7 +53,7 @@ def main(
 
         game: LeanGame = LeanGame(
             # comment_seeds=comments,
-            num_comment_seeds=6,
+            num_comment_seeds=21,
             max_depth=20
         )
         state: LeanGameState = game.start_state(

@@ -29,24 +29,18 @@ def main(
 
     LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
-    def send_code_read_json(cmd, timeout_start=60, timeout_cat=60, timeout_finish=60, _child: Optional[pexpect.spawn] = None, kill=False):
+    def send_code_read_json(cmd, child: pexpect.spawn, timeout_start=60, timeout_cat=60, timeout_finish=60, kill=False):
         try:
-            return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, _child=_child, kill=kill)
+            return _send_code_read_json(cmd, child, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, kill=kill)
         except Exception as e:
             return {'system_error': str(e)}
 
-    def _send_code_read_json(cmd, timeout_start=60, timeout_cat=60, timeout_finish=60, _child: Optional[pexpect.spawn] = None, kill=False):
+    def _send_code_read_json(cmd, child: pexpect.spawn, timeout_start=60, timeout_cat=60, timeout_finish=60, kill=False):
         """
         Note that there's actually no reason to make the timeouts super short. Timeouts aren't usually indicative
         of buggy code, they're just due to variance in the time it takes to run the code. So, we can just set them
         to be very long.
         """
-        if _child is None:
-            child = pexpect.spawn(
-                f"{DEFAULT_LAKE_PATH} exe repl",
-                cwd=DEFAULT_LEAN_WORKSPACE)
-        else:
-            child = _child
 
         cmd_json = json.dumps(cmd)
         # print(cmd_json)
@@ -97,10 +91,10 @@ def main(
         _send_code_read_json(
             {
                 "cmd": LEAN4_DEFAULT_HEADER,
-                "allTactics": True,
-                "tactics": True,
+                # "allTactics": True,
+                # "tactics": True,
             },
-            _child=child,
+            child=child,
             timeout_start=600,
             timeout_cat=600,
             timeout_finish=600
@@ -156,10 +150,11 @@ def main(
 
         result = send_code_read_json({
             "cmd": input_data['task'],
-            "allTactics": True,
-            "tactics": True,
+            # "allTactics": True,
+            # "tactics": True,
             "env": 0
-        }, _child=child)
+        }, child)
+
         # if result is error, try restarting the repl.
         if 'system_error' in result:
             logger.error(
@@ -171,10 +166,10 @@ def main(
             child = setup_repl()
             result = send_code_read_json({
                 "cmd": input_data['task'],
-                "allTactics": True,
-                "tactics": True,
+                # "allTactics": True,
+                # "tactics": True,
                 "env": 0
-            }, _child=child)
+            }, child)
 
         result = {
             'mcts_worker_id': input_data['mcts_worker_id'],

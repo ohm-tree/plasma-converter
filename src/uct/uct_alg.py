@@ -37,27 +37,31 @@ def uct_search(
     Requires that game_state is a non-terminal state.
     """
 
+    victorious_death = False
+    winning_node = None
     # set root action to -1 so we can identify it and add noise
 
-    completion_waiting: Dict[int, LeanGameState] = {}
-    context_waiting: Dict[int, LeanGameState] = {}
-    lean_waiting: Dict[int, LeanGameState] = {}
+    completion_waiting: Dict[int, Tuple[LeanGameState, float]] = {}
+    context_waiting: Dict[int, Tuple[LeanGameState, float]] = {}
+    lean_waiting: Dict[int, Tuple[LeanGameState, float]] = {}
     iters = 0
 
-    while True:
-        logger.info(f"Number of iterations: {iters}")
-        logger.info(f"Number of completion_waiting: {len(completion_waiting)}")
-        logger.info(f"Number of context_waiting: {len(context_waiting)}")
-        logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
+    sum_completion_time = 0
+    sum_context_time = 0
+    sum_lean_time = 0
+    total_completion = 0
+    total_context = 0
+    total_lean = 0
 
-        logger.info(f"Number visits: {root.child_number_visits}")
-        logger.info(f"Prior policy: {root.child_priors}")
-        logger.info(f"Q values: {root.child_Q()}")
-        logger.info(f"U values: {root.child_U()}")
+    absolute_start_time = time.time()
+    dead_time = 0
 
+    while not victorious_death:
+        dead_time_start = time.time()
+        activity = False
         if iters >= num_iters and len(completion_waiting) == 0 and len(context_waiting) == 0 and len(lean_waiting) == 0:
             break
-        if iters < num_iters:
+        if iters < num_iters and len(completion_waiting) + len(context_waiting) + len(lean_waiting) < 10:
             # greedily select leaf with given exploration parameter
             leaf: UCTNode = root.select_leaf_no_virtual_loss(c)
 
@@ -65,6 +69,7 @@ def uct_search(
 
             # Problem: we don't know if a leaf is terminal until we lean4-verify it!
             if leaf.game_state.step >= LeanGameStateStep.PROCESSED and leaf.is_terminal:
+                activity = True
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
                 # compute the value estimate of the player at the terminal leaf
@@ -84,6 +89,7 @@ def uct_search(
                 # We have absolutely never seen this leaf before.
                 assert leaf.game_state.step == LeanGameStateStep.INITIALIZED
                 root.select_leaf(c)  # Apply the virtual loss this time.
+                activity = True
 
                 # Add the child priors and value estimate to the completion queue!
                 # tasks should take the form
@@ -103,17 +109,32 @@ def uct_search(
                         'type': 'completion'
                     }
                 )
-                completion_waiting[hash(leaf)] = leaf
+                completion_waiting[hash(leaf)] = (leaf, time.time())
                 iters += 1
         # Check for completed leaves.
 
         # Load any results from the completion queue, lean queue, and context_queue.
         # and enqueue them all to the lean_queue and context_queue.
+        if worker_queue.empty() and (iters >= num_iters or len(completion_waiting) + len(context_waiting) + len(lean_waiting) >= 10):
+            # just be patient i guess. don't clog up cpu spinning.
+            time.sleep(1)
         while not worker_queue.empty():
+            activity = True
             result = worker_queue.get()
+            node: UCTNode
+            time_init: float
             if result['type'] == 'completion':
                 # Find the node that requested this completion.
-                node: UCTNode = completion_waiting.pop(result['completion_task_id'])
+                node, time_init = completion_waiting.pop(
+                    result['completion_task_id'])
+
+                time_taken = time.time() - time_init
+
+                logger.info("Received completion output, took " +
+                            str(time_taken) + " seconds.")
+                sum_completion_time += time_taken
+                total_completion += 1
+
                 # Update the node with the completion.
                 state: LeanGameState = node.game_state
                 state.post_LLM_rollout(result['output'])
@@ -127,11 +148,18 @@ def uct_search(
                         'type': 'lean'
                     }
                 )
-                lean_waiting[hash(node)] = node
+                lean_waiting[hash(node)] = (node, time.time())
 
             elif result['type'] == 'lean':
                 # Find the node that requested this lean.
-                node: UCTNode = lean_waiting.pop(result['lean_task_id'])
+                node, time_init = lean_waiting.pop(result['lean_task_id'])
+
+                time_taken = time.time() - time_init
+
+                logger.info("Received lean output, took " +
+                            str(time_taken) + " seconds.")
+                sum_lean_time += time_taken
+                total_lean += 1
 
                 # Update the node with the lean.
                 state: LeanGameState = node.game_state
@@ -143,6 +171,14 @@ def uct_search(
                     value_estimate: float = game.reward(state)
                     # Immediately backup the value estimate along the path to the root
                     node.backup(value_estimate)
+
+                    if value_estimate == 1.0:
+                        logger.info(
+                            "We think we just won! Here was the lean output:")
+                        logger.info(result['result'])
+                        victorious_death = True
+                        winning_node = node
+
                 else:
                     # Enqueue the node to the context_queue.
                     global_context_queue.put(
@@ -153,11 +189,19 @@ def uct_search(
                             'type': 'context'
                         }
                     )
-                    context_waiting[hash(node)] = node
+                    context_waiting[hash(node)] = (node, time.time())
 
             elif result['type'] == 'policy_value':
                 # Find the node that requested this policy value.
-                node: UCTNode = context_waiting.pop(result['task_id'])
+                node, time_init = context_waiting.pop(result['task_id'])
+
+                time_taken = time.time() - time_init
+
+                logger.info("Received context output, took " +
+                            str(time_taken) + " seconds.")
+                sum_context_time += time_taken
+                total_context += 1
+
                 # Update the node with the policy value.
                 state: LeanGameState = node.game_state
                 state.post_comments(result['task_output']['comments'])
@@ -171,16 +215,30 @@ def uct_search(
                 node.expand(policy,
                             result['task_output']['value'], train)
                 node.backup(result['task_output']['value'])
+        if activity:
+            logger.info(f"Number of iterations: {iters}")
+            logger.info(
+                f"Number of completion_waiting: {len(completion_waiting)}")
+            logger.info(f"Number of context_waiting: {len(context_waiting)}")
+            logger.info(f"Number of lean_waiting: {len(lean_waiting)}")
 
-    # print("Number visits", [i.item()
-    #       for i in root.child_number_visits if i > 0])
-    # print("Prior policy", [i.item() for i in root.child_priors if i > 0])
-    # print("Q values", [i.item() for i, j in zip(
-    #     root.child_Q(), root.child_number_visits) if j > 0])
-    # print("U values", [i.item() for i, j in zip(
-    #     root.child_U(), root.child_number_visits) if j > 0])
-    print("Number visits", root.child_number_visits)
-    print("Prior policy", root.child_priors)
-    print("Q values", root.child_Q())
-    print("U values", root.child_U())
-    return root.child_number_visits / np.sum(root.child_number_visits), root.child_Q()[root.child_number_visits.argmax()]
+            logger.info(f"Number visits: {root.child_number_visits}")
+            logger.info(f"Prior policy: {root.child_priors}")
+            logger.info(f"Q values: {root.child_Q()}")
+            logger.info(f"U values: {root.child_U()}")
+            if total_completion > 0:
+                logger.info(
+                    f"Total completion time: {sum_completion_time}, average: {sum_completion_time / total_completion}")
+            if total_context > 0:
+                logger.info(
+                    f"Total context time: {sum_context_time}, average: {sum_context_time / total_context}")
+            if total_lean > 0:
+                logger.info(
+                    f"Total lean time: {sum_lean_time}, average: {sum_lean_time / total_lean}")
+
+            logger.info(
+                f"Dead time: {dead_time}, time elapsed: {time.time() - absolute_start_time}")
+
+        if not activity:
+            dead_time += time.time() - dead_time_start
+    return root.child_number_visits / np.sum(root.child_number_visits), root.child_Q()[root.child_number_visits.argmax()], winning_node

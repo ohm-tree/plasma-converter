@@ -87,8 +87,10 @@ def main(
     llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
               max_num_batched_tokens=8192,
               trust_remote_code=True,
-              enforce_eager=True,
-              tensor_parallel_size=len(gpu_set))
+              #   enforce_eager=True,
+              tensor_parallel_size=len(gpu_set),
+              swap_space=16
+              )
 
     # else:
     #     raise ValueError(
@@ -168,5 +170,5 @@ def main(
     del llm.llm_engine.model_executor
     del llm
     gc.collect()
-    print("Completion worker is dead.")
-    logger.info("Completion worker is dead.")
+    print("Completion worker " + str(completion_worker_id) + " is dead.")
+    logger.info("Completion worker " + str(completion_worker_id) + " is dead.")

@@ -13,9 +13,9 @@ from src.workers.fast_pv_worker import policy_value_main as policy_value_process
 # todo: make this a config file.
 distributed_config = {
     'num_worker_procs': 163,
-    'num_completion_procs': 4,
-    'num_policy_value_procs': 4,
-    'num_lean_procs': 12,
+    'num_completion_procs': 3,
+    'num_policy_value_procs': 5,
+    'num_lean_procs': 24,
 }
 
 json_name = "config"  # todo: make this a config file.
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         'policy_value_queue': policy_value_queues[i],
         'worker_queues': worker_queues,
         'global_policy_value_queue': global_policy_value_queue,
-        'policy_value_batch_size': 20
+        'policy_value_batch_size': 30,
     })
         for i in range(distributed_config['num_policy_value_procs'])]
 
