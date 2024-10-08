@@ -7,23 +7,21 @@ from typing import Dict, List
 from vllm import RequestOutput
 
 from src.workers.llm_worker import LLMWorker
+from src.workers.types import CompletionTaskType, CompletionWorkerType
 from src.workers.worker import *
-
-CompletionTaskType = TaskType("completion")
-CompletionWorkerType = WorkerType("completion", [CompletionTaskType])
 
 
 class CompletionWorker(LLMWorker):
     def __init__(self,
                  config: dict,
                  run_name: str,
-                 completion_worker_id: int,
+                 task_id: int,
                  gpu_set: List[int],
                  queues: Dict[Union[TaskType, WorkerIdentifer]],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
-                CompletionWorkerType, completion_worker_id),
+                CompletionWorkerType, task_id),
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,

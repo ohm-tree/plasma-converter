@@ -9,6 +9,12 @@ from typing import Dict, List
 from vllm import RequestOutput
 
 from src.workers.llm_worker import LLMWorker
+from src.workers.types import (
+    ContextWorkerType,
+    PolicyValuePostProcessTaskType,
+    PolicyValueTaskType,
+    PolicyValueWorkerType,
+)
 from src.workers.worker import *
 
 
@@ -108,25 +114,18 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
     return res
 
 
-PolicyValueTaskType = TaskType("policy_value")
-PolicyValuePostProcessTaskType = TaskType("policy_value_post_process")
-ContextWorkerType = WorkerType("context", [PolicyValueTaskType])
-PolicyValueWorkerType = WorkerType(
-    "policy_value", [PolicyValuePostProcessTaskType])
-
-
 class ContextWorker(LLMWorker):
 
     def __init__(self,
                  config: dict,
                  run_name: str,
-                 context_worker_id: int,
+                 task_id: int,
                  gpu_set: List[int],
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
-                ContextWorkerType, context_worker_id),
+                ContextWorkerType, task_id),
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
@@ -186,13 +185,13 @@ class PolicyValueWorker(LLMWorker):
     def __init__(self,
                  config: dict,
                  run_name: str,
-                 policy_value_worker_id: int,
+                 task_id: int,
                  gpu_set: List[int],
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
-                PolicyValueWorkerType, policy_value_worker_id),
+                PolicyValueWorkerType, task_id),
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,

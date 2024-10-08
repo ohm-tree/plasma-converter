@@ -14,13 +14,13 @@ import numpy as np
 
 from src.games.lean_game import LeanGame, LeanGameState
 from src.train.self_play import self_play
+from src.workers.types import (
+    CompletionTaskType,
+    LeanTaskType,
+    MCTSWorkerType,
+    PolicyValueTaskType,
+)
 from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerType
-
-LeanTaskType = TaskType("lean")
-CompletionTaskType = TaskType("completion")
-PolicyValueTaskType = TaskType("policy_value")
-MCTSWorkerType = WorkerType(
-    "mcts", [LeanTaskType, CompletionTaskType, PolicyValueTaskType])
 
 
 class MCTSWorker(Worker):
@@ -59,7 +59,7 @@ class MCTSWorker(Worker):
                 if json.loads(line.strip()).get('split') == self.config['split']
             ]
 
-    def main(self):
+    def run(self):
         for current_problem in range(self.worker_idx, len(self.data), self.config['worker']['num_procs']):
             self.logger.info(
                 f"Working on problem {current_problem}")

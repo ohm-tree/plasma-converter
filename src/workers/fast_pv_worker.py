@@ -5,6 +5,7 @@ import numpy as np
 from vllm import RequestOutput
 
 from src.workers.llm_worker import LLMWorker
+from src.workers.types import FastPolicyValueWorkerType, PolicyValueTaskType
 from src.workers.worker import *
 
 
@@ -23,22 +24,17 @@ def prompt(lean_game_dict: Dict) -> str:
     return res
 
 
-PolicyValueTaskType = TaskType("policy_value")
-FastPolicyValueWorkerType = WorkerType(
-    "fast_policy_value", [PolicyValueTaskType])
-
-
 class FastPolicyValueWorker(LLMWorker):
     def __init__(self,
                  config: dict,
                  run_name: str,
-                 fast_pv_worker_id: int,
+                 task_id: int,
                  gpu_set: List[int],
                  queues: Dict[Union[TaskType, WorkerIdentifer]],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
-                FastPolicyValueWorkerType, fast_pv_worker_id),
+                FastPolicyValueWorkerType, task_id),
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,

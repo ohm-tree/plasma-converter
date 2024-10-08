@@ -8,6 +8,7 @@ from typing import Dict, Optional
 
 import pexpect
 
+from src.workers.types import LeanTaskType, LeanWorkerType
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
@@ -92,10 +93,6 @@ def setup_repl():
         _child=child
     )
     return child
-
-
-LeanTaskType = TaskType("lean")
-LeanWorkerType = WorkerType("lean", [LeanTaskType])
 
 
 class LeanWorker(Worker):

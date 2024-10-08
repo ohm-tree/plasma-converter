@@ -16,9 +16,6 @@ class TaskType:
     task_type: str
 
 
-MasterType = TaskType("master")
-
-
 @dataclass(frozen=True)
 class TaskIdentifier:
     """
@@ -26,6 +23,9 @@ class TaskIdentifier:
     """
     task_idx: int
     task_type: TaskType
+
+
+KillTaskType = TaskType("kill")
 
 
 @dataclass(frozen=True)
@@ -89,11 +89,17 @@ class Worker(abc.ABC):
             f"Worker {self.worker_idx} of type {self.worker_type} initialized."
         )
 
-        self._no_master = False
-        if MasterType not in self.queues:
-            self._no_master = True
+        self._no_inbox = False
+        if self.worker_type not in self.queues:
+            self._no_inbox = True
             self.logger.warning(
-                "No master queue detected; worker may never terminate.")
+                "No inbox queue detected; worker may never terminate.")
+
+        self._no_scream_queue = False
+        if KillTaskType not in self.queues:
+            self._no_scream_queue = True
+            self.logger.warning(
+                "No scream queue detected; when worker terminates, master may not know.")
 
     def setup_logger(self):
         # I should live in src/workers/
@@ -206,13 +212,13 @@ class Worker(abc.ABC):
         except queue.Empty:
             return None
 
-    def main(self):
+    def run(self):
         """
         The default main loop for a worker which
         loops infinitely until a kill signal is received.
 
         If you want to implement a custom main loop, override this method,
-        not the _main method.
+        not the main method.
         """
         # check for kill signals from the master queue.
         while self.no_poison():
@@ -224,12 +230,17 @@ class Worker(abc.ABC):
                 self.logger.critical(e)
                 break
 
-    def _main(self):
-        self.main()
+    def main(self):
+        """
+        The main method for a worker.
+
+        This method should not be overridden.
+        """
+        self.run()
         try:
             # enqueue a kill signal to the master queue.
-            if not self._no_master:
-                self.queues[WorkerType(MasterType)].put("kill")
+            if not self._no_scream_queue:
+                self.queues[KillTaskType].put("kill")
 
             self.shutdown()
             self.logger.info(
@@ -250,10 +261,9 @@ class Worker(abc.ABC):
         bool
             True if no kill signal has been received, False otherwise.
         """
-        if not self._no_master:
+        if not self._no_inbox:
             try:
-                kill_signal = self.queues[WorkerType(
-                    MasterType)].get_nowait()
+                kill_signal = self.queues[self.worker_id].get_nowait()
                 print(
                     f"Received kill signal: {kill_signal}")
             except queue.Empty:
