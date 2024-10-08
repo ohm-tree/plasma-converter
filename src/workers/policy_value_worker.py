@@ -6,6 +6,17 @@ import queue
 import time
 from typing import Dict, List
 
+from vllm import RequestOutput
+
+from src.workers.llm_worker import LLMWorker
+from src.workers.types import (
+    ContextWorkerType,
+    PolicyValuePostProcessTaskType,
+    PolicyValueTaskType,
+    PolicyValueWorkerType,
+)
+from src.workers.worker import *
+
 
 def construct_context(lean_game_dict: Dict) -> str:
     """
@@ -24,7 +35,7 @@ Here is the tactic state at this point:
     res += lean_game_dict['tactic_state']
     res += f"""
 ```
-Please summarize what we have proven so far. 
+Please summarize what we have proven so far.
 Please summarize the current tactic state of the proof.
 Then, please discuss whether or not the proof is on the right track. Are we proving useful lemmas? Are we using the right tactics? Are we missing any key insights?
 """
@@ -103,318 +114,133 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
     return res
 
 
-def context_main(
-        config: dict,
-        run_name: str,
-        context_worker_id: int,
-        gpu_set: List[int],
-        master_queue: multiprocessing.Queue,
-        context_queue: multiprocessing.Queue,
-        global_context_queue: multiprocessing.Queue,
-        global_policy_value_queue: multiprocessing.Queue,
-):
-    """
-    Entry point for the context worker process.
+class ContextWorker(LLMWorker):
 
-    Takes in lean game dicts from the context queue,
-    and outputs a context for the policy-value worker to suggest comments.
-    """
+    def __init__(self,
+                 config: dict,
+                 run_name: str,
+                 task_id: int,
+                 gpu_set: List[int],
+                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 ):
+        super().__init__(
+            worker_id=WorkerIdentifer(
+                ContextWorkerType, task_id),
+            queues=queues,
+            run_name=run_name,
+            gpu_set=gpu_set,
+            LLM_kwargs={
+                'model': "deepseek-ai/deepseek-math-7b-instruct",
+                'max_num_batched_tokens': 8192,
+                'trust_remote_code': True,
+            },
+            sampling_kwargs={
+                'max_tokens': 1024,
+                'temperature': 0.0,
+                'top_k': 1,
+                'top_p': 1.0
+            }
+        )
+        self.config = config
 
-    # I live in src/workers/
-    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
-    SRC_DIR = os.path.dirname(WORKER_DIR)
-    ROOT_DIR = os.path.dirname(SRC_DIR)
+    def loop(self):
+        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
+            task_type=ContextWorkerType,
+            timeout=30,
+            max_tasks=self.config['batch_size'],
+        )
+        self.logger.info(
+            f"Received {len(my_tasks)} tasks.")
 
-    # give myself a custom logging file.
-    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(
-        f"logs/{run_name}/context_worker_{context_worker_id}.log")
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-    logger.info(f"Starting context worker {context_worker_id}.")
-
-    # Set up vllm stuff.
-    import gc
-
-    from vllm import LLM, SamplingParams
-    from vllm.distributed.parallel_state import (
-        destroy_distributed_environment,
-        destroy_model_parallel,
-    )
-
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
-
-    # TODO: stuff all of the configs into a config file.
-    # llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
-    #           max_num_batched_tokens=8192,
-    #           trust_remote_code=True,
-    #           dtype="float16",
-    #           tensor_parallel_size=len(gpu_set))
-    llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
-              max_num_batched_tokens=8192,
-              trust_remote_code=True,
-              tensor_parallel_size=len(gpu_set))
-
-    sampling_params = SamplingParams(
-        max_tokens=1024,
-        temperature=0.0,
-        top_k=1,
-        top_p=1.0
-    )
-
-    logger.info("Context worker initialized.")
-
-    # bloodline = time.time()
-
-    while True:
-        # check my personal queue for blood.
-        # found_blood = False
-        kill = False
-        while True:
-            try:
-                blood = context_queue.get_nowait()
-            except queue.Empty:
-                break
-            else:
-                if blood == 'kill':
-                    # found_blood = False
-                    kill = True
-                    break
-                # found_blood = True
-                # bloodline = time.time()
-
-        if kill:
-            logger.info("Kill signal received. Dying.")
-            break
-        # if ((not found_blood) and time.time() < bloodline + 60 * 15):
-        #     # If I haven't received a signal that other processes are
-        #     # alive in the last 15 minutes, I should die.
-        #     if not found_blood:
-        #         logger.info("No blood found. Dying.")
-        #         break
-
-        my_tasks = []
-        # tasks should take the form
-        # {
-        #   'mcts_worker_id': int, # The worker task id that generated this task.
-        #   'task_id': int, # The specific completion task id of this task.
-        #   'task_input': dict # The task to complete, which is a lean_game_dict.
-        #   'type': dict
-        # }
-        try:
-            new_task = global_context_queue.get(timeout=30)
-        except queue.Empty:
-            pass
-        else:
-            assert new_task['type'] == 'context'
-            my_tasks.append(new_task)
-
-        while len(my_tasks) < config['batch_size']:
-            try:
-                new_task = global_context_queue.get_nowait()
-            except queue.Empty:
-                break
-            assert new_task['type'] == 'context'
-            my_tasks.append(new_task)
-
-        logger.info(f"Context Worker Received {len(my_tasks)} tasks.")
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
-            continue
+            return
         # We have tasks to complete.
         input_data = [
-            construct_context(my_tasks[i]['task_input'])
-            for i in range(len(my_tasks))
+            construct_context(i.task)
+            for i in my_tasks
         ]
-        outputs = llm.generate(
+        outputs: List[RequestOutput] = self.generate(
             input_data,
-            sampling_params=sampling_params
+            sampling_params=self.sampling_params
         )
 
         for i in range(len(outputs)):
-            result = {
-                'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
-                'task_id': my_tasks[i]['task_id'],
-                'task_input': my_tasks[i]['task_input'],
-                'task_context': outputs[i].outputs[0].text,
-                'type': 'policy_value'
+            output = outputs[i].outputs[0].text
+            self.logger.info(output)
+            task: WorkerTask = my_tasks[i]
+            self.enqueue(
+                obj=WorkerResponse(
+                    head_id=self.worker_id,
+                    tail_id=task.head_id,
+                    task_id=task.task_id,
+                    task=task.task,
+                    response=output
+                ),
+                where=PolicyValuePostProcessTaskType
+            )
+
+
+class PolicyValueWorker(LLMWorker):
+    def __init__(self,
+                 config: dict,
+                 run_name: str,
+                 task_id: int,
+                 gpu_set: List[int],
+                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 ):
+        super().__init__(
+            worker_id=WorkerIdentifer(
+                PolicyValueWorkerType, task_id),
+            queues=queues,
+            run_name=run_name,
+            gpu_set=gpu_set,
+            LLM_kwargs={
+                'model': "deepseek-ai/deepseek-math-7b-instruct",
+                'max_num_batched_tokens': 8192,
+                'trust_remote_code': True,
+            },
+            sampling_kwargs={
+                'max_tokens': 512,
+                'temperature': 0.0,
+                'top_k': 1,
+                'top_p': 1.0
             }
-            logger.info(str(result))
-            global_policy_value_queue.put(result)
-    # send a signal to the master queue that we are dead.
-    master_queue.put({
-        'name': 'context',
-        'worker_id': context_worker_id,
-        'type': 'dead'
-    })
+        )
+        self.config = config
 
-    destroy_model_parallel()
-    destroy_distributed_environment()
-    del llm.llm_engine.model_executor
-    del llm
-    gc.collect()
+    def loop(self):
+        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
+            task_type=PolicyValueTaskType,
+            timeout=30,
+            max_tasks=self.config['batch_size'],
+        )
+        self.logger.info(
+            f"Received {len(my_tasks)} tasks.")
 
-
-def policy_value_main(
-        config: dict,
-        run_name: str,
-        policy_value_worker_id: int,
-        gpu_set: List[int],
-        master_queue: multiprocessing.Queue,
-        policy_value_queue: multiprocessing.Queue,
-        worker_queues: Dict[int, multiprocessing.Queue],
-        global_policy_value_queue: multiprocessing.Queue,
-        policy_value_batch_size: int,
-):
-    """
-    Entry point for the PV worker process.
-
-    Takes in contexts from the policy-value queue,
-    and outputs suggestions for the lean game dicts.
-    """
-
-    # I live in src/workers/
-    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
-    SRC_DIR = os.path.dirname(WORKER_DIR)
-    ROOT_DIR = os.path.dirname(SRC_DIR)
-
-    # give myself a custom logging file.
-    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(
-        f"logs/{run_name}/policy_value_worker_{policy_value_worker_id}.log")
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-    logger.info(f"Starting policy-value worker {policy_value_worker_id}.")
-
-    # Set up vllm stuff.
-    import gc
-
-    from vllm import LLM, SamplingParams
-    from vllm.distributed.parallel_state import (
-        destroy_distributed_environment,
-        destroy_model_parallel,
-    )
-
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
-
-    # TODO: stuff all of the configs into a config file.
-    # llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
-    #           max_num_batched_tokens=8192,
-    #           trust_remote_code=True,
-    #           dtype="float16",
-    #           tensor_parallel_size=len(gpu_set))
-    llm = LLM(model="deepseek-ai/deepseek-math-7b-instruct",
-              max_num_batched_tokens=8192,
-              trust_remote_code=True,
-              tensor_parallel_size=len(gpu_set))
-
-    sampling_params = SamplingParams(
-        max_tokens=512,
-        temperature=0.0,
-        top_k=1,
-        top_p=1.0
-    )
-
-    logger.info("Policy-value worker initialized.")
-
-    # bloodline = time.time()
-
-    while True:
-        # check my personal queue for blood.
-        # found_blood = False
-        kill = False
-        while True:
-            try:
-                blood = policy_value_queue.get_nowait()
-            except queue.Empty:
-                break
-            else:
-                if blood == 'kill':
-                    # found_blood = False
-                    kill = True
-                    break
-                # found_blood = True
-                # bloodline = time.time()
-
-        if kill:
-            logger.fatal("Kill signal received. Dying.")
-            break
-        # if ((not found_blood) and time.time() < bloodline + 60 * 15):
-        #     # If I haven't received a signal that other processes are
-        #     # alive in the last 15 minutes, I should die.
-        #     if not found_blood:
-        #         logger.info("No blood found. Dying.")
-        #         break
-
-        my_tasks = []
-        # tasks should take the form
-        # {
-        #   'mcts_worker_id': int, # The worker task id that generated this task.
-        #   'task_id': int, # The specific completion task id of this task.
-        #   'task_input': str # The task to complete, a string prompt.
-        #   'type': dict
-        # }
-        try:
-            new_task = global_policy_value_queue.get(timeout=30)
-        except queue.Empty:
-            pass
-        else:
-            assert new_task['type'] == 'policy_value'
-            my_tasks.append(new_task)
-        while len(my_tasks) < policy_value_batch_size:
-            try:
-                new_task = global_policy_value_queue.get_nowait()
-            except queue.Empty:
-                break
-            assert new_task['type'] == 'policy_value'
-            my_tasks.append(new_task)
-
-        logger.info(f"PV Worker received {len(my_tasks)} tasks.")
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
-            continue
+            return
         # We have tasks to complete.
         input_data = [
             policy_value_suggest_comments(
-                my_tasks[i]['task_input'],
-                my_tasks[i]['task_context']
+                i.task['task_input'],
+                i.task['task_context']
             )
-            for i in range(len(my_tasks))
+            for i in my_tasks
         ]
-        outputs = llm.generate(
+        outputs: List[RequestOutput] = self.generate(
             input_data,
-            sampling_params=sampling_params
+            sampling_params=self.sampling_params
         )
 
         for i in range(len(outputs)):
+            output = outputs[i].outputs[0].text
+            self.logger.info(output)
             res = parse_policy_value_output(
-                outputs[i].outputs[0].text, logger)
+                output, self.logger)
 
-            result = {
-                'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
-                'task_id': my_tasks[i]['task_id'],
-                'task_output': res,
-                'type': 'policy_value'
-            }
-            logger.info(str(result))
-
-            worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
-
-    # send a signal to the master queue that we are dead.
-    master_queue.put({
-        'name': 'policy_value',
-        'worker_id': policy_value_worker_id,
-        'type': 'dead'
-    })
-
-    destroy_model_parallel()
-    destroy_distributed_environment()
-    del llm.llm_engine.model_executor
-    del llm
-    gc.collect()
+            self.enqueue_response(
+                response=res,
+                task=my_tasks[i]
+            )

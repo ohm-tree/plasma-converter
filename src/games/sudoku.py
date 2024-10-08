@@ -2,7 +2,7 @@ from typing import List, Optional
 
 import numpy as np
 
-from src.games.game import Game
+from src.games.game import LeanGame
 
 
 class SudokuGameState:
@@ -38,7 +38,7 @@ class SudokuGameState:
         return '\n'.join(' '.join(str(cell) if cell != 0 else '.' for cell in row) for row in self.board)
 
 
-class SudokuGame(Game[SudokuGameState]):
+class SudokuGame(LeanGame[SudokuGameState]):
     """
     A Sudoku game implementation of the Game class.
     """

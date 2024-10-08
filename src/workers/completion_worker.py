@@ -1,4 +1,7 @@
-import multiprocessing
+"""
+Entry point for the completion worker process.
+"""
+
 from typing import Dict, List
 
 
@@ -130,34 +133,56 @@ def main(
 
         logger.info(
             f"Worker {completion_worker_id} received {len(my_tasks)} tasks.")
+from vllm import RequestOutput
+
+from src.workers.llm_worker import LLMWorker
+from src.workers.types import CompletionTaskType, CompletionWorkerType
+from src.workers.worker import *
+
+
+class CompletionWorker(LLMWorker):
+    def __init__(self,
+                 config: dict,
+                 run_name: str,
+                 task_id: int,
+                 gpu_set: List[int],
+                 queues: Dict[Union[TaskType, WorkerIdentifer]],
+                 ):
+        super().__init__(
+            worker_id=WorkerIdentifer(
+                CompletionWorkerType, task_id),
+            queues=queues,
+            run_name=run_name,
+            gpu_set=gpu_set,
+            LLM_kwargs=None,  # Default to the LLM constructor.
+            sampling_kwargs=config['sampling_params']
+        )
+        self.config = config
+
+    def loop(self):
+        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
+            task_type=CompletionTaskType,
+            timeout=30,
+            max_tasks=self.config['batch_size'],
+        )
+        self.logger.info(
+            f"Received {len(my_tasks)} tasks.")
 
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
-            continue
+            return
         # We have tasks to complete.
         input_data = [
-            my_tasks[i]['task']
-            for i in range(len(my_tasks))
+            i.task for i in my_tasks
         ]
-        outputs = llm.generate(
+        outputs: List[RequestOutput] = self.generate(
             input_data,
-            sampling_params=sampling_params
+            sampling_params=self.sampling_params
         )
         for i in range(len(outputs)):
-            result = {
-                'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
-                'completion_task_id': my_tasks[i]['completion_task_id'],
-                'output': outputs[i].outputs[0].text,
-                'type': 'completion'
-            }
-            logger.info(str(result))
-
-            worker_queues[my_tasks[i]['mcts_worker_id']].put(result)
-
-    destroy_model_parallel()
-    destroy_distributed_environment()
-    del llm.llm_engine.model_executor
-    del llm
-    gc.collect()
-    print("Completion worker " + str(completion_worker_id) + " is dead.")
-    logger.info("Completion worker " + str(completion_worker_id) + " is dead.")
+            output = outputs[i].outputs[0].text
+            self.logger.info(output)
+            self.enqueue_response(
+                response=output,
+                task=my_tasks[i]
+            )

@@ -2,109 +2,106 @@
 In this file, we will let a human play a game of Lean.
 """
 
-import multiprocessing
 import json
 import logging
+import multiprocessing
 import os
+import queue
+import time
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 
 from src.games.lean_game import LeanGame, LeanGameState
 from src.train.self_play import self_play
+from src.workers.types import (
+    CompletionTaskType,
+    LeanTaskType,
+    MCTSWorkerType,
+    PolicyValueTaskType,
+)
+from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerType
 
 
-def main(
-    config: dict,
-    run_name: str,
-    task_id: int,
-    master_queue: multiprocessing.Queue,
-    worker_queue: multiprocessing.Queue,
-    global_completion_queue: multiprocessing.Queue,
-    global_lean_queue: multiprocessing.Queue,
-    global_context_queue: multiprocessing.Queue
-):
-    # I live in src/workers/
-    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
-    SRC_DIR = os.path.dirname(WORKER_DIR)
-    ROOT_DIR = os.path.dirname(SRC_DIR)
-
-    with open(config['data_dir'], 'r') as file:
-        data = [
-            json.loads(line.strip()) 
-            for line in file.readlines() 
-            if json.loads(line.strip()).get('split') == config['split']
-        ]
-
-    # give myself a custom logging file.
-    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(
-        f"logs/{run_name}/mcts_inference_worker_{task_id}.log")
-    logger.addHandler(fh)
-    logger.info(f"Starting mcts_inference_worker {task_id}.")
-
-    for current_problem in range(task_id, len(data), config['worker']['num_procs']):
-        logger.info(f"Worker {task_id} working on problem {current_problem}")
-        problem = data[current_problem]
-        informal_prefix = problem['informal_prefix']
-        formal_statement = problem['formal_statement']
-        PROBLEM_STATEMENT = informal_prefix + formal_statement
-        tactic_state = problem['goal']
-
-        game: LeanGame = LeanGame(
-            # comment_seeds=comments,
-            num_comment_seeds=21,
-            max_depth=20
-        )
-        state: LeanGameState = game.start_state(
-            problem=PROBLEM_STATEMENT,
-            tactic_state=tactic_state
+class MCTSWorker(Worker):
+    def __init__(self,
+                 config: dict,
+                 run_name: str,
+                 task_id: int,
+                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 ):
+        super().__init__(
+            worker_id=WorkerIdentifer(
+                MCTSWorkerType, task_id),
+            queues=queues,
+            run_name=run_name,
         )
 
-        states, distributions, rewards = self_play(
-            worker_id=task_id,
-            state=state,
-            game=game,
-            num_iters=1000,
-            logger=logger,
-            worker_queue=worker_queue,
-            global_completion_queue=global_completion_queue,
-            global_context_queue=global_context_queue,
-            global_lean_queue=global_lean_queue
-        )
+        self.config = config
 
-        game_data_path = f"data/{run_name}/games/{task_id}"
-        os.makedirs(game_data_path, exist_ok=True)
+        self.load_problems()
 
-        LeanGameState.saves(states, os.path.join(
-            game_data_path, f"{problem['name']}_states.npy"))
+        self.game_data_path = f"data/{run_name}/games/{task_id}/"
+        os.makedirs(self.game_data_path, exist_ok=True)
+        self.output_path = f"outputs/{run_name}/"
+        os.makedirs(self.output_path, exist_ok=True)
 
-        with open(os.path.join(game_data_path, f"{problem['name']}_distributions.npy"), "wb") as file:
-            # Don't allow pickle, I want this to be a numpy array for sure.
-            np.save(file, distributions, allow_pickle=False)
-        with open(os.path.join(game_data_path, f"{problem['name']}_outcomes.npy"), "wb") as file:
-            # Don't allow pickle, I want this to be a numpy array for sure.
-            np.save(file, rewards, allow_pickle=False)
+    def load_problems(self):
+        # I live in src/workers/
+        WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
+        SRC_DIR = os.path.dirname(WORKER_DIR)
+        ROOT_DIR = os.path.dirname(SRC_DIR)
 
-        # save the human printout to a file
-        os.makedirs(f"outputs/{run_name}/", exist_ok=True)
-        with open(f"outputs/{run_name}/{problem['name']}.txt", 'w') as file:
-            # write a human printout of each state in the game.
-            for i, state in enumerate(states):
-                file.write(state.human_printout())
+        with open(self.config['data_dir'], 'r') as file:
+            self.data = [
+                json.loads(line.strip())
+                for line in file.readlines()
+                if json.loads(line.strip()).get('split') == self.config['split']
+            ]
 
-        logger.info(
-            f"Finished problem {problem['name']} result: {rewards[-1]}")
+    def run(self):
+        for current_problem in range(self.worker_idx, len(self.data), self.config['worker']['num_procs']):
+            self.logger.info(
+                f"Working on problem {current_problem}")
+            problem = self.data[current_problem]
+            informal_prefix = problem['informal_prefix']
+            formal_statement = problem['formal_statement']
+            PROBLEM_STATEMENT = informal_prefix + formal_statement
+            tactic_state = problem['goal']
 
-    # tell the master queue that we are done with all tasks.
-    master_queue.put(
-        {
-            'mcts_worker_id': task_id,
-            'task_id': 0,
-            'type': 'done'
-        }
-    )
-    logger.info(f"Finished all tasks.")
-    logger.removeHandler(fh)
-    fh.close()
+            game: LeanGame = LeanGame(
+                # comment_seeds=comments,
+                num_comment_seeds=6,
+                max_depth=20
+            )
+            state: LeanGameState = game.start_state(
+                problem=PROBLEM_STATEMENT,
+                tactic_state=tactic_state
+            )
+
+            states: List[LeanGameState]
+
+            states, distributions, rewards = self_play(
+                self,
+                state=state,
+                game=game,
+                num_iters=1000,
+            )
+
+            LeanGameState.saves(states, os.path.join(
+                self.game_data_path, f"{problem['name']}_states.npy"))
+
+            with open(os.path.join(self.game_data_path, f"{problem['name']}_distributions.npy"), "wb") as file:
+                # Don't allow pickle, I want this to be a numpy array for sure.
+                np.save(file, distributions, allow_pickle=False)
+            with open(os.path.join(self.game_data_path, f"{problem['name']}_outcomes.npy"), "wb") as file:
+                # Don't allow pickle, I want this to be a numpy array for sure.
+                np.save(file, rewards, allow_pickle=False)
+
+            # save the human printout to a file
+            with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w') as file:
+                for i, state in enumerate(states):
+                    file.write(state.human_printout())
+
+            self.logger.info(
+                f"Finished problem {problem['name']} result: {rewards[-1]}")

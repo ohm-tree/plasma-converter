@@ -40,6 +40,7 @@ class GameState(ABC):
 
 GameStateType = TypeVar('GameStateType', bound=GameState)
 
+
 class Game(ABC, Generic[GameStateType]):
     """
     The Game class is the abstract base class for any one-player,

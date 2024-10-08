@@ -16,18 +16,23 @@ import numpy as np
 from tqdm import tqdm
 
 from src.games.lean_game import LeanGame, LeanGameState
-from src.policies.policy import Policy
 from src.uct.uct_alg import uct_search
 from src.uct.uct_node import UCTNode
+from src.workers.mcts_inference_worker import (
+    CompletionTaskType,
+    LeanTaskType,
+    MCTSWorker,
+    MCTSWorkerType,
+    PolicyValueTaskType,
+)
 
 
-def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: int,
-              logger: logging.Logger,
-              worker_queue: multiprocessing.Queue,
-              global_completion_queue: multiprocessing.Queue,
-              global_context_queue: multiprocessing.Queue,
-              global_lean_queue: multiprocessing.Queue,
-              ) -> Tuple[List[LeanGameState], List[np.ndarray], float]:
+def self_play(
+    self: MCTSWorker,
+    state: LeanGameState,
+    game: LeanGame,
+    num_iters: int,
+) -> Tuple[List[LeanGameState], List[np.ndarray], float]:
     """
     Play a game using a policy, and return the game states, action distributions, and final reward.
     """
@@ -40,34 +45,23 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
     # Edge case: on the very first move, the completions are not available yet.
     # Send those in.
 
-    global_context_queue.put(
-        {
-            'mcts_worker_id': worker_id,
-            'task_id': 0,
-            'task_input': state.pre_comments(),
-            'type': 'context'
-        }
+    self.enqueue_task(
+        obj=state.pre_comments(),
+        task_idx=0,
+        task_type=PolicyValueTaskType
     )
 
-    context_output = None
-    while context_output is None:
-        try:
-            context_output = worker_queue.get_nowait()
-        except queue.Empty:
-            context_output = None
-            pass
+    context_output = self.spin_deque_task(PolicyValueTaskType)[0]
+    assert context_output.task_id.task_idx == 0
 
-    assert context_output['type'] == 'policy_value'
-    assert context_output['task_id'] == 0
-    state.post_comments(context_output['task_output']['comments'])
+    state.post_comments(context_output.response['comments'])
 
-    # TODO: subtree reuse.
     root = UCTNode(game, state, -1, init_type="zero")
 
     # first, we need to comment the state right away.
-    logger.info(
+    self.logger.info(
         f"Received policy: {context_output['task_output']['policy']}")
-    logger.info(
+    self.logger.info(
         f"Received value: {context_output['task_output']['value']}")
 
     root.expand(context_output['task_output']['policy'],
@@ -78,19 +72,14 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
     states.append(root.game_state)
     while not game.is_terminal(root.game_state):
 
-        logger.info("Move: " + str(move_count))
-        logger.info(root.game_state.human_printout())
+        self.logger.info("Move: " + str(move_count))
+        self.logger.info(root.game_state.human_printout())
         """
         TODO: Fast Playouts would be implemented here.
         """
 
-        distribution, _, winning_node = uct_search(
-            logger,
-            worker_id,
-            worker_queue=worker_queue,
-            global_completion_queue=global_completion_queue,
-            global_context_queue=global_context_queue,
-            global_lean_queue=global_lean_queue,
+        distribution, _ = uct_search(
+            self,
             game=game,
             root=root,
             num_iters=num_iters
@@ -107,7 +96,7 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
             root = winning_node
             break
         distributions.append(distribution)
-        logger.info(f"Action distribution: {distribution}")
+        self.logger.info(f"Action distribution: {distribution}")
 
         action = np.random.choice(len(distribution), p=distribution)
         root = root.children[action]
@@ -119,10 +108,10 @@ def self_play(worker_id: int, state: LeanGameState, game: LeanGame, num_iters: i
     # The reward for all states in the tree is the reward of the final state.
     if winning_node is not None:
         final_reward = game.reward(winning_node.game_state)
-        logger.info("Game finished early with reward: " + str(final_reward))
+        self.logger.info("Game finished early with reward: " + str(final_reward))
     else:
         final_reward = game.reward(root.game_state)
-        logger.info(
+        self.logger.info(
             f"Game finished after {move_count} moves with reward: {final_reward}")
     rewards = [final_reward for _ in states]
     return states, distributions, rewards
