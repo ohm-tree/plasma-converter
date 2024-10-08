@@ -136,6 +136,9 @@ class UCTNode:
         # mask out illegal actions
         scores[~self.action_mask] = -np.inf
 
+        # print("scores", scores)
+        # print("action mask", self.action_mask)
+
         return self.children[np.argmax(scores)]
 
     def select_leaf_no_virtual_loss(self, c: float = 1.0) -> 'UCTNode':
@@ -190,8 +193,6 @@ class UCTNode:
             self.game_state), "Cannot expand a terminal node."
         assert not self.is_expanded, "Cannot expand an already expanded node."
 
-        self.is_expanded = True
-
         # if train and self.action == -1:
         #     # if you are the root, mix dirichlet noise into the prior
         #     child_priors = 0.75 * child_priors + 0.25 * \
@@ -214,6 +215,8 @@ class UCTNode:
             if self.action_mask[action]:
                 self.add_child(action, prior)
                 # assert action in self.children
+
+        self.is_expanded = True
 
     def add_child(self, action, prior):
         """

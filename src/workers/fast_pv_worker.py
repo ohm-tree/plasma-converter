@@ -82,7 +82,7 @@ def policy_value_main(
         temperature=1,
         max_tokens=500,
         top_p=0.95,
-        n=10,
+        n=config['branching_factor'],
         stop = ['\n'],
         logprobs=True
     )
@@ -161,11 +161,11 @@ def policy_value_main(
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
 
-            comments = np.array([option.text for option in options])
+            comments = np.array(["  --" + option.text for option in options])
             policy = np.array([option.cumulative_logprob for option in options])
-            unique_indices = [i==0 or comments[i]!=comments[i-1] for i in range(len(comments))]
-            comments = comments[unique_indices]
-            policy = policy[unique_indices]
+            # unique_indices = [i==0 or comments[i]!=comments[i-1] for i in range(len(comments))]
+            # comments = comments[unique_indices]
+            # policy = policy[unique_indices]
             policy = np.exp(policy)
             policy /= policy.sum()
 

@@ -54,7 +54,7 @@ def main(
 
         game: LeanGame = LeanGame(
             # comment_seeds=comments,
-            num_comment_seeds=6,
+            num_comment_seeds=config['policy_value']['branching_factor'],
             max_depth=20
         )
         state: LeanGameState = game.start_state(

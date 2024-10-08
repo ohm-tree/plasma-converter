@@ -14,7 +14,7 @@ lean:
 
 completion:
   num_procs: 4
-  batch_size: 100
+  batch_size: 80
   max_num_batched_tokens: 8192
   sampling:
     max_tokens: 512
@@ -27,3 +27,4 @@ policy_value:
   num_procs: 4
   type: fast
   batch_size: 40
+  branching_factor: 6
