@@ -6,7 +6,7 @@ from typing import Callable, List, Optional
 
 import numpy as np
 
-from src.games.game import Game
+from src.games.game import LeanGame
 
 # from src.networks.prover_llm import ProverLLM
 
@@ -349,16 +349,20 @@ class LeanGameState:
         # Add back the newline for accurate indexing.
         line_lengths = [len(line) + 1 for line in lines]
         if row < 1:
-            raise ValueError(f"Row must be at least 1. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+            raise ValueError(
+                f"Row must be at least 1. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         if col < 0:
-            raise ValueError(f"Column must be at least 0. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+            raise ValueError(
+                f"Column must be at least 0. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         if row > len(lines):
-            raise ValueError(f"Row is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+            raise ValueError(
+                f"Row is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         if col >= line_lengths[row-1]:
             # The col should never be exactly line_lengths;
             # If the cursor is "after the newline character"
             # then it should really be the 0th index of the next line.
-            raise ValueError(f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+            raise ValueError(
+                f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         return sum(line_lengths[:row-1]) + col
 
     def truncate(self, sorries: List[dict], errors: List[dict]):
@@ -580,7 +584,7 @@ class LeanGameState:
         return [cls(**state) for state in states]
 
 
-class LeanGame(Game[LeanGameState]):
+class LeanGame(LeanGame[LeanGameState]):
     """
     The LeanGame class implements the game logic
     for a Lean 4 proof assistant game.

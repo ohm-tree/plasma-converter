@@ -47,7 +47,8 @@ class LLMWorker(Worker):
                  gpu_set: List[int],
                  model_name: Optional[str] = "deepseek-ai/DeepSeek-Prover-V1.5-RL",
                  LLM_kwargs: Optional[dict] = None,
-                 sampling_kwargs: Optional[dict] = None
+                 sampling_kwargs: Optional[dict] = None,
+                 use_tqdm: bool = True  # Dopamine
                  ):
         super().__init__(worker_id, queues, run_name)
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
@@ -80,10 +81,13 @@ class LLMWorker(Worker):
 
         self.gpu_set = gpu_set
 
+        self.use_tqdm = use_tqdm
+
     def generate(self, input_data: List[str]) -> List[RequestOutput]:
         return self.llm.generate(
             input_data,
-            sampling_params=self.sampling_params
+            sampling_params=self.sampling_params,
+            use_tqdm=self.use_tqdm
         )
 
     def shutdown(self):

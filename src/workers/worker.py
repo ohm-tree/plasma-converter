@@ -89,6 +89,12 @@ class Worker(abc.ABC):
             f"Worker {self.worker_idx} of type {self.worker_type} initialized."
         )
 
+        self._no_master = False
+        if MasterType not in self.queues:
+            self._no_master = True
+            self.logger.warning(
+                "No master queue detected; worker may never terminate.")
+
     def setup_logger(self):
         # I should live in src/workers/
         WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -154,10 +160,24 @@ class Worker(abc.ABC):
                         task_type: TaskType,
                         timeout: Optional[int] = None,
                         batch_size: Optional[int] = None,
-                        ) -> Iterable[WorkerTask]:
-        my_tasks: List[WorkerTask] = []
+                        ) -> List[Union[WorkerTask, WorkerResponse]]:
+        """
+        If batch_size is None, return a single task.
+
+        If batch_size is not None, return a batch of tasks
+        of size at most batch_size.
+
+        If timeout is None, block until a task is available.
+
+        If timeout is not None, blocks for up to timeout seconds
+        before returning; possibly returns fewer than batch_size tasks.
+        """
+        if batch_size is None:
+            batch_size = 1
+
+        my_tasks: List[Union[WorkerTask, WorkerResponse]] = []
         first = True
-        task: WorkerTask
+        task: Union[WorkerTask, WorkerResponse]
         while len(my_tasks) < batch_size:
             try:
                 if first:
@@ -180,30 +200,22 @@ class Worker(abc.ABC):
     def deque_task(self,
                    task_type: TaskType,
                    timeout: Optional[int] = None,
-                   ) -> WorkerTask:
+                   ) -> Optional[Union[WorkerTask, WorkerResponse]]:
         try:
             return self.queues[task_type].get(timeout=timeout)
         except queue.Empty:
             return None
 
     def main(self):
-        _no_master = False
-        while True:
-            # check for kill signals from the master queue.
-            if not _no_master:
-                if MasterType not in self.queues:
-                    _no_master = True
-                    self.logger.warning(
-                        "No master queue detected; worker may never terminate.")
-                try:
-                    kill_signal = self.queues[WorkerType(
-                        MasterType)].get_nowait()
-                    print(
-                        f"Received kill signal: {kill_signal}")
-                except queue.Empty:
-                    pass
-                else:
-                    break
+        """
+        The default main loop for a worker which
+        loops infinitely until a kill signal is received.
+
+        If you want to implement a custom main loop, override this method,
+        not the _main method.
+        """
+        # check for kill signals from the master queue.
+        while self.no_poison():
             try:
                 self.loop()
             except Exception as e:
@@ -211,12 +223,15 @@ class Worker(abc.ABC):
                     "An exception occurred in the worker loop!!")
                 self.logger.critical(e)
                 break
+
+    def _main(self):
+        self.main()
         try:
-            self.shutdown()
             # enqueue a kill signal to the master queue.
-            if not _no_master:
+            if not self._no_master:
                 self.queues[WorkerType(MasterType)].put("kill")
 
+            self.shutdown()
             self.logger.info(
                 f"Worker {self.worker_idx} of type {self.worker_type} terminated."
             )
@@ -225,6 +240,27 @@ class Worker(abc.ABC):
             self.logger.critical(
                 "An exception occurred in the worker shutdown!!")
             self.logger.critical(e)
+
+    def no_poison(self) -> bool:
+        """
+        Check for kill signals from the master queue.
+
+        Returns
+        -------
+        bool
+            True if no kill signal has been received, False otherwise.
+        """
+        if not self._no_master:
+            try:
+                kill_signal = self.queues[WorkerType(
+                    MasterType)].get_nowait()
+                print(
+                    f"Received kill signal: {kill_signal}")
+            except queue.Empty:
+                pass
+            else:
+                return False
+        return True
 
     @abc.abstractmethod
     def loop(self):

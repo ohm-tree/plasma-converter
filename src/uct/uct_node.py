@@ -9,17 +9,17 @@ from typing import Dict, Generic, Optional
 
 import numpy as np
 
-from src.games.game import Game, GameState
+from games.lean_game import LeanGame, LeanGameState
 
 
 class UCTNode:
 
-    def __init__(self, game: Game, game_state: GameState, action: int, parent: 'UCTNode' = None, init_type: str = "zero"):
+    def __init__(self, game: LeanGame, game_state: LeanGameState, action: int, parent: 'UCTNode' = None, init_type: str = "zero"):
         """
         Initialize a new UCTNode.
         """
-        self.game: Game = game
-        self.game_state: GameState = game_state
+        self.game: LeanGame = game
+        self.game_state: LeanGameState = game_state
 
         # Action to enter the node, -1 if root
         self.action: int = action
@@ -82,7 +82,7 @@ class UCTNode:
         if self._action_mask is None:
             self._action_mask = self.game.action_mask(self.game_state)
         return self._action_mask
-    
+
     @property
     def is_terminal(self):
         if self._is_terminal is None:

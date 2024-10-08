@@ -6,8 +6,8 @@ An agent that allows a human to play a game interactively.
 
 import numpy as np
 
-from src.games.game import Game, GameState
 from src.agents.agent import Agent
+from src.games.game import GameState, LeanGame
 
 
 def get_human_action(action_mask: np.ndarray) -> int:
@@ -31,11 +31,11 @@ class HumanAgent(Agent):
     An agent that allows a human to play a game interactively.
     """
 
-    def action(self, game: Game, state: GameState) -> int:
+    def action(self, game: LeanGame, state: GameState) -> int:
         """
         Outputs an action given a game and state, by asking the human to input an action.
         """
         action_mask = game.action_mask(state)
         print(f"Legal action mask: {action_mask}")
-        
+
         return get_human_action(action_mask)
