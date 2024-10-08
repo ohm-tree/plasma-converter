@@ -9,17 +9,16 @@ from typing import Dict, Generic, Optional
 
 import numpy as np
 
-from games.lean_game import LeanGame, LeanGameState
+from games.game import ConcurrentMetaGameState
 
 
 class UCTNode:
 
-    def __init__(self, game: LeanGame, game_state: LeanGameState, action: int, parent: 'UCTNode' = None, init_type: str = "zero"):
+    def __init__(self, game_state: ConcurrentMetaGameState, action: int, parent: 'UCTNode' = None, init_type: str = "zero"):
         """
         Initialize a new UCTNode.
         """
-        self.game: LeanGame = game
-        self.game_state: LeanGameState = game_state
+        self.game_state: ConcurrentMetaGameState = game_state
 
         # Action to enter the node, -1 if root
         self.action: int = action
