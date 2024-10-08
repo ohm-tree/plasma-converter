@@ -1,12 +1,26 @@
+from __future__ import annotations
+
 import os
 import random
 import time
 from enum import IntEnum
-from typing import Callable, List, Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 import numpy as np
 
 from src.games.game import Game
+from src.games.lean_game import LeanGame, LeanGameState, LeanGameStateStep
+from src.uct.uct_node import UCTNode
+
+if TYPE_CHECKING:
+    from src.workers.mcts_inference_worker import (
+        CompletionTaskType,
+        LeanTaskType,
+        MCTSWorker,
+        MCTSWorkerType,
+        PolicyValueTaskType,
+    )
+    from src.workers.worker import TaskIdentifier, TaskType, WorkerResponse
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
@@ -291,109 +305,80 @@ class LeanGameState:
     def __str__(self) -> str:
         return f"LeanGameState({self.problem}, {self.code}, step = {self.step})"
 
-        # # Load any results from the completion queue, lean queue, and context_queue.
-        # # and enqueue them all to the lean_queue and context_queue.
+    def compute(self, worker: MCTSWorker, result: Optional[WorkerResponse] = None) -> None:
+        """
 
-        # dead_time_start = time.time()
-        # messages = self.spin_deque_task(
-        #     task_type=self.worker_id,
-        #     timeout=None,  # Spin until we get a message.
-        #     batch_size=None  # Get all messages.
-        # )
-        # dead_time += time.time() - dead_time_start
+        Things I need to return:
+         - whether or not I can backup.
+         - whether or not i can
+        """
+        # Load any results from the completion queue, lean queue, and context_queue.
+        # and enqueue them all to the lean_queue and context_queue.
+        if result is None:
+            worker.enqueue_task(
+                obj=self.pre_LLM_rollout(),
+                task_idx=hash(self),
+                task_type=CompletionTaskType
+            )
+        elif result.task_id.task_type == CompletionTaskType:
+            self.post_LLM_rollout(result['output'])
+            worker.enqueue_task(
+                obj=self.pre_process(),
+                task_idx=hash(self),
+                task_type=LeanTaskType
+            )
+        elif result.task_id.task_type == LeanTaskType:
+            self.post_process(result['result'])
+            node.is_processed = True
 
-        # for result in messages:
-        #     node: UCTNode
-        #     time_init: float
-        #     if result.task_id.task_type == CompletionTaskType:
-        #         # Find the node that requested this completion.
-        #         node, time_init = completion_waiting.pop(
-        #             result['completion_task_id'])
+            if node.is_terminal:
+                # compute the value estimate of the player at the terminal leaf
+                value_estimate: float = game.reward(self)
+                # Immediately backup the value estimate along the path to the root
+                node.backup(value_estimate)
 
-        #         time_taken = time.time() - time_init
+                if value_estimate == 1.0:
+                    worker.logger.info(
+                        "We think we just won! Here was the lean output:")
+                    worker.logger.info(result['result'])
+                    victorious_death = True
+                    winning_node = node
 
-        #         self.logger.info("Received completion output, took " +
-        #                          str(time_taken) + " seconds.")
-        #         sum_completion_time += time_taken
-        #         total_completion += 1
+            else:
+                # Enqueue the node to the context_queue.
+                worker.enqueue_task(
+                    obj=self.pre_comments(),
+                    task_idx=hash(node),
+                    task_type=PolicyValueTaskType
+                )
+                context_waiting[hash(node)] = (node, time.time())
 
-        #         # Update the node with the completion.
-        #         state: LeanGameState = node.game_state
-        #         state.post_LLM_rollout(result['output'])
+        elif result.task_id.task_type == PolicyValueTaskType:
+            # Find the node that requested this policy value.
+            node, time_init = context_waiting.pop(result['task_id'])
 
-        #         # Enqueue the node to the lean queue.
-        #         self.enqueue_task(
-        #             obj=state.pre_process(),
-        #             task_idx=hash(node),
-        #             task_type=LeanTaskType
-        #         )
+            time_taken = time.time() - time_init
 
-        #         lean_waiting[hash(node)] = (node, time.time())
+            worker.logger.info("Received context output, took " +
+                               str(time_taken) + " seconds.")
+            sum_context_time += time_taken
+            total_context += 1
 
-        #     elif result.task_id.task_type == LeanTaskType:
-        #         # Find the node that requested this lean.
-        #         node, time_init = lean_waiting.pop(result['lean_task_id'])
+            # Update the node with the policy value.
+            self: LeanGameState = node.game_state
+            self.post_comments(result['task_output']['comments'])
 
-        #         time_taken = time.time() - time_init
-
-        #         self.logger.info("Received lean output, took " +
-        #                          str(time_taken) + " seconds.")
-        #         sum_lean_time += time_taken
-        #         total_lean += 1
-
-        #         # Update the node with the lean.
-        #         state: LeanGameState = node.game_state
-        #         state.post_process(result['result'])
-        #         node.is_processed = True
-
-        #         if node.is_terminal:
-        #             # compute the value estimate of the player at the terminal leaf
-        #             value_estimate: float = game.reward(state)
-        #             # Immediately backup the value estimate along the path to the root
-        #             node.backup(value_estimate)
-
-        #             if value_estimate == 1.0:
-        #                 self.logger.info(
-        #                     "We think we just won! Here was the lean output:")
-        #                 self.logger.info(result['result'])
-        #                 victorious_death = True
-        #                 winning_node = node
-
-        #         else:
-        #             # Enqueue the node to the context_queue.
-        #             self.enqueue_task(
-        #                 obj=state.pre_comments(),
-        #                 task_idx=hash(node),
-        #                 task_type=PolicyValueTaskType
-        #             )
-        #             context_waiting[hash(node)] = (node, time.time())
-
-        #     elif result.task_id.task_type == PolicyValueTaskType:
-        #         # Find the node that requested this policy value.
-        #         node, time_init = context_waiting.pop(result['task_id'])
-
-        #         time_taken = time.time() - time_init
-
-        #         self.logger.info("Received context output, took " +
-        #                          str(time_taken) + " seconds.")
-        #         sum_context_time += time_taken
-        #         total_context += 1
-
-        #         # Update the node with the policy value.
-        #         state: LeanGameState = node.game_state
-        #         state.post_comments(result['task_output']['comments'])
-
-        #         # first, we need to comment the state right away.
-        #         self.logger.info(
-        #             f"Received policy: {result['task_output']['policy']}")
-        #         self.logger.info(
-        #             f"Received value: {result['task_output']['value']}")
-        #         policy = np.array(result['task_output']['policy'])
-        #         node.expand(policy,
-        #                     result['task_output']['value'], train)
-        #         node.backup(result['task_output']['value'])
-        #     else:
-        #         raise ValueError("Unknown task type.")
+            # first, we need to comment the state right away.
+            worker.logger.info(
+                f"Received policy: {result['task_output']['policy']}")
+            worker.logger.info(
+                f"Received value: {result['task_output']['value']}")
+            policy = np.array(result['task_output']['policy'])
+            node.expand(policy,
+                        result['task_output']['value'], train)
+            node.backup(result['task_output']['value'])
+        else:
+            raise ValueError("Unknown task type.")
 
     def pre_LLM_rollout(self) -> str:
         """
