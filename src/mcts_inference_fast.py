@@ -35,13 +35,12 @@ def run_inference():
                          for i in range(config['completion']['num_procs'])}
     policy_value_queues = {i: multiprocessing.Queue()
                            for i in range(config['policy_value']['num_procs'])}
-    context_queues = {i: multiprocessing.Queue()
-                      for i in range(config['context']['num_procs'])}
+    # context_queues = {i: multiprocessing.Queue()
+    #                   for i in range(config['context']['num_procs'])}
     lean_queues = {i: multiprocessing.Queue()
                    for i in range(config['lean']['num_procs'])}
 
     global_completion_queue = multiprocessing.Queue()
-    global_context_queue = multiprocessing.Queue()
     global_policy_value_queue = multiprocessing.Queue()
 
     global_lean_queue = multiprocessing.Queue()
@@ -57,7 +56,7 @@ def run_inference():
         'worker_queue': worker_queues[i],
         'global_completion_queue': global_completion_queue,
         'global_lean_queue': global_lean_queue,
-        'global_context_queue': global_context_queue,
+        'global_context_queue': global_policy_value_queue,
     }
     ) for i in range(config['worker']['num_procs'])]
 
@@ -104,77 +103,77 @@ def run_inference():
 
     # Start all processes
 
-    # for w in inference_procs + completion_procs + policy_value_procs:
-    #     w.start()
-
-    for w in inference_procs + lean_procs:
+    for w in inference_procs + lean_procs + policy_value_procs + completion_procs:
         w.start()
 
-    # workers_alive = {i: True for i in range(
-    #     config['worker']['num_procs'])}
-    # completion_alive = {i: True for i in range(
-    #     config['completion']['num_procs'])}
-    # lean_alive = {i: True for i in range(config['lean']['num_procs'])}
-    # policy_value_alive = {i: True for i in range(
-    #     config['policy_value']['num_procs'])}
+    # for w in inference_procs + lean_procs:
+    #     w.start()
+
+    workers_alive = {i: True for i in range(
+        config['worker']['num_procs'])}
+    completion_alive = {i: True for i in range(
+        config['completion']['num_procs'])}
+    lean_alive = {i: True for i in range(config['lean']['num_procs'])}
+    policy_value_alive = {i: True for i in range(
+        config['policy_value']['num_procs'])}
     # context_alive = {i: True for i in range(
     #     config['context']['num_procs'])}
 
-    # while True:
-    #     # Check if all the processes are still alive
-    #     for i, w in enumerate(inference_procs):
-    #         w.join(timeout=0)
-    #         if not w.is_alive():
-    #             workers_alive[i] = False
-    #     for i, w in enumerate(completion_procs):
-    #         w.join(timeout=0)
-    #         if not w.is_alive():
-    #             completion_alive[i] = False
-    #     for i, w in enumerate(lean_procs):
-    #         w.join(timeout=0)
-    #         if not w.is_alive():
-    #             lean_alive[i] = False
-    #     for i, w in enumerate(policy_value_procs):
-    #         w.join(timeout=0)
-    #         if not w.is_alive():
-    #             policy_value_alive[i] = False
+    while True:
+        # Check if all the processes are still alive
+        for i, w in enumerate(inference_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                workers_alive[i] = False
+        for i, w in enumerate(completion_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                completion_alive[i] = False
+        for i, w in enumerate(lean_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                lean_alive[i] = False
+        for i, w in enumerate(policy_value_procs):
+            w.join(timeout=0)
+            if not w.is_alive():
+                policy_value_alive[i] = False
 
-    #     if all([not v for v in workers_alive.values()]):
-    #         print("All workers are done.")
-    #         break
-    #     if any([not v for v in completion_alive.values()]):
-    #         print("One of the completion processes has died.")
-    #         break
-    #     if any([not v for v in lean_alive.values()]):
-    #         print("One of the lean processes has died.")
-    #         break
-    #     if any([not v for v in policy_value_alive.values()]):
-    #         print("One of the policy_value processes has died.")
-    #         break
-    #     if any([not v for v in context_alive.values()]):
-    #         print("One of the context processes has died.")
-    #         break
+        if all([not v for v in workers_alive.values()]):
+            print("All workers are done.")
+            break
+        if any([not v for v in completion_alive.values()]):
+            print("One of the completion processes has died.")
+            break
+        if any([not v for v in lean_alive.values()]):
+            print("One of the lean processes has died.")
+            break
+        if any([not v for v in policy_value_alive.values()]):
+            print("One of the policy_value processes has died.")
+            break
+        # if any([not v for v in context_alive.values()]):
+        #     print("One of the context processes has died.")
+        #     break
 
-    #     time.sleep(1)
+        time.sleep(1)
 
-    # # Send kill signals to all processes
-    # for q in worker_queues.values():
-    #     q.put("kill")
-    # for q in completion_queues.values():
-    #     q.put("kill")
-    # for q in lean_queues.values():
-    #     q.put("kill")
-    # for q in policy_value_queues.values():
-    #     q.put("kill")
+    # Send kill signals to all processes
+    for q in worker_queues.values():
+        q.put("kill")
+    for q in completion_queues.values():
+        q.put("kill")
+    for q in lean_queues.values():
+        q.put("kill")
+    for q in policy_value_queues.values():
+        q.put("kill")
     # for q in context_queues.values():
     #     q.put("kill")
-    # print("All kill signals sent.")
+    print("All kill signals sent.")
 
-    # # Wait for 5 minutes, then force kill all processes
-    # time.sleep(300)
-    # for w in inference_procs + completion_procs + lean_procs + policy_value_procs:
-    #     w.terminate()
-    #     w.join()
-    # print("All processes terminated.")
+    # Wait for 5 minutes, then force kill all processes
+    time.sleep(300)
+    for w in inference_procs + completion_procs + lean_procs + policy_value_procs:
+        w.terminate()
+        w.join()
+    print("All processes terminated.")
 
 run_inference()

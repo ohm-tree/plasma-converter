@@ -50,7 +50,7 @@ def main(
             child = _child
 
         cmd_json = json.dumps(cmd)
-        print("cmd_json", cmd_json)
+        # print("cmd_json", cmd_json)
         child.send(cmd_json + "\r\n")
         # Read the input itself.
         # This should be printed instantly, so timeout is set to 1 second.

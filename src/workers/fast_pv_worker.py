@@ -13,7 +13,7 @@ def prompt(lean_game_dict: Dict) -> str:
 '''
 
     res += lean_game_dict['header'] + \
-        lean_game_dict['problem'] + lean_game_dict['old_code']
+        lean_game_dict['problem'] + lean_game_dict['old_code'] + '  --'
     
     return res
 
@@ -123,7 +123,7 @@ def policy_value_main(
         #   'mcts_worker_id': int, # The worker task id that generated this task.
         #   'task_id': int, # The specific completion task id of this task.
         #   'task_input': dict # The task to complete, which is a lean_game_dict.
-        #   'type': dict
+        #   'type': string
         # }
 
         try:
@@ -155,11 +155,15 @@ def policy_value_main(
             use_tqdm=False,
         )
 
+        print("model_outputs", model_outputs)
+
         for i in range(len(model_outputs)):
-            options = model_outputs[i].outputs
+            options = model_outputs[0].outputs[i]
+            # either this or model_outputs[i].outputs[0]
 
             comments = np.array([option.text for option in options])
             policy = np.array([option.cumulative_logprob for option in options])
+            print("policy", policy)
             unique_indices = [i==0 or comments[i]!=comments[i-1] for i in range(len(comments))]
             comments = comments[unique_indices]
             policy = policy[unique_indices]
