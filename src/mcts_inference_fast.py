@@ -57,8 +57,7 @@ def run_inference():
         'global_completion_queue': global_completion_queue,
         'global_lean_queue': global_lean_queue,
         'global_context_queue': global_policy_value_queue,
-    }
-    ) for i in range(config['worker']['num_procs'])]
+    }) for i in range(config['worker']['num_procs'])]
 
     completion_procs = [multiprocessing.Process(target=completion_process, kwargs={
         'config': config['completion'],
@@ -69,9 +68,7 @@ def run_inference():
         'completion_queue': completion_queues[i],
         'worker_queues': worker_queues,
         'global_completion_queue': global_completion_queue,
-    }
-    )
-        for i in range(config['completion']['num_procs'])]
+    }) for i in range(config['completion']['num_procs'])]
 
     gpu_offset = config['completion']['num_procs']
 
@@ -84,8 +81,7 @@ def run_inference():
         'policy_value_queue': policy_value_queues[i],
         'worker_queues': worker_queues,
         'global_policy_value_queue': global_policy_value_queue,
-    })
-        for i in range(config['policy_value']['num_procs'])]
+    }) for i in range(config['policy_value']['num_procs'])]
 
     gpu_offset += config['policy_value']['num_procs']
 
@@ -97,9 +93,7 @@ def run_inference():
         'lean_queue': lean_queues[i],
         'worker_queues': worker_queues,
         'global_lean_queue': global_lean_queue
-    }
-    )
-        for i in range(config['lean']['num_procs'])]
+    }) for i in range(config['lean']['num_procs'])]
 
     # Start all processes
 
@@ -169,8 +163,8 @@ def run_inference():
     #     q.put("kill")
     print("All kill signals sent.")
 
-    # Wait for 5 minutes, then force kill all processes
-    time.sleep(300)
+    # Wait for 30s, then force kill all processes
+    time.sleep(30)
     for w in inference_procs + completion_procs + lean_procs + policy_value_procs:
         w.terminate()
         w.join()

@@ -103,6 +103,8 @@ def uct_search(
                         'type': 'completion'
                     }
                 )
+                # print("prerollout")
+                # print(state.pre_LLM_rollout())
                 completion_waiting[hash(leaf)] = leaf
                 iters += 1
         # Check for completed leaves.
@@ -117,6 +119,9 @@ def uct_search(
                 # Update the node with the completion.
                 state: LeanGameState = node.game_state
                 state.post_LLM_rollout(result['output'])
+
+                # print("post rollout")
+                # print(result['output'])
 
                 # Enqueue the node to the lean queue.
                 global_lean_queue.put(
@@ -168,6 +173,9 @@ def uct_search(
                 logger.info(
                     f"Received value: {result['task_output']['value']}")
                 policy = np.array(result['task_output']['policy'])
+                # print("policy")
+                # print(policy)
+                # print("comments", result['task_output']['comments'])
                 node.expand(policy,
                             result['task_output']['value'], train)
                 node.backup(result['task_output']['value'])
@@ -179,8 +187,8 @@ def uct_search(
     #     root.child_Q(), root.child_number_visits) if j > 0])
     # print("U values", [i.item() for i, j in zip(
     #     root.child_U(), root.child_number_visits) if j > 0])
-    print("Number visits", root.child_number_visits)
-    print("Prior policy", root.child_priors)
-    print("Q values", root.child_Q())
-    print("U values", root.child_U())
+    # print("Number visits", root.child_number_visits)
+    # print("Prior policy", root.child_priors)
+    # print("Q values", root.child_Q())
+    # print("U values", root.child_U())
     return root.child_number_visits / np.sum(root.child_number_visits), root.child_Q()[root.child_number_visits.argmax()]

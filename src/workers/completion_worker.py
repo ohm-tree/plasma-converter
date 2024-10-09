@@ -75,7 +75,6 @@ def main(
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
-    # TODO: stuff all of the configs into a config file.
     llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
               max_num_batched_tokens=config['max_num_batched_tokens'],
               trust_remote_code=True,
@@ -140,7 +139,7 @@ def main(
             result = {
                 'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
                 'completion_task_id': my_tasks[i]['completion_task_id'],
-                'output': outputs[i].outputs[0].text,
+                'output': outputs[i].outputs[0].text + '\n',
                 'type': 'completion'
             }
             logger.info(str(result))

@@ -164,6 +164,8 @@ def main(
         if 'system_error' in result:
             logger.error(
                 f"Error in send_code_read_json: {result['system_error']}")
+            print("send_code_read_json", input_data['task'])
+            print("end")
             try:
                 child.close()
             except:

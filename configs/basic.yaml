@@ -1,6 +1,7 @@
 run_name: mcts_inference_valid
 data_dir: datasets/minif2f.jsonl
 split: valid
+max_depth: 20
 
 worker:
   num_procs: 163
@@ -27,4 +28,11 @@ policy_value:
   num_procs: 4
   type: fast
   batch_size: 40
-  branching_factor: 6
+  branching_factor: 1
+  sampling:
+    temperature: 1.1
+    max_tokens: 100
+    top_p: 0.95
+    n: 1
+    stop: ["\n"]
+    logprobs: True

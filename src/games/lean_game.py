@@ -306,11 +306,13 @@ class LeanGameState:
         if self.step != LeanGameStateStep.INITIALIZED:
             raise LeanGameStateError(
                 "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
-
-        return 'Complete the following Lean 4 code.\nHere is a hint:\n' + self.comment.strip() + \
-            '\nThe tactic state is:\n' + \
-            self.old_tactic_state.strip()+'\n```lean\n' + self.header + self.problem + \
-            self.old_code
+        
+        # print("old_tactic_state", self.old_tactic_state)
+        return 'Complete the following Lean 4 code.' + \
+            '\n```lean\n' + self.header + self.problem + \
+            self.old_code + '\n' + \
+            "/--\n" + self.old_tactic_state.strip() + "\n-/\n" + \
+            self.comment
 
     def post_LLM_rollout(self, new_code: str):
         """
@@ -632,11 +634,13 @@ class LeanGame(Game[LeanGameState]):
             The initial tactic state.
         """
 
+        # print("tactic_state", tactic_state)
+
         return LeanGameState(
             step=LeanGameStateStep.PROCESSED,
             problem=problem,
             old_code="",
-            old_tactic_state="",
+            old_tactic_state=tactic_state,
             comment="",
             depth=0,
             header=header,

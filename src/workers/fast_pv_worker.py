@@ -79,12 +79,7 @@ def policy_value_main(
     #           tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
-        temperature=1,
-        max_tokens=500,
-        top_p=0.95,
-        n=config['branching_factor'],
-        stop = ['\n'],
-        logprobs=True
+        **config['sampling']
     )
 
     logger.info("Policy-value worker initialized.")
@@ -150,6 +145,7 @@ def policy_value_main(
         
         model_inputs = [prompt(task['task_input']) for task in my_tasks]
 
+        # print("model_inputs[0]", model_inputs[0])
         model_outputs = llm.generate(
             model_inputs,
             sampling_params,
@@ -161,13 +157,21 @@ def policy_value_main(
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
 
-            comments = np.array(["  --" + option.text for option in options])
+            comments = np.array(["  --" + option.text + "\n" for option in options])
             policy = np.array([option.cumulative_logprob for option in options])
             # unique_indices = [i==0 or comments[i]!=comments[i-1] for i in range(len(comments))]
             # comments = comments[unique_indices]
             # policy = policy[unique_indices]
             policy = np.exp(policy)
             policy /= policy.sum()
+
+            # print("first comment")
+            # print("n in comments[0]", '\n' in comments[0])
+            # print("r in comments[0]", "\r" in comments[0])
+            # print(comments[0])
+            # print("second comment")
+            # print(comments[1])
+            # print("END COMMENTS")
 
             res = {
                 'comments': comments,
