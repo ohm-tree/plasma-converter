@@ -1,8 +1,8 @@
-run_name: mcts_inference_valid
+run_name: fast_linear_inference_valid
 data_dir: /home/ubuntu/ohm-tree-IL/plasma-converter/datasets/minif2f.jsonl
 split: "valid"
 
-mcts:
+linear_inference:
     num_procs: 163
 
 completion:

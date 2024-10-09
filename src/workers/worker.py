@@ -137,9 +137,14 @@ class Worker(abc.ABC):
 
     def enqueue_task(self,
                      obj: Any,
-                     task_idx: int,
-                     task_type: TaskType
+                     task_idx: Optional[int] = None,
+                     task_type: Optional[TaskType] = None
                      ) -> None:
+        if isinstance(task_type, WorkerTask):
+            task_type = task_type.task_id.task_type
+            self.enqueue(obj, task_type)
+            return
+
         task = WorkerTask(
             head_id=self.worker_id,
             task_id=TaskIdentifier(

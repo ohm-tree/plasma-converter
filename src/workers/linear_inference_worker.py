@@ -1,204 +1,115 @@
 """
-In this file, we will let a human play a game of Lean (using modal).
+In this file, we will let a human play a game of Lean.
 """
 
+import json
+import logging
 import multiprocessing
+import os
+import queue
+import time
+from typing import Dict, List, Optional, Union
+
+import numpy as np
+
+from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
+from src.games.lean_game_core import LeanGameState
+from src.train.self_play import self_play
+from src.workers.types import (
+    CompletionTaskType,
+    LeanTaskType,
+    LinearInferenceWorkerType,
+    PolicyValueTaskType,
+)
+from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerType
 
 
-def main(
-    run_name: str,
-    task_id: int,
-    num_tasks: int,
-    json_name: str,
-    master_queue: multiprocessing.Queue,
-    worker_queue: multiprocessing.Queue,
-    global_completion_queue: multiprocessing.Queue,
-    global_lean_queue: multiprocessing.Queue,
-    global_context_queue: multiprocessing.Queue
-):
-    import json
-    import logging
-    import os
-    import queue
-    import time
-
-    from src.games.lean_game import LeanGame, LeanGameState
-
-    # I live in src/workers/
-    WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
-    SRC_DIR = os.path.dirname(WORKER_DIR)
-    ROOT_DIR = os.path.dirname(SRC_DIR)
-
-    with open(f"{ROOT_DIR}/datasets/minif2f.jsonl", 'r') as file:
-        # Each line in the file is a separate JSON object
-        data = [json.loads(line.strip()) for line in file.readlines()]
-
-    # give myself a custom logging file.
-    os.makedirs(f"{ROOT_DIR}/logs/{run_name}", exist_ok=True)
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(
-        f"logs/{run_name}/linear_inference_worker_{task_id}.log")
-    logger.addHandler(fh)
-    logger.info(f"Starting linear_inference_worker {task_id}.")
-
-    for current_problem in range(task_id, len(data), num_tasks):
-        logger.info(f"Worker {task_id} working on problem {current_problem}")
-        problem = data[current_problem]
-        informal_prefix = problem['informal_prefix']
-        formal_statement = problem['formal_statement']
-        PROBLEM_STATEMENT = informal_prefix + formal_statement
-        tactic_state = problem['goal']
-
-        game: LeanGame = LeanGame(
-            # comment_seeds=comments,
-            num_comment_seeds=6,
-            max_depth=20
-        )
-        state: LeanGameState = game.start_state(
-            problem=PROBLEM_STATEMENT,
-            tactic_state=tactic_state
+class LinearInferenceWorker(Worker):
+    def __init__(self,
+                 config: dict,
+                 run_name: str,
+                 task_id: int,
+                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 ):
+        super().__init__(
+            worker_id=WorkerIdentifer(
+                LinearInferenceWorkerType, task_id),
+            queues=queues,
+            run_name=run_name,
         )
 
-        global_context_queue.put(
-            {
-                'mcts_worker_id': task_id,
-                # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
-                'task_id': 0,
-                'task_input': state.pre_comments(),
-                'type': 'context'
-            }
-        )
+        self.config = config
 
-        time_to_context = -time.time()
-        context_output = None
-        while context_output is None:
-            try:
-                context_output = worker_queue.get_nowait()
-            except queue.Empty:
-                context_output = None
-                pass
+        self.load_problems()
 
-        time_to_context += time.time()
-        logger.info(f"Time to context: {time_to_context}")
-        assert context_output['type'] == 'policy_value'
-        assert context_output['task_id'] == 0
-        state.post_comments(context_output['task_output']['comments'])
-        logger.info(
-            f"Received policy: {context_output['task_output']['policy']}")
-        logger.info(
-            f"Received value: {context_output['task_output']['value']}")
-        # first, we need to comment the state right away.
+        self.game_data_path = f"data/{run_name}/games/{task_id}/"
+        os.makedirs(self.game_data_path, exist_ok=True)
+        self.output_path = f"outputs/{run_name}/"
+        os.makedirs(self.output_path, exist_ok=True)
 
-        while not game.is_terminal(state):
-            logger.info(state.human_printout())
-            action = 0
-            state = game.next_state(state, action)
+    def load_problems(self):
+        # I live in src/workers/
+        WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
+        SRC_DIR = os.path.dirname(WORKER_DIR)
+        ROOT_DIR = os.path.dirname(SRC_DIR)
 
-            input_data = state.pre_LLM_rollout()
+        with open(self.config['data_dir'], 'r') as file:
+            self.data = [
+                json.loads(line.strip())
+                for line in file.readlines()
+                if json.loads(line.strip()).get('split') == self.config['split']
+            ]
 
-            # tasks should take the form
-            # {
-            #   'worker_id': int, # The worker task id that generated this task.
-            #   'completion_task_id': int, # The specific completion task id of this task.
-            #   'task': str # The task to complete, a string prompt.
-            #   'type': str # Should be 'completion'
-            # }
-            global_completion_queue.put({
-                'mcts_worker_id': task_id,
-                # In this test, we will only have one completion task ever and the cpu workers will spin on the outputs.
-                'completion_task_id': 0,
-                'task': input_data,
-                'type': 'completion'
-            })
-            time_to_completion = -time.time()
-            completion_output = None
-            while completion_output is None:
-                try:
-                    completion_output = worker_queue.get_nowait()
-                except queue.Empty:
-                    completion_output = None
-                    pass
+    def run(self):
+        for current_problem in range(self.worker_idx, len(self.data), self.config['worker']['num_procs']):
+            self.logger.info(
+                f"Working on problem {current_problem}")
+            problem = self.data[current_problem]
+            informal_prefix = problem['informal_prefix']
+            formal_statement = problem['formal_statement']
+            PROBLEM_STATEMENT = informal_prefix + formal_statement
+            tactic_state = problem['goal']
 
-            time_to_completion += time.time()
-            logger.info(f"Time to completion: {time_to_completion}")
-            assert completion_output['type'] == 'completion'
-            assert completion_output['completion_task_id'] == 0
-
-            output = completion_output['output'] + "\n"
-            state.post_LLM_rollout(output)
-            lean4_input = state.pre_process()
-            # tasks should take the form
-            # {
-            #   'worker_id': int, # The worker task id that generated this task.
-            #   'lean_task_id': int, # The specific lean task id of this task.
-            #   'task': str # The task to complete, a string prompt.
-            #   'type': str # Should be 'lean'
-            # }
-
-            global_lean_queue.put({
-                'mcts_worker_id': task_id,
-                # In this test, we will only have one lean task ever and the cpu workers will spin on the outputs.
-                'lean_task_id': 0,
-                'task': lean4_input,
-                'type': 'lean'
-            })
-
-            time_to_lean = -time.time()
-            lean_output = None
-            while lean_output is None:
-                try:
-                    lean_output = worker_queue.get_nowait()
-                except queue.Empty:
-                    lean_output = None
-                    pass
-
-            time_to_lean += time.time()
-            logger.info(f"Time to lean: {time_to_lean}")
-            assert lean_output['type'] == 'lean'
-            assert lean_output['lean_task_id'] == 0
-            state.post_process(lean_output['result'])
-
-            global_context_queue.put(
-                {
-                    'mcts_worker_id': task_id,
-                    # In this test, we will only have one context task ever and the cpu workers will spin on the outputs.
-                    'task_id': 0,
-                    'task_input': state.pre_comments(),
-                    'type': 'context'
-                }
+            state: MetaLeanGameState = MetaLeanGameState.starting_state(
+                worker_id=self.worker_id,
+                problem=PROBLEM_STATEMENT,
+                tactic_state=tactic_state
             )
 
-            time_to_context = -time.time()
-            context_output = None
-            while context_output is None:
-                try:
-                    context_output = worker_queue.get_nowait()
-                except queue.Empty:
-                    context_output = None
-                    pass
+            while not state.terminal():
+                self.logger.info(state.human_printout())
+                action = 0
+                state = state.next_state(action)
+                input_data = next(state.pre_LLM_rollout())
+                self.enqueue_task(input_data)
+                time_to_completion = -time.time()
+                completion_output = next(self.spin_deque_task(
+                    task_type=CompletionTaskType
+                ))
+                time_to_completion += time.time()
+                self.logger.info(f"Time to completion: {time_to_completion}")
+                lean4_input = next(state.post_LLM_rollout(completion_output))
+                self.enqueue_task(lean4_input)
+                time_to_lean = -time.time()
+                lean_output = next(self.spin_deque_task(
+                    task_type=LeanTaskType
+                ))
+                time_to_lean += time.time()
+                self.logger.info(f"Time to lean: {time_to_lean}")
+                context_input = next(state.post_process(lean_output))
+                self.enqueue_task(context_input)
+                time_to_context = -time.time()
+                context_output = next(self.spin_deque_task(
+                    task_type=PolicyValueTaskType
+                ))
+                time_to_context += time.time()
+                self.logger.info(f"Time to context: {time_to_context}")
+                state.post_comments(context_output)
 
-            time_to_context += time.time()
-            logger.info(f"Time to context: {time_to_context}")
-            assert context_output['type'] == 'policy_value'
-            assert context_output['task_id'] == 0
-            state.post_comments(context_output['task_output']['comments'])
-            logger.info(
-                f"Received policy: {context_output['task_output']['policy']}")
-            logger.info(
-                f"Received value: {context_output['task_output']['value']}")
+            # save the human printout to a file
+            os.makedirs("outputs/distributed_run/", exist_ok=True)
+            with open(f"outputs/distributed_run/{problem['name']}.txt", 'w') as file:
+                file.write(state.human_printout())
 
-        # save the human printout to a file
-        os.makedirs("outputs/distributed_run/", exist_ok=True)
-        with open(f"outputs/distributed_run/{problem['name']}.txt", 'w') as file:
-            file.write(state.human_printout())
-
-        logger.info(f"Finished problem {problem['name']} result: {state.win}")
-    # tell the master queue that we are done with all tasks.
-    master_queue.put(
-        {
-            'mcts_worker_id': task_id,
-            'task_id': 0,
-            'type': 'done'
-        }
-    )
+            self.logger.info(
+                f"Finished problem {problem['name']} result: {state.reward()}")

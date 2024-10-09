@@ -11,7 +11,7 @@ from src.games.concurrent import handler, on_startup, require_ready
 from src.games.game import ConcurrentGameState, ConcurrentMetaGameState
 from src.games.lean_game_core import LeanGameMove, LeanGameState, LeanGameStateError
 from src.uct.uct_node import UCTNode
-from src.workers.types import CompletionTaskType, PolicyValueTaskType
+from src.workers.types import CompletionTaskType, LeanTaskType, PolicyValueTaskType
 from src.workers.worker import (
     TaskIdentifier,
     TaskType,
@@ -19,6 +19,8 @@ from src.workers.worker import (
     WorkerResponse,
     WorkerTask,
 )
+
+LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
 @dataclass
@@ -84,20 +86,18 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         return [cls(**state) for state in states]
 
     @classmethod
-    def starting_state(cls, *args, **kwargs) -> LeanGameState:
-        """
-        Returns the starting state of the game.
-        """
-
-        worker_id = kwargs['worker_id']
-        problem = kwargs['problem']
-        header = kwargs['header']
-        max_depth = kwargs.get('max_depth', 100)
+    def starting_state(cls,
+                       worker_id: WorkerIdentifer,
+                       problem: str,
+                       tactic_state: str,
+                       header: str = LEAN4_DEFAULT_HEADER,
+                       max_depth: int = 100) -> 'MetaLeanGameState':
 
         internal_state = LeanGameState.starting_state(
             worker_id=worker_id,
             problem=problem,
             header=header,
+            tactic_state=tactic_state,
             max_depth=max_depth
         )
 
@@ -230,6 +230,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         new_code: str = completion.response
         if new_code.endswith('```'):
             new_code = new_code[:-3]
+        if not new_code.endswith('\n'):
+            new_code += '\n'
         self.state.new_code = new_code
 
         return self.state.startup(callback=self.pre_comments)
@@ -266,3 +268,10 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self._policy = np.array(results.response['policy'])
         self._value = results.response['value']
         self.finish()
+
+    @handler(LeanTaskType)
+    def post_process(self, lean_output: WorkerResponse) -> Iterable[WorkerTask]:
+        """
+        This function is called after the Lean task is done.
+        """
+        yield from self.state.post_process(lean_output.response)

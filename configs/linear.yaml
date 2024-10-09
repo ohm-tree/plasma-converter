@@ -1,8 +1,8 @@
-run_name: mcts_inference_valid
+run_name: linear_inference_valid
 data_dir: /home/ubuntu/ohm-tree-IL/plasma-converter/datasets/minif2f.jsonl
 split: "valid"
 
-mcts:
+linear_inference:
     num_procs: 163
 
 completion:
@@ -22,7 +22,7 @@ lean:
     num_procs: 24
 
 fast_policy_value:
-    num_procs: 5
+    num_procs: 0
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
@@ -36,7 +36,7 @@ fast_policy_value:
         stop: ["\n"]
 
 policy_value:
-    num_procs: 0
+    num_procs: 2
     batch_size: 40
     model:
         model: "deepseek-ai/deepseek-math-7b-instruct"
@@ -49,7 +49,7 @@ policy_value:
         top_p: 1.0
 
 context:
-    num_procs: 0
+    num_procs: 3
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"

@@ -35,3 +35,9 @@ def mcts_inference_entrypoint(*args, **kwargs):
     from src.workers.mcts_inference_worker import MCTSWorker
     worker = MCTSWorker(*args, **kwargs)
     worker.main()
+
+
+def linear_inference_entrypoint(*args, **kwargs):
+    from src.workers.linear_inference_worker import LinearInferenceWorker
+    worker = LinearInferenceWorker(*args, **kwargs)
+    worker.main()

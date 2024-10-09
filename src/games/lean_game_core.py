@@ -183,7 +183,12 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         }
 
     @classmethod
-    def starting_state(cls, worker_id: WorkerIdentifer, problem: str, header: str, max_depth=100) -> 'LeanGameState':
+    def starting_state(cls,
+                       worker_id: WorkerIdentifer,
+                       problem: str,
+                       header: str,
+                       tactic_state: str,
+                       max_depth: int =100) -> 'LeanGameState':
         """
         Returns the starting state of the game.
         """
@@ -194,11 +199,11 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             new_code="",
             depth=0,
             max_depth=max_depth,
-            ready=False,
-            win=None,
-            dead=None,
-            tactic_state=None,
-            valid_code=None,
+            ready=True,
+            win=False,
+            dead=False,
+            tactic_state=tactic_state,
+            valid_code="",
             worker_id=worker_id
         )
 

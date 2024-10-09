@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-from src.games.lean_game import LeanGame, LeanGameState
+from src.games.lean_game import MetaLeanGameState, MetaLeanGameMove
 from src.train.self_play import self_play
 from src.workers.types import (
     CompletionTaskType,

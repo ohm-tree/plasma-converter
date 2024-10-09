@@ -41,7 +41,9 @@ def run_inference():
             print("Warning: No policy value workers are active.")
 
     WORKER_TYPES_AND_STRINGS: Tuple[Tuple[WorkerType, str, Callable, bool]] = (
-        (MCTSWorkerType, 'worker', mcts_inference_entrypoint, False),
+        (MCTSWorkerType, 'mcts', mcts_inference_entrypoint, False),
+        (LinearInferenceWorkerType, 'linear_inference',
+         linear_inference_entrypoint, True),
         (CompletionWorkerType, 'completion', completion_entrypoint, True),
         (PolicyValueWorkerType, 'policy_value', policy_value_entrypoint, True),
         (LeanWorkerType, 'lean', lean_entrypoint, False),
@@ -102,13 +104,13 @@ def run_inference():
                     alive[key][i] = False
 
         dead = False
-        if all([not v for v in alive['mcts']]):
+        if all([not v for v in alive['linear_inference']]):
             print("All workers are done.")
             dead = True
             break
 
         for key in procs.keys():
-            if key == 'mcts':
+            if key == 'linear_inference':
                 continue
             if any([not v for v in alive[key]]):
                 print(f"One of the {key} processes has died.")
