@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 import random
 import time
@@ -13,16 +11,14 @@ from src.games.concurrent import handler, on_startup, require_ready
 from src.games.game import ConcurrentGameState, ConcurrentMetaGameState
 from src.games.lean_game_core import LeanGameMove, LeanGameState, LeanGameStateError
 from src.uct.uct_node import UCTNode
-
-if TYPE_CHECKING:
-    from src.workers.types import CompletionTaskType, PolicyValueTaskType
-    from src.workers.worker import (
-        TaskIdentifier,
-        TaskType,
-        WorkerIdentifer,
-        WorkerResponse,
-        WorkerTask,
-    )
+from src.workers.types import CompletionTaskType, PolicyValueTaskType
+from src.workers.worker import (
+    TaskIdentifier,
+    TaskType,
+    WorkerIdentifer,
+    WorkerResponse,
+    WorkerTask,
+)
 
 
 @dataclass
