@@ -1,12 +1,13 @@
 
-from typing import Dict, List
+import multiprocessing
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from vllm import RequestOutput
 
 from src.workers.llm_worker import LLMWorker
 from src.workers.types import FastPolicyValueWorkerType, PolicyValueTaskType
-from src.workers.worker import *
+from src.workers.worker import TaskType, WorkerIdentifer, WorkerTask
 
 
 def prompt(lean_game_dict: Dict) -> str:
@@ -26,11 +27,12 @@ def prompt(lean_game_dict: Dict) -> str:
 
 class FastPolicyValueWorker(LLMWorker):
     def __init__(self,
+                 global_config: dict,
                  config: dict,
                  run_name: str,
                  task_id: int,
                  gpu_set: List[int],
-                 queues: Dict[Union[TaskType, WorkerIdentifer]],
+                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -42,6 +44,7 @@ class FastPolicyValueWorker(LLMWorker):
             sampling_kwargs=config['sampling']
         )
         self.config = config
+        self.num_comments = config['num_comments']
 
     def loop(self):
         my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
@@ -75,8 +78,8 @@ class FastPolicyValueWorker(LLMWorker):
             policy /= policy.sum()
 
             comments = [''] + [option.text for option in options]
-            assert len(comments) == N + 1
-            policy = list(range(N + 1, 0, -1))
+            assert len(comments) == self.num_comments
+            policy = list(range(self.num_comments, 0, -1))
             policy = [i / sum(policy) for i in policy]
             res = {
                 'comments': comments,

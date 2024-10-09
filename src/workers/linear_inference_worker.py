@@ -14,7 +14,6 @@ import numpy as np
 
 from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
 from src.games.lean_game_core import LeanGameState
-from src.train.self_play import self_play
 from src.workers.types import (
     CompletionTaskType,
     LeanTaskType,
@@ -26,10 +25,12 @@ from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerType
 
 class LinearInferenceWorker(Worker):
     def __init__(self,
+                 global_config: dict,
                  config: dict,
                  run_name: str,
                  task_id: int,
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 **kwargs  # Unused
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -39,6 +40,7 @@ class LinearInferenceWorker(Worker):
         )
 
         self.config = config
+        self.global_config = global_config
 
         self.load_problems()
 
@@ -53,15 +55,15 @@ class LinearInferenceWorker(Worker):
         SRC_DIR = os.path.dirname(WORKER_DIR)
         ROOT_DIR = os.path.dirname(SRC_DIR)
 
-        with open(self.config['data_dir'], 'r') as file:
+        with open(os.path.join(ROOT_DIR, self.global_config['data_dir']), 'r') as file:
             self.data = [
                 json.loads(line.strip())
                 for line in file.readlines()
-                if json.loads(line.strip()).get('split') == self.config['split']
+                if json.loads(line.strip()).get('split') == self.global_config['split']
             ]
 
     def run(self):
-        for current_problem in range(self.worker_idx, len(self.data), self.config['worker']['num_procs']):
+        for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
             self.logger.info(
                 f"Working on problem {current_problem}")
             problem = self.data[current_problem]
@@ -75,6 +77,16 @@ class LinearInferenceWorker(Worker):
                 problem=PROBLEM_STATEMENT,
                 tactic_state=tactic_state
             )
+
+            context_input = next(state.pre_comments())
+            self.enqueue_task(context_input)
+            time_to_context = -time.time()
+            context_output = next(self.spin_deque_task(
+                task_type=PolicyValueTaskType
+            ))
+            time_to_context += time.time()
+            self.logger.info(f"Time to context: {time_to_context}")
+            state.post_comments(context_output)
 
             while not state.terminal():
                 self.logger.info(state.human_printout())
@@ -113,3 +125,6 @@ class LinearInferenceWorker(Worker):
 
             self.logger.info(
                 f"Finished problem {problem['name']} result: {state.reward()}")
+
+    def loop(self):
+        pass

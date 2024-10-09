@@ -1,15 +1,15 @@
-run_name: linear_inference_valid
+run_name: linear_inference_debug
 split: "valid"
 data_dir: datasets/minif2f.jsonl
 
 linear_inference:
-    num_procs: 163
+    num_procs: 1
 
 mcts:
     num_procs: 0
 
 completion:
-    num_procs: 3
+    num_procs: 1
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
@@ -22,7 +22,7 @@ completion:
         top_p: 1.0
 
 lean:
-    num_procs: 24
+    num_procs: 1
     num_comments: 10
 
 fast_policy_value:
@@ -40,7 +40,7 @@ fast_policy_value:
         stop: ["\n"]
 
 policy_value:
-    num_procs: 2
+    num_procs: 1
     batch_size: 40
     num_comments: 10
     model:
@@ -54,7 +54,7 @@ policy_value:
         top_p: 1.0
 
 context:
-    num_procs: 3
+    num_procs: 1
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"

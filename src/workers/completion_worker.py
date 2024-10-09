@@ -2,6 +2,7 @@
 Entry point for the completion worker process.
 """
 
+import multiprocessing
 from typing import Dict, List
 
 from vllm import RequestOutput
@@ -13,11 +14,12 @@ from src.workers.worker import *
 
 class CompletionWorker(LLMWorker):
     def __init__(self,
+                 global_config: dict,
                  config: dict,
                  run_name: str,
                  task_id: int,
                  gpu_set: List[int],
-                 queues: Dict[Union[TaskType, WorkerIdentifer]],
+                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(

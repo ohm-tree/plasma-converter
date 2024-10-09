@@ -21,6 +21,7 @@ with open(args.config, 'r') as file:
 
 
 # Run with `python src/linear_inference.py --config configs/linear.yaml`
+# Debug with `python src/linear_inference.py --config configs/linear_debug.yaml`
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 
@@ -53,6 +54,7 @@ def run_inference():
     )
 
     queues = {}
+    print("Creating Queues:")
     for worker_type, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
         queues.update(
             {
@@ -60,28 +62,36 @@ def run_inference():
                 for i in range(config[type_string]['num_procs'])
             }
         )
+        print(f"{type_string}: {config[type_string]['num_procs']} queues")
 
     for task_type in [LeanTaskType, CompletionTaskType, PolicyValueTaskType, PolicyValuePostProcessTaskType, KillTaskType]:
         queues.update({task_type: multiprocessing.Queue()})
+        print(f"{task_type}: 1 queues")
 
     # Create inference processes
     gpu_offset = 0
     procs: Dict[str, List[multiprocessing.Process]] = {}
     for _, type_string, entrypoint, gpu in WORKER_TYPES_AND_STRINGS:
-        if config[type_string]['num_procs'] > 0:
-            procs.update({type_string: []})
-            for i in range(config[type_string]['num_procs']):
-                procs[type_string].append(multiprocessing.Process(target=entrypoint, kwargs={
-                    'config': config[type_string],
-                    'run_name': run_name,
-                    'task_id': i,
-                    'queues': queues,
-                    'gpu_set': [gpu_offset + i] if gpu else []}
-                )
-                )
+        procs.update({type_string: []})
+        for i in range(config[type_string]['num_procs']):
+            procs[type_string].append(multiprocessing.Process(target=entrypoint, kwargs={
+                'global_config': config,
+                'config': config[type_string],
+                'run_name': run_name,
+                'task_id': i,
+                'queues': queues,
+                'gpu_set': [gpu_offset + i] if gpu else []}
+            )
+            )
 
         if gpu:
             gpu_offset += config[type_string]['num_procs']
+
+    print("Starting Processes:")
+    for key in procs.keys():
+        print(f"{key}: {len(procs[key])} processes")
+
+    time.sleep(1)  # Debug: let us see the processes start up
 
     # These should all just be references, arranged in nice ways.
     all_procs: List[multiprocessing.Process] = []
@@ -93,7 +103,7 @@ def run_inference():
     for w in all_procs:
         w.start()
 
-    alive = {i: [True for i in procs[key]] for key in procs.keys()}
+    alive = {key: [True for i in procs[key]] for key in procs.keys()}
 
     while True:
         # Check if all the processes are still alive

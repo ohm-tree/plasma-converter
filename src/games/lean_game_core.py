@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple
 import numpy as np
 
 from src.games.concurrent import ConcurrentClass, handler, on_startup
-from src.games.game import ConcurrentGameState, Game
+from src.games.game import ConcurrentGameState
 from src.uct.uct_node import UCTNode
 from src.workers.types import LeanTaskType
 from src.workers.worker import (
@@ -54,7 +54,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
     UUID = 0
 
     def __init__(self,
-                 parent: Optional[LeanGameState],
+                 parent: Optional['LeanGameState'],
                  problem: str,
                  header: str,
                  new_code: Optional[str],
@@ -177,8 +177,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             "valid_code": self.valid_code,
             "tactic_state": self.tactic_state,
             "old_tactic_state": self.old_tactic_state,
-            "win": self.win,
-            "dead": self.dead,
+            "win": self._win,
+            "dead": self._dead,
             "depth": self.depth,
         }
 
@@ -188,7 +188,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                        problem: str,
                        header: str,
                        tactic_state: str,
-                       max_depth: int =100) -> 'LeanGameState':
+                       max_depth: int = 100) -> 'LeanGameState':
         """
         Returns the starting state of the game.
         """
@@ -216,11 +216,11 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                 "problem, header are required.")
 
         if self.ready():
-            if None in [self.win, self.dead, self.tactic_state, self.valid_code]:
+            if None in [self._win, self._dead, self.tactic_state, self.valid_code]:
                 raise ValueError(
                     "win, dead, tactic_state, and valid_code are required if ready is True.")
         else:
-            if [self.win, self.dead, self.tactic_state, self.valid_code].count(None) != 4:
+            if [self._win, self._dead, self.tactic_state, self.valid_code].count(None) != 4:
                 raise ValueError(
                     "win, dead, tactic_state, and valid_code must be None if ready is False.")
 
@@ -441,11 +441,11 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             This is called "segmentation".
             If at this stage, *no new code is written* (possibly
             because the very next chunk of code causes an error,
-            then we need to set self.dead = True).
+            then we need to set self._dead = True).
             3. The new tactic state after this new segment.
             This will be stored in self.new_tactic_state.
             4. Whether or not we are done. This will
-            be stored in self.win.
+            be stored in self._win.
 
         Parameters
         ----------
@@ -462,8 +462,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
             self.tactic_state = ""
             self.valid_code = ""
-            self.dead = True
-            self.win = False
+            self._dead = True
+            self._win = False
             return
 
         # 'sorries' has never been part of a repl_result
@@ -519,18 +519,18 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             # This means that the new code was truncated to nothing,
             # i.e. the first new line of code written caused an error.
             # This is a dead state.
-            self.dead = True
-            self.win = False
+            self._dead = True
+            self._win = False
             return
 
         if complete:
             print("Marked as complete!")
             print(repl_result)
-            self.dead = False
-            self.win = True
+            self._dead = False
+            self._win = True
             return
 
-        self.dead = False
-        self.win = False
+        self._dead = False
+        self._win = False
 
         return ()

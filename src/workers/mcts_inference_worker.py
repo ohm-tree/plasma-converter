@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-from src.games.lean_game import MetaLeanGameState, MetaLeanGameMove
+from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
 from src.train.self_play import self_play
 from src.workers.types import (
     CompletionTaskType,
@@ -105,3 +105,6 @@ class MCTSWorker(Worker):
 
             self.logger.info(
                 f"Finished problem {problem['name']} result: {rewards[-1]}")
+
+    def loop(self):
+        pass

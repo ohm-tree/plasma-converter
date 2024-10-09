@@ -15,7 +15,7 @@ from typing import Any, List, Tuple
 import numpy as np
 from tqdm import tqdm
 
-from src.games.lean_game import LeanGame, LeanGameState
+from src.games.lean_game import LeanGameState
 from src.uct.uct_alg import uct_search
 from src.uct.uct_node import UCTNode
 from src.workers.mcts_inference_worker import (
@@ -30,7 +30,6 @@ from src.workers.mcts_inference_worker import (
 def self_play(
     self: MCTSWorker,
     state: LeanGameState,
-    game: LeanGame,
     num_iters: int,
 ) -> Tuple[List[LeanGameState], List[np.ndarray], float]:
     """

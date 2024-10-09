@@ -101,6 +101,7 @@ class LeanWorker(Worker):
                  run_name: str,
                  task_id: int,
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 **kwargs  # Unused
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(

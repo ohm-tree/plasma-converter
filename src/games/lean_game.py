@@ -247,14 +247,14 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
             "tactic_state": self.state.tactic_state
         }
 
-        return (WorkerTask(
+        yield WorkerTask(
             head_id=self.worker_id,
             task_id=TaskIdentifier(
                 task_type=PolicyValueTaskType,
                 task_idx=hash(self)
             ),
             task=task,
-        ),)
+        )
 
     @handler(PolicyValueTaskType)
     def post_comments(self, results: WorkerResponse) -> None:

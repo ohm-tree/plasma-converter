@@ -116,7 +116,7 @@ class Worker(abc.ABC):
         fh = logging.FileHandler(
             os.path.join(self.ROOT_DIR, f"logs/{self.run_name}/{self.worker_type}_worker_{self.worker_idx}.log"))
 
-        logging_prefix = f'[{self.worker_type} - {self.worker_idx}] '
+        logging_prefix = f'[{self.worker_type.worker_type} - {self.worker_idx}] '
         formatter = logging.Formatter(
             logging_prefix + '%(asctime)s - %(levelname)s - %(message)s')
 
@@ -140,10 +140,13 @@ class Worker(abc.ABC):
                      task_idx: Optional[int] = None,
                      task_type: Optional[TaskType] = None
                      ) -> None:
-        if isinstance(task_type, WorkerTask):
-            task_type = task_type.task_id.task_type
+        if isinstance(obj, WorkerTask):
+            task_type = obj.task_id.task_type
             self.enqueue(obj, task_type)
             return
+
+        assert task_idx is not None
+        assert task_type is not None
 
         task = WorkerTask(
             head_id=self.worker_id,
@@ -165,6 +168,7 @@ class Worker(abc.ABC):
             task=task.task,
             response=response
         )
+        self.logger.info("Enqueued response", response_task)
         self.enqueue(response_task, task.head_id)
 
     def spin_deque_task(self,
@@ -186,10 +190,10 @@ class Worker(abc.ABC):
         if batch_size is None:
             batch_size = float('inf')
 
-        my_tasks: List[Union[WorkerTask, WorkerResponse]] = []
         first = blocking
         task: Union[WorkerTask, WorkerResponse]
-        while len(my_tasks) < batch_size:
+        num_tasks = 0
+        while num_tasks < batch_size:
             try:
                 if first:
                     first = False
@@ -203,14 +207,13 @@ class Worker(abc.ABC):
                 if task == 'kill':
                     self.logger.info(
                         f"Received kill signal, terminating.")
-                    return my_tasks
+                    return
                 if task.task_id.task_type not in self.worker_type.consumes:
                     raise ValueError(
                         f"I am a worker of type {self.worker_type}, got {task.task_id.task_type}"
                     )
-            my_tasks.append(task)
-
-        return my_tasks
+                yield task
+                num_tasks += 1
 
     def deque_task(self,
                    task_type: TaskType,

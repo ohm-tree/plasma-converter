@@ -122,6 +122,7 @@ class ContextWorker(LLMWorker):
                  task_id: int,
                  gpu_set: List[int],
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 **kwargs  # Unused
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -179,6 +180,7 @@ class PolicyValueWorker(LLMWorker):
                  task_id: int,
                  gpu_set: List[int],
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 **kwargs  # Unused
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -190,6 +192,7 @@ class PolicyValueWorker(LLMWorker):
             sampling_kwargs=config['sampling']
         )
         self.config = config
+        self.num = config['num_comments']
 
     def loop(self):
         my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
@@ -207,7 +210,8 @@ class PolicyValueWorker(LLMWorker):
         input_data = [
             policy_value_suggest_comments(
                 i.task['task_input'],
-                i.task['task_context']
+                i.task['task_context'],
+                num=self.num
             )
             for i in my_tasks
         ]
@@ -220,7 +224,7 @@ class PolicyValueWorker(LLMWorker):
             output = outputs[i].outputs[0].text
             self.logger.info(output)
             res = parse_policy_value_output(
-                output, self.logger)
+                output, self.logger, num=self.num)
 
             self.enqueue_response(
                 response=res,
