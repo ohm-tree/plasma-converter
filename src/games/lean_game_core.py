@@ -12,22 +12,14 @@ import numpy as np
 from src.games.concurrent import ConcurrentClass, handler, on_startup
 from src.games.game import ConcurrentGameState, Game
 from src.uct.uct_node import UCTNode
-
-if TYPE_CHECKING:
-    from src.workers.mcts_inference_worker import (
-        CompletionTaskType,
-        LeanTaskType,
-        MCTSWorker,
-        MCTSWorkerType,
-        PolicyValueTaskType,
-    )
-    from src.workers.worker import (
-        TaskIdentifier,
-        TaskType,
-        WorkerIdentifer,
-        WorkerResponse,
-        WorkerTask,
-    )
+from src.workers.types import LeanTaskType
+from src.workers.worker import (
+    TaskIdentifier,
+    TaskType,
+    WorkerIdentifer,
+    WorkerResponse,
+    WorkerTask,
+)
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
@@ -136,6 +128,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self.tactic_state: Optional[str] = tactic_state
         self.valid_code: Optional[str] = valid_code
 
+        self._ready = ready
+
         self.check_state()
 
         # We don't want to re-generate a child when we re-do an action,
@@ -171,6 +165,24 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         """
         states = np.load(filename, allow_pickle=True)
         return [cls(**state) for state in states]
+
+    def human_json(self):
+        """
+        Return a human-readable JSON representation of the state.
+        """
+
+        return {
+            "header": self.header,
+            "problem": self.problem,
+            "old_code": self.old_code,
+            "new_code": self.new_code,
+            "valid_code": self.valid_code,
+            "tactic_state": self.tactic_state,
+            "old_tactic_state": self.old_tactic_state,
+            "win": self.win,
+            "dead": self.dead,
+            "depth": self.depth,
+        }
 
     @classmethod
     def starting_state(cls, worker_id: WorkerIdentifer, problem: str, header: str, max_depth=100) -> 'LeanGameState':
@@ -280,6 +292,15 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         Hash the state based on the id.
         """
         return self._id
+
+    def make_root(self) -> None:
+        """
+        Severs any references to the parent of
+        this state, making it the root of the tree.
+        """
+        if self.parent is not None:
+            self.parent.children = {}
+            self.parent = None
 
     ################################################################
     # Details of the ConcurrentClass Interface

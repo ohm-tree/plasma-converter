@@ -164,6 +164,7 @@ class Worker(abc.ABC):
 
     def spin_deque_task(self,
                         task_type: Union[TaskType, WorkerIdentifer],
+                        blocking=True,
                         timeout: Optional[int] = None,
                         batch_size: Optional[int] = None,
                         ) -> List[Union[WorkerTask, WorkerResponse]]:
@@ -181,7 +182,7 @@ class Worker(abc.ABC):
             batch_size = float('inf')
 
         my_tasks: List[Union[WorkerTask, WorkerResponse]] = []
-        first = True
+        first = blocking
         task: Union[WorkerTask, WorkerResponse]
         while len(my_tasks) < batch_size:
             try:

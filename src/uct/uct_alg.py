@@ -10,27 +10,26 @@ from __future__ import annotations
 import logging
 import multiprocessing
 import time
-from typing import TYPE_CHECKING, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Generic, Iterator, List, Tuple, TypeVar
 
 import numpy as np
 
-from src.games.lean_game import LeanGame, LeanGameState, LeanGameStateStep
+from src.games.concurrent import ConcurrentClass, Router
+from src.games.game import (
+    ConcurrentGameStateType,
+    ConcurrentMetaGameState,
+    ConcurrentMetaGameStateType,
+    GameMoveType,
+    MetaGameMoveType,
+)
 from src.uct.uct_node import UCTNode
-
-if TYPE_CHECKING:
-    from src.workers.mcts_inference_worker import (
-        CompletionTaskType,
-        LeanTaskType,
-        MCTSWorker,
-        MCTSWorkerType,
-        PolicyValueTaskType,
-    )
+from src.workers.types import CompletionTaskType, PolicyValueTaskType
+from src.workers.worker import TaskIdentifier, Worker, WorkerResponse, WorkerTask
 
 
 def uct_search(
-    self: "MCTSWorker",
-    game: LeanGame,
-    root: UCTNode,
+    self: "Worker",
+    root: UCTNode[ConcurrentMetaGameStateType],
     num_iters: int,
     c: float = 1.0,
     train: bool = True,
@@ -45,47 +44,32 @@ def uct_search(
 
     victorious_death = False
     winning_node = None
-    # set root action to -1 so we can identify it and add noise
-
-    completion_waiting: Dict[int, Tuple[LeanGameState, float]] = {}
-    context_waiting: Dict[int, Tuple[LeanGameState, float]] = {}
-    lean_waiting: Dict[int, Tuple[LeanGameState, float]] = {}
     iters = 0
-
-    sum_completion_time = 0
-    sum_context_time = 0
-    sum_lean_time = 0
-    total_completion = 0
-    total_context = 0
-    total_lean = 0
-
-    absolute_start_time = time.time()
     dead_time = 0
 
+    router = Router(self)
+
     while not victorious_death:
-        dead_time_start = time.time()
         activity = False
-        if iters >= num_iters and len(completion_waiting) == 0 and len(context_waiting) == 0 and len(lean_waiting) == 0:
-            break
-        if iters < num_iters and len(completion_waiting) + len(context_waiting) + len(lean_waiting) < 10:
+        if iters < num_iters and router.total_active < 10:
             # greedily select leaf with given exploration parameter
-            leaf: UCTNode = root.select_leaf_no_virtual_loss(c)
+            leaf = root.select_leaf_no_virtual_loss(c)
 
             assert (not leaf.is_expanded) or (leaf.is_terminal)
 
             # Problem: we don't know if a leaf is terminal until we lean4-verify it!
-            if leaf.game_state.step >= LeanGameStateStep.PROCESSED and leaf.is_terminal:
+            if leaf.game_state.ready():
                 activity = True
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
                 # compute the value estimate of the player at the terminal leaf
-                value_estimate: float = game.reward(leaf.game_state)
+                value_estimate: float = leaf.game_state
                 # Immediately backup the value estimate along the path to the root
                 leaf.backup(value_estimate)
                 iters += 1
 
-            elif hash(leaf) in completion_waiting or hash(leaf) in context_waiting or hash(leaf) in lean_waiting:
-                assert LeanGameStateStep.INITIALIZED <= leaf.game_state.step <= LeanGameStateStep.PROCESSED
+            elif leaf.game_state.started():
+                assert router.contains(hash(leaf))
                 # This annoys us, because
                 # it is an already-visited node.
                 # We simply yield control from this process for a
@@ -93,26 +77,11 @@ def uct_search(
                 time.sleep(1)
             else:
                 # We have absolutely never seen this leaf before.
-                assert leaf.game_state.step == LeanGameStateStep.INITIALIZED
                 root.select_leaf(c)  # Apply the virtual loss this time.
                 activity = True
 
                 # Add the child priors and value estimate to the completion queue!
-                # tasks should take the form
-                # {
-                #   'worker_id': int, # The worker task id that generated this task.
-                #   'completion_task_id': int, # The specific completion task id of this task.
-                #   'task': str # The task to complete, a string prompt.
-                # }
-
-                state: LeanGameState = leaf.game_state
-
-                self.enqueue_task(
-                    obj=state.pre_LLM_rollout(),
-                    task_idx=hash(leaf),
-                    task_type=CompletionTaskType
-                )
-                completion_waiting[hash(leaf)] = (leaf, time.time())
+                router.startup(leaf)
                 iters += 1
         # Check for completed leaves.
 

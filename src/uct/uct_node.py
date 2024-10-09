@@ -2,26 +2,42 @@
 uct_node.py
 
 This module contains the UCTNode class, which represents a node in the UCT search tree.
-The code is adapted from https://www.moderndescartes.com/essays/deep_dive_mcts/.
 """
 
-from typing import Dict, Generic, Optional
+from typing import Any, Dict, Generic, Hashable, Iterator, Optional, TypeVar
 
 import numpy as np
 
-from games.game import ConcurrentMetaGameState
+from games.concurrent import ConcurrentClass, handler, on_startup, require_ready
+from games.game import (
+    ConcurrentGameState,
+    ConcurrentGameStateType,
+    ConcurrentMetaGameState,
+    ConcurrentMetaGameStateType,
+    GameMoveType,
+    MetaGameMoveType,
+)
+from src.workers.worker import WorkerIdentifer, WorkerResponse, WorkerTask
 
 
-class UCTNode:
-
-    def __init__(self, game_state: ConcurrentMetaGameState, action: int, parent: 'UCTNode' = None, init_type: str = "zero"):
+class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
+    def __init__(self,
+                 worker_id: WorkerIdentifer,
+                 game_state: ConcurrentMetaGameStateType,
+                 action_idx: int,
+                 parent: 'UCTNode[ConcurrentMetaGameStateType]' = None,
+                 init_type: str = "zero",
+                 max_actions: int = None,
+                 ):
         """
         Initialize a new UCTNode.
         """
-        self.game_state: ConcurrentMetaGameState = game_state
+        super().__init__(worker_id=worker_id)
+
+        self.game_state: ConcurrentMetaGameStateType = game_state
 
         # Action to enter the node, -1 if root
-        self.action: int = action
+        self.action_idx: int = action_idx
 
         # Parent of the node, None if root
         self.parent: Optional[UCTNode] = parent
@@ -36,17 +52,23 @@ class UCTNode:
         self.is_processed: bool = False
 
         # Cached values so that we don't need to recompute them every time
-        self._action_mask = None
         self._is_terminal = None
 
         # The priors and values are obtained from a neural network every time you expand a node
         # The priors, total values, and number visits will be 0 on all illegal actions
-        num_actions = len(self.action_mask)
+        if max_actions is None:
+            if self.parent is not None:
+                self.max_actions = self.parent.max_actions
+            else:
+                self.max_actions = 100
+        else:
+            self.max_actions = max_actions
+        self.action_mask: np.ndarray = np.zeros(self.max_actions, dtype=bool)
 
         # These values are initialized in the expand() function.
-        self.child_priors: np.ndarray = np.zeros(num_actions)
-        self.child_total_value: np.ndarray = np.zeros(num_actions)
-        self.child_number_visits: np.ndarray = np.zeros(num_actions)
+        self.child_priors: np.ndarray = np.zeros(self.max_actions)
+        self.child_total_value: np.ndarray = np.zeros(self.max_actions)
+        self.child_number_visits: np.ndarray = np.zeros(self.max_actions)
 
         # Used iff you are the root.
         if self.parent is None:
@@ -74,45 +96,39 @@ class UCTNode:
             self.root_total_value = 0
             self.root_number_visits = 0
         self.parent = None
-        self.action = -1
-
-    @property
-    def action_mask(self):
-        if self._action_mask is None:
-            self._action_mask = self.game.action_mask(self.game_state)
-        return self._action_mask
+        self.action_idx = -1
 
     @property
     def is_terminal(self):
         if self._is_terminal is None:
-            self._is_terminal = self.game.is_terminal(self.game_state)
+            self._is_terminal = self.game_state.terminal()
         return self._is_terminal
 
     @property
     def number_visits(self):
         if self.parent is None:
             return self.root_number_visits
-        return self.parent.child_number_visits[self.action]
+        return self.parent.child_number_visits[self.action_idx]
 
     @number_visits.setter
     def number_visits(self, value):
         if self.parent is None:
             self.root_number_visits = value
         else:
-            self.parent.child_number_visits[self.action] = value
+            self.parent.child_number_visits[self.action_idx] = value
 
     @property
     def total_value(self):
         if self.parent is None:
             return self.root_total_value
-        return self.parent.child_total_value[self.action]
+        return self.parent.child_total_value[self.action_idx]
 
     @total_value.setter
     def total_value(self, value):
         if self.parent is None:
             self.root_total_value = value
         else:
-            self.parent.child_total_value[self.action] = value
+            self.parent.child_total_value[self.action_idx] = value
 
     def child_Q(self):
         """
@@ -137,7 +153,7 @@ class UCTNode:
 
         return self.children[np.argmax(scores)]
 
-    def select_leaf_no_virtual_loss(self, c: float = 1.0) -> 'UCTNode':
+    def select_leaf_no_virtual_loss(self, c: float = 1.0) -> 'UCTNode[ConcurrentMetaGameStateType]':
         """
         Deterministically select the next leaf to expand based on the best path.
         """
@@ -153,7 +169,7 @@ class UCTNode:
 
         return current
 
-    def select_leaf(self, c: float = 1.0) -> 'UCTNode':
+    def select_leaf(self, c: float = 1.0) -> 'UCTNode[ConcurrentMetaGameStateType]':
         """
         Deterministically select the next leaf to expand based on the best path.
         """
@@ -185,8 +201,7 @@ class UCTNode:
         """
         Expand a non-terminal, un-expanded node using the child_priors from the neural network.
         """
-        assert not self.game.is_terminal(
-            self.game_state), "Cannot expand a terminal node."
+        assert not self.game_state.terminal(), "Cannot expand a terminal node."
         assert not self.is_expanded, "Cannot expand an already expanded node."
 
         self.is_expanded = True
@@ -214,23 +229,32 @@ class UCTNode:
                 self.add_child(action, prior)
                 # assert action in self.children
 
-    def add_child(self, action, prior):
+    def add_child(self, action_idx, prior):
         """
         Add a child with a given action and prior probability.
 
         The value_estimates are updated together in expand().
         """
-        assert not action in self.children, f"Child with action {action} already exists."
+        assert not action_idx in self.children, f"Child with action {action_idx} already exists."
 
-        self.child_priors[action] = prior
+        self.child_priors[action_idx] = prior
 
-        self.children[action] = UCTNode(
-            self.game,
-            self.game.next_state(self.game_state, action),
-            action,
+        action = self.game_state.get_active_move(action_idx)
+        self.children[action_idx] = UCTNode(
+            self.game_state.next_state(action),
+            action_idx,
             parent=self,
             init_type=self.init_type
         )
+
+    def backprop_and_expand(self):
+        """
+        Process the responses from the worker.
+        """
+
+        self.backup(self.game_state.value())
+        self.expand(self.game_state.policy(),
+                    self.game_state.value(), train=True)
 
     def backup(self, estimate):
         """
@@ -243,6 +267,11 @@ class UCTNode:
             # Extra +1 to the estimate to offset the virtual loss.
             current.total_value += estimate + 1
             current = current.parent
+
+    @on_startup
+    def fire_child(self) -> Iterator[WorkerTask]:
+        for _ in self.game_state.startup(callback=self.backprop_and_expand):
+            yield _
 
 
 def dirichlet_noise(action_mask, alpha):

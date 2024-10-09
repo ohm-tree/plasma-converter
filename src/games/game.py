@@ -11,13 +11,13 @@ from typing import Any, Generic, Hashable, Iterable, List, TypeVar
 
 import numpy as np
 
-from src.games.concurrent import ConcurrentClass
+from src.games.concurrent import ConcurrentClass, require_ready
 from workers.worker import WorkerResponse, WorkerTask
 
-GameMove = TypeVar('GameMove', bound=Hashable)
+GameMoveType = TypeVar('GameMoveType', bound=Hashable)
 
 
-class ConcurrentGameState(ConcurrentClass, ABC, Generic[GameMove], Hashable):
+class ConcurrentGameState(Generic[GameMoveType], ConcurrentClass, ABC, Hashable):
     """
     The ConcurrentGameState class is an abstract base class
     for representing the state of a game.
@@ -80,7 +80,7 @@ class ConcurrentGameState(ConcurrentClass, ABC, Generic[GameMove], Hashable):
         raise NotImplementedError
 
     @abstractmethod
-    def next_state(self, action: GameMove) -> 'ConcurrentGameState':
+    def next_state(self, action: GameMoveType) -> 'ConcurrentGameState':
         """
         Returns the next state of the game given a current state and action.
         Requires that the state is non-terminal and action is legal.
@@ -103,7 +103,7 @@ class ConcurrentGameState(ConcurrentClass, ABC, Generic[GameMove], Hashable):
         raise NotImplementedError
 
     @abstractmethod
-    def make_root(self) -> 'ConcurrentGameState':
+    def make_root(self) -> None:
         """
         Severs any references to the parent of
         this state, making it the root of the tree.
@@ -114,10 +114,13 @@ class ConcurrentGameState(ConcurrentClass, ABC, Generic[GameMove], Hashable):
 ConcurrentGameStateType = TypeVar(
     'ConcurrentGameStateType', bound=ConcurrentGameState)
 
-MetaGameMove = TypeVar('MetaGameMove', bound=Hashable)
+MetaGameMoveType = TypeVar('MetaGameMoveType', bound=Hashable)
 
 
-class ConcurrentMetaGameState(ConcurrentGameState, ABC, Generic[ConcurrentGameStateType, MetaGameMove], Hashable):
+class ConcurrentMetaGameState(Generic[ConcurrentGameStateType, MetaGameMoveType],
+                              ConcurrentGameState[MetaGameMoveType],
+                              ABC,
+                              Hashable):
     """
     The ConcurrentMetaGameState class is an abstract base class
     for representing the state of a game plus the internal state of an agent
@@ -155,6 +158,7 @@ class ConcurrentMetaGameState(ConcurrentGameState, ABC, Generic[ConcurrentGameSt
         return self.state.ready()
 
     @abstractmethod
+    @require_ready
     def policy(self) -> np.ndarray:
         """
         Returns the policy for the game state.
@@ -162,6 +166,7 @@ class ConcurrentMetaGameState(ConcurrentGameState, ABC, Generic[ConcurrentGameSt
         raise NotImplementedError
 
     @abstractmethod
+    @require_ready
     def value(self) -> float:
         """
         Returns the value for the game state.
@@ -169,20 +174,31 @@ class ConcurrentMetaGameState(ConcurrentGameState, ABC, Generic[ConcurrentGameSt
         raise NotImplementedError
 
     @abstractmethod
-    def active_moves(self) -> Iterable[GameMove]:
+    @require_ready
+    def get_active_move(self, index: int) -> MetaGameMoveType:
+        """
+        Returns the active move at the given index.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    @require_ready
+    def active_moves(self) -> List[MetaGameMoveType]:
         """
         Returns the active moves for the game state.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def index_active_move(self, move: GameMove) -> int:
+    @require_ready
+    def index_active_move(self, move: MetaGameMoveType) -> int:
         """
         Returns the index of the active move in the game state.
         """
         raise NotImplementedError
 
     @abstractmethod
+    @require_ready
     def len_active_moves(self) -> int:
         """
         Returns the number of active moves in the game state.
@@ -195,3 +211,7 @@ class ConcurrentMetaGameState(ConcurrentGameState, ABC, Generic[ConcurrentGameSt
         Demand to see a new move.
         """
         raise NotImplementedError
+
+
+ConcurrentMetaGameStateType = TypeVar(
+    'ConcurrentMetaGameStateType', bound=ConcurrentMetaGameState[ConcurrentGameStateType, MetaGameMoveType])
