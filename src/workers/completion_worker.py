@@ -25,8 +25,8 @@ class CompletionWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
-            LLM_kwargs=None,  # Default to the LLM constructor.
-            sampling_kwargs=config['sampling_params']
+            LLM_kwargs=config['model'],
+            sampling_kwargs=config['sampling']
         )
         self.config = config
 

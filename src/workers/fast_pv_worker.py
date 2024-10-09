@@ -38,14 +38,8 @@ class FastPolicyValueWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
-            LLM_kwargs=None,  # Default to the LLM constructor.
-            sampling_kwargs={
-                'temperature': 1,
-                'max_tokens': 500,
-                'top_p': 0.95,
-                'n': 10,
-                'stop': ['\n']
-            }
+            LLM_kwargs=config['model'],
+            sampling_kwargs=config['sampling']
         )
         self.config = config
 

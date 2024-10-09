@@ -129,17 +129,8 @@ class ContextWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
-            LLM_kwargs={
-                'model': "deepseek-ai/deepseek-math-7b-instruct",
-                'max_num_batched_tokens': 8192,
-                'trust_remote_code': True,
-            },
-            sampling_kwargs={
-                'max_tokens': 1024,
-                'temperature': 0.0,
-                'top_k': 1,
-                'top_p': 1.0
-            }
+            LLM_kwargs=config['model'],
+            sampling_kwargs=config['sampling']
         )
         self.config = config
 
@@ -195,17 +186,8 @@ class PolicyValueWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
-            LLM_kwargs={
-                'model': "deepseek-ai/deepseek-math-7b-instruct",
-                'max_num_batched_tokens': 8192,
-                'trust_remote_code': True,
-            },
-            sampling_kwargs={
-                'max_tokens': 512,
-                'temperature': 0.0,
-                'top_k': 1,
-                'top_p': 1.0
-            }
+            LLM_kwargs=config['model'],
+            sampling_kwargs=config['sampling']
         )
         self.config = config
 
