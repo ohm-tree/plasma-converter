@@ -46,6 +46,8 @@ class FastPolicyValueWorker(LLMWorker):
         self.config = config
         self.num_comments = config['num_comments']
 
+        assert config['num_comments'] == config['sampling']['n'] + 1
+
     def loop(self):
         my_tasks: Iterator[WorkerTask] = self.spin_deque_task(
             channel=PolicyValueTaskType,
@@ -58,7 +60,7 @@ class FastPolicyValueWorker(LLMWorker):
             # Spinlock, disappointing, but there's nothing to do.
             return
         # We have tasks to complete.
-        model_inputs = [prompt(task['task_input']) for task in my_tasks]
+        model_inputs = [prompt(task.task) for task in my_tasks]
 
         model_outputs: List[RequestOutput] = self.generate(
             model_inputs
@@ -66,16 +68,6 @@ class FastPolicyValueWorker(LLMWorker):
 
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
-
-            comments = np.array([option.text for option in options])
-            policy = np.array(
-                [option.cumulative_logprob for option in options])
-            unique_indices = [i == 0 or comments[i] != comments[i-1]
-                              for i in range(len(comments))]
-            comments = comments[unique_indices]
-            policy = policy[unique_indices]
-            policy = np.exp(policy)
-            policy /= policy.sum()
 
             comments = [''] + [option.text for option in options]
             assert len(comments) == self.num_comments

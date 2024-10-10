@@ -1,9 +1,5 @@
 """
-This file runs mcts inference with a yaml config.
-
-It is not meant for actual linear experiments, which do not require
-comments etc. It is meant to test all of the workers without the complications
-of MCTS rollouts.
+This file runs mcts inference with fast_pv_worker and a yaml config.
 """
 
 import argparse
@@ -25,19 +21,30 @@ with open(args.config, 'r') as file:
 
 
 """
-Run with
+Run fast linear inference with
 ```bash
-python src/linear_inference.py --config configs/linear.yaml
+python src/inference.py --config configs/fast_linear.yaml
 ```
-Debug with
+
+Run fast mcts inference with
 ```bash
-python src/linear_inference.py --config configs/linear_debug.yaml
+python src/inference.py --config configs/fast_mcts.yaml
 ```
+
+Debug fast mcts inference with
+```bash
+python src/inference.py --config configs/fast_mcts_debug.yaml
+```
+
 """
 
 
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
+
+    for _, type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
+        if type_string not in config:
+            config[type_string] = {'num_procs': 0}
 
     # Assert that the config is valid
     fast_pv_active = (config['fast_policy_value']['num_procs'] > 0)
@@ -55,21 +62,19 @@ def run_inference():
         else:
             print("Warning: No policy value workers are active.")
 
-    WORKER_TYPES_AND_STRINGS: Tuple[Tuple[WorkerType, str, Callable, bool]] = (
-        (MCTSWorkerType, 'mcts', mcts_inference_entrypoint, False),
-        (LinearInferenceWorkerType, 'linear_inference',
-         linear_inference_entrypoint, False),
-        (CompletionWorkerType, 'completion', completion_entrypoint, True),
-        (PolicyValueWorkerType, 'policy_value', policy_value_entrypoint, True),
-        (LeanWorkerType, 'lean', lean_entrypoint, False),
-        (FastPolicyValueWorkerType, 'fast_policy_value',
-         fast_policy_value_entrypoint, True),
-        (ContextWorkerType, 'context', context_entrypoint, True),
-    )
+    if config['linear_inference']['num_procs'] > 0:
+        print("Running in linear inference mode.")
+    if config['linear_inference_debug']['num_procs'] > 0:
+        print("Running in linear inference debug mode.")
+    if config['mcts']['num_procs'] > 0:
+        print("Running in MCTS mode.")
+    if sum([config['completion']['num_procs'], config['policy_value']['num_procs'], config['context']['num_procs']]) != 1:
+        raise ValueError(
+            "Exactly one of completion, policy_value, or context workers must be active.")
 
     queues = {}
     print("Creating Queues:")
-    for worker_type, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
+    for worker_type, type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         queues.update(
             {
                 WorkerIdentifer(worker_type, i): multiprocessing.Queue()
@@ -85,7 +90,7 @@ def run_inference():
     # Create inference processes
     gpu_offset = 0
     procs: Dict[str, List[multiprocessing.Process]] = {}
-    for _, type_string, entrypoint, gpu in WORKER_TYPES_AND_STRINGS:
+    for _, type_string, entrypoint, gpu, _ in WORKER_TYPES_AND_STRINGS:
         procs.update({type_string: []})
         for i in range(config[type_string]['num_procs']):
             procs[type_string].append(multiprocessing.Process(target=entrypoint, kwargs={
@@ -135,34 +140,32 @@ def run_inference():
                         print_alive()
                     alive[key][i] = False
 
-        dead = False
-        if all([not v for v in alive['linear_inference']]):
-            print("All workers are done.")
-            dead = True
-            break
+        # We terminate if all of the inessential workers are dead
+        # or if any of the essential workers are dead
+        all_inessential_dead = True
+        any_essential_dead = False
+        for _, type_string, _, _, inessential in WORKER_TYPES_AND_STRINGS:
+            for i in range(config[type_string]['num_procs']):
+                if inessential:
+                    all_inessential_dead = all_inessential_dead and not alive[type_string][i]
+                else:
+                    any_essential_dead = any_essential_dead or not alive[type_string][i]
 
-        for key in procs.keys():
-            if key == 'linear_inference':
-                continue
-            for i, v in enumerate(alive[key]):
-                if not v:
-                    print(f"{key} process number {i} has died.")
-                    dead = True
-                    break
-        if dead:
+        if any_essential_dead:
+            print("An essential worker has died.")
+            break
+        if all_inessential_dead:
+            print("All inessential workers are done.")
             break
         time.sleep(1)
 
     print("Killing all processes.")
     # Send kill signals to all processes
     queues[KillTaskType].put("kill")
-    # for worker_type, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
-    #     for i in range(config[type_string]['num_procs']):
-    #         queues[WorkerIdentifer(worker_type, i)].put("kill")
     print("All kill signals sent.")
 
-    # Wait for 5 minutes, then force kill all processes
-    time.sleep(300)
+    # Wait for 30 seconds, then force kill all processes
+    time.sleep(30)
     for w in all_procs:
         w.terminate()
         w.join()

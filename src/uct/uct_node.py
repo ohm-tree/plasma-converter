@@ -32,7 +32,6 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         """
         Initialize a new UCTNode.
         """
-        super().__init__(worker_id=worker_id)
 
         self.game_state: ConcurrentMetaGameStateType = game_state
 
@@ -76,6 +75,9 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
             self.root_number_visits: int = 0
 
         self.init_type = init_type
+
+        # This is done last, because certain @property decorators require the above to be set.
+        super().__init__(worker_id=worker_id)
 
     def __hash__(self):
         """
@@ -224,10 +226,10 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         if self.init_type == "zero":
             pass
 
-        for action, prior in enumerate(child_priors):
-            if self.action_mask[action]:
-                self.add_child(action, prior)
-                # assert action in self.children
+        for action_idx, prior in enumerate(child_priors):
+            # if self.action_mask[action]:
+            self.add_child(action_idx, prior)
+            # assert action in self.children
 
     def add_child(self, action_idx, prior):
         """
@@ -241,6 +243,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
         action = self.game_state.get_active_move(action_idx)
         self.children[action_idx] = UCTNode(
+            self.worker_id,
             self.game_state.next_state(action),
             action_idx,
             parent=self,
