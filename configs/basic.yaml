@@ -15,14 +15,14 @@ lean:
 
 completion:
   num_procs: 4
-  batch_size: 80
+  batch_size: 100
   max_num_batched_tokens: 8192
   sampling:
     max_tokens: 512
     temperature: 0.0
     top_k: 1
     top_p: 1.0
-    stop: ["\n", "```"]
+    stop: ["--", "/--"] # stop before next step (proxy = comment)
 
 policy_value:
   num_procs: 4
