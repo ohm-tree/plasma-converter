@@ -217,14 +217,14 @@ class Worker(abc.ABC):
                     task = self.queues[channel].get(
                         block=True,
                         timeout=timeout)
-                    print("INSIDE SPIN DEQUE TASK, FIRST IS TRUE")
+                    # print("INSIDE SPIN DEQUE TASK, FIRST IS TRUE")
                 else:
                     task = self.queues[channel].get_nowait()
             except queue.Empty:
                 break
             else:
-                print("Found a task")
-                print(task)
+                # print("Found a task")
+                # print(task)
 
                 if task == 'kill':
                     self.logger.info(
@@ -300,8 +300,8 @@ class Worker(abc.ABC):
         if not self._no_scream_queue:
             try:
                 kill_signal = self.queues[KillTaskType].get_nowait()
-                print(
-                    f"Received kill signal: {kill_signal}")
+                # print(
+                #     f"Received kill signal: {kill_signal}")
                 self.queues[KillTaskType].put("kill")  # echo the kill signal
             except queue.Empty:
                 pass

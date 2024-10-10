@@ -528,8 +528,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             return
 
         if complete:
-            print("Marked as complete!")
-            print(repl_result)
+            # print("Marked as complete!")
+            # print(repl_result)
             self._dead = False
             self._win = True
             self.finish()

@@ -197,14 +197,13 @@ class Router(Generic[T]):
                 self.enqueue_task(msg, source)
 
     def debug(self):
-        print(f"Active tasks: {self.total_active}")
+        res = f"Active tasks: {self.total_active}\n"
         for task_type, count in self.active_counts_by_task_type.items():
-            print(f"TaskType {task_type}: {count} active")
+            res += f"TaskType {task_type}: {count} active\n"
             if task_type in self.total_times_by_task_type:
                 if count > 0:
-                    print(
-                        f"Average time per task: {self.total_times_by_task_type[task_type] / count}")
-        print("Active objects:")
+                    res += f"Average time per task: {self.total_times_by_task_type[task_type] / count}\n"
+        res += "Active objects:\n"
         for obj, task in self.active_objs.items():
-            print(f"{obj}: {task}")
-        print("\n")
+            res += f"{obj}: {task}\n"
+        return res

@@ -240,9 +240,9 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called before the comments are generated.
         """
-        print("#" * 80)
-        print(self.state.header, self.state.problem,
-              self.state.old_code, self.state.tactic_state)
+        # print("#" * 80)
+        # print(self.state.header, self.state.problem,
+        #       self.state.old_code, self.state.tactic_state)
         task = {
             "header": self.state.header,
             "problem": self.state.problem,
@@ -264,10 +264,10 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called after the comments are generated.
         """
-        print(results)
-        print(type(results))
-        print(results.__dict__)
-        print(results.response)
+        # print(results)
+        # print(type(results))
+        # print(results.__dict__)
+        # print(results.response)
         self.gen_comments = tuple(
             MetaLeanGameMove(comment) for comment in results.response['comments']
         )
