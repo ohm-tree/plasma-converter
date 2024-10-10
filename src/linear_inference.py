@@ -54,7 +54,7 @@ def run_inference():
     WORKER_TYPES_AND_STRINGS: Tuple[Tuple[WorkerType, str, Callable, bool]] = (
         (MCTSWorkerType, 'mcts', mcts_inference_entrypoint, False),
         (LinearInferenceWorkerType, 'linear_inference',
-         linear_inference_entrypoint, True),
+         linear_inference_entrypoint, False),
         (CompletionWorkerType, 'completion', completion_entrypoint, True),
         (PolicyValueWorkerType, 'policy_value', policy_value_entrypoint, True),
         (LeanWorkerType, 'lean', lean_entrypoint, False),

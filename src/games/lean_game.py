@@ -91,7 +91,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
                        problem: str,
                        tactic_state: str,
                        header: str = LEAN4_DEFAULT_HEADER,
-                       max_depth: int = 100) -> 'MetaLeanGameState':
+                       max_depth: int = 20) -> 'MetaLeanGameState':
 
         internal_state = LeanGameState.starting_state(
             worker_id=worker_id,

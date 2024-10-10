@@ -188,7 +188,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                        problem: str,
                        header: str,
                        tactic_state: str,
-                       max_depth: int = 100) -> 'LeanGameState':
+                       max_depth: int = 20) -> 'LeanGameState':
         """
         Returns the starting state of the game.
         """
