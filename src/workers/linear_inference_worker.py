@@ -79,9 +79,6 @@ class LinearInferenceWorker(Worker):
             )
 
             context_input: WorkerTask = next(state.pre_comments())
-            print(context_input.head_id)
-            print(context_input.task_id)
-            print(context_input.task)
             self.enqueue_task(context_input)
             time_to_context = -time.time()
             context_output = self.spin_deque_task(
@@ -93,7 +90,7 @@ class LinearInferenceWorker(Worker):
 
             while not state.terminal():
                 self.logger.info(state.human_printout())
-                action = 0
+                action = state.get_active_move(0)
                 state = state.next_state(action)
                 input_data = next(state.pre_LLM_rollout())
                 self.enqueue_task(input_data)

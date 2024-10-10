@@ -3,9 +3,20 @@ import logging
 import multiprocessing
 import os
 import queue
-from collections.abc import Iterable
+import traceback
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
+
+"""
+I'm still not very happy with the current messaging scheme.
+We should have atomic TaskTypes, atomic TaskIndicies,
+no taskidentifiers, uhhh
+
+basically Tasks should be classes to themselves that you can register.
+joever.
+
+"""
 
 
 @dataclass(frozen=True)
@@ -34,7 +45,7 @@ class WorkerType:
     A type of worker.
     """
     worker_type: str
-    consumes: Iterable[TaskType]
+    consumes: Iterator[TaskType]
 
 
 @dataclass(frozen=True)
@@ -142,11 +153,11 @@ class Worker(abc.ABC):
                      ) -> None:
         if isinstance(obj, WorkerTask):
             task_type = obj.task_id.task_type
-            print("INSIDE ENQUEUE TASK")
-            print(task_type)
-            print("-"*80)
-            print(obj)
-            print("-"*80)
+            # print("INSIDE ENQUEUE TASK")
+            # print(task_type)
+            # print("-"*80)
+            # print(obj)
+            # print("-"*80)
             self.enqueue(obj, task_type)
             return
 
@@ -173,7 +184,7 @@ class Worker(abc.ABC):
             task=task.task,
             response=response
         )
-        self.logger.info("Enqueued response", response_task)
+        self.logger.info("Enqueued response" + str(response_task))
         self.enqueue(response_task, task.head_id)
 
     def spin_deque_task(self,
@@ -219,9 +230,9 @@ class Worker(abc.ABC):
                     self.logger.info(
                         f"Received kill signal, terminating.")
                     return
-                if task.task_id.channel not in self.worker_type.consumes:
+                if task.task_id.task_type not in self.worker_type.consumes:
                     raise ValueError(
-                        f"I am a worker of type {self.worker_type}, got {task.task_id.channel}"
+                        f"I am a worker of type {self.worker_type}, got {task.task_id.task_type}"
                     )
                 # yield task
                 res.append(task)
@@ -252,7 +263,7 @@ class Worker(abc.ABC):
             except Exception as e:
                 self.logger.critical(
                     "An exception occurred in the worker loop!!")
-                self.logger.critical(e)
+                self.logger.critical(traceback.format_exc())
                 break
 
     def main(self):
@@ -286,11 +297,12 @@ class Worker(abc.ABC):
         bool
             True if no kill signal has been received, False otherwise.
         """
-        if not self._no_inbox:
+        if not self._no_scream_queue:
             try:
-                kill_signal = self.queues[self.worker_id].get_nowait()
+                kill_signal = self.queues[KillTaskType].get_nowait()
                 print(
                     f"Received kill signal: {kill_signal}")
+                self.queues[KillTaskType].put("kill")  # echo the kill signal
             except queue.Empty:
                 pass
             else:

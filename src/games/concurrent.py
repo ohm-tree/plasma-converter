@@ -1,16 +1,6 @@
 import time
 from abc import ABC, abstractmethod
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    TypeVar,
-)
+from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, TypeVar
 
 from src.workers.worker import *
 
@@ -22,13 +12,13 @@ def handler(t: TaskType):
     such that when messages of type t are received by the object,
     function f gets called on t.
     """
-    def wrapper(func: Callable[[ConcurrentClass, WorkerResponse], Iterable[WorkerTask]]):
+    def wrapper(func: Callable[[ConcurrentClass, WorkerResponse], Iterator[WorkerTask]]):
         func._task_type = t
         return func
     return wrapper
 
 
-def on_startup(func: Callable[[], Iterable[WorkerTask]]):
+def on_startup(func: Callable[[], Iterator[WorkerTask]]):
     """
     Registers a function to be called on object startup.
     """
@@ -81,7 +71,7 @@ class ConcurrentClass(ABC):
         """
         return self._started
 
-    def startup(self, callback: Optional[Callable[[], None]] = None) -> Iterable[WorkerTask]:
+    def startup(self, callback: Optional[Callable[[], None]] = None) -> Iterator[WorkerTask]:
         """
         Use to delay the object startup.
 
@@ -110,7 +100,7 @@ class ConcurrentClass(ABC):
         if hasattr(self, 'ready_callback'):
             self.ready_callback()
 
-    def tick(self, messages: Iterable[WorkerResponse]) -> Iterable[WorkerTask]:
+    def tick(self, messages: Iterator[WorkerResponse]) -> Iterator[WorkerTask]:
         """
         Ticks the concurrent object. All instance methods decorated with @handler
         will fire when the corresponding TaskType is received.

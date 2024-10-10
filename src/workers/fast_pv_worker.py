@@ -1,6 +1,6 @@
 
 import multiprocessing
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 from vllm import RequestOutput
@@ -47,7 +47,7 @@ class FastPolicyValueWorker(LLMWorker):
         self.num_comments = config['num_comments']
 
     def loop(self):
-        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
+        my_tasks: Iterator[WorkerTask] = self.spin_deque_task(
             channel=PolicyValueTaskType,
             timeout=30,
             batch_size=self.config['batch_size'],

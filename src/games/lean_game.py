@@ -3,7 +3,7 @@ import random
 import time
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
 
 import numpy as np
 
@@ -23,7 +23,7 @@ from src.workers.worker import (
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
-@dataclass
+@dataclass(frozen=True)
 class MetaLeanGameMove:
     """
     A move in the Lean game.
@@ -197,12 +197,12 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         res += fancy_field("Old Tactic State", self.state.old_tactic_state)
         res += fancy_field("New Tactic State", self.state.tactic_state)
 
-        res += fancy_field("Meta", f"Win: {self.state.win}, Dead: {self.state.dead}\n"
+        res += fancy_field("Meta", f"Win: {self.state._win}, Dead: {self.state._dead}\n"
                            f"Depth: {self.state.depth} Number of Children: {len(self.children)}\n")
         return res
 
     @ on_startup
-    def pre_LLM_rollout(self) -> Iterable[WorkerTask]:
+    def pre_LLM_rollout(self) -> Iterator[WorkerTask]:
         """
         This function is called before the LLM rollout is done.
         It generates a prompt for the LLM.
@@ -213,17 +213,17 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
             self.state.old_tactic_state.strip()+'\n```lean\n' + self.state.header + self.state.problem + \
             self.state.old_code
 
-        return (WorkerTask(
+        yield WorkerTask(
             head_id=self.worker_id,
             task_id=TaskIdentifier(
                 task_type=CompletionTaskType,
                 task_idx=hash(self)
             ),
             task=prompt,
-        ),)
+        )
 
     @handler(CompletionTaskType)
-    def post_LLM_rollout(self, completion: WorkerResponse) -> Iterable[WorkerTask]:
+    def post_LLM_rollout(self, completion: WorkerResponse) -> Iterator[WorkerTask]:
         """
         This function is called after the LLM rollout is done.
         """
@@ -236,7 +236,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
 
         return self.state.startup(callback=self.pre_comments)
 
-    def pre_comments(self) -> Iterable[WorkerTask]:
+    def pre_comments(self) -> Iterator[WorkerTask]:
         """
         This function is called before the comments are generated.
         """
@@ -274,7 +274,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self.finish()
 
     @handler(LeanTaskType)
-    def post_process(self, lean_output: WorkerResponse) -> Iterable[WorkerTask]:
+    def post_process(self, lean_output: WorkerResponse) -> Iterator[WorkerTask]:
         """
         This function is called after the Lean task is done.
         """

@@ -51,7 +51,7 @@ def policy_value_suggest_comments(lean_game_dict: Dict, discussion_context: str,
     res += lean_game_dict['tactic_state']
     res += f"""
 ```
-Then, please suggest 5 ideas to complete the proof.
+Then, please suggest {num} ideas to complete the proof.
 Please delimit each idea with <IDEA></IDEA> tags.
 
 Rate the likelihood that this proof will succeed on a scale of 1 (very unlikely) to 10 (very likely).
@@ -136,8 +136,8 @@ class ContextWorker(LLMWorker):
         self.config = config
 
     def loop(self):
-        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
-            channel=ContextWorkerType,
+        my_tasks: List[WorkerTask] = self.spin_deque_task(
+            channel=PolicyValueTaskType,
             timeout=30,
             batch_size=self.config['batch_size'],
         )
@@ -153,22 +153,26 @@ class ContextWorker(LLMWorker):
             for i in my_tasks
         ]
         outputs: List[RequestOutput] = self.generate(
-            input_data,
-            sampling_params=self.sampling_params
+            input_data
         )
 
         for i in range(len(outputs)):
             output = outputs[i].outputs[0].text
             self.logger.info(output)
             task: WorkerTask = my_tasks[i]
-            self.enqueue(
-                obj=WorkerResponse(
-                    head_id=self.worker_id,
-                    tail_id=task.head_id,
-                    task_id=task.task_id,
-                    task=task.task,
-                    response=output
+            wrapped_response = WorkerResponse(
+                head_id=task.head_id,
+                tail_id=self.worker_id,
+                task_id=TaskIdentifier(
+                    task_idx=task.task_id.task_idx,
+                    task_type=PolicyValuePostProcessTaskType
                 ),
+                task=task.task,
+                response=output
+            )
+            self.logger.info(wrapped_response)
+            self.enqueue(
+                obj=wrapped_response,
                 where=PolicyValuePostProcessTaskType
             )
 
@@ -195,8 +199,8 @@ class PolicyValueWorker(LLMWorker):
         self.num = config['num_comments']
 
     def loop(self):
-        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
-            channel=PolicyValueTaskType,
+        my_tasks: List[WorkerResponse] = self.spin_deque_task(
+            channel=PolicyValuePostProcessTaskType,
             timeout=30,
             batch_size=self.config['batch_size'],
         )
@@ -209,15 +213,14 @@ class PolicyValueWorker(LLMWorker):
         # We have tasks to complete.
         input_data = [
             policy_value_suggest_comments(
-                i.task['task_input'],
-                i.task['task_context'],
+                i.task,
+                i.response,
                 num=self.num
             )
             for i in my_tasks
         ]
         outputs: List[RequestOutput] = self.generate(
-            input_data,
-            sampling_params=self.sampling_params
+            input_data
         )
 
         for i in range(len(outputs)):
@@ -228,5 +231,12 @@ class PolicyValueWorker(LLMWorker):
 
             self.enqueue_response(
                 response=res,
-                task=my_tasks[i]
+                task=WorkerTask(
+                    head_id=my_tasks[i].head_id,
+                    task_id=TaskIdentifier(
+                        task_idx=my_tasks[i].task_id.task_idx,
+                        task_type=PolicyValueTaskType
+                    ),
+                    task=my_tasks[i].task
+                )
             )

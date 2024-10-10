@@ -3,7 +3,7 @@ import random
 import time
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
 
 import numpy as np
 
@@ -310,7 +310,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
     ################################################################
 
     @on_startup
-    def pre_process(self) -> Iterable[WorkerTask]:
+    def pre_process(self) -> Iterator[WorkerTask]:
         """
         This function is called before the state is processed.
         It prepares a string query for the lean 4 verifier.
@@ -322,7 +322,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
 
         yield WorkerTask(
             head_id=self.worker_id,
-            task_id=TaskIdentifier(task_type=LeanTaskType, task_id=self._id),
+            task_id=TaskIdentifier(task_type=LeanTaskType, task_idx=self._id),
             task=self.problem + self.old_code + self.new_code
         )
 

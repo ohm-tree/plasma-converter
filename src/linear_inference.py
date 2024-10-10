@@ -20,8 +20,18 @@ with open(args.config, 'r') as file:
     config = yaml.safe_load(file)
 
 
-# Run with `python src/linear_inference.py --config configs/linear.yaml`
-# Debug with `python src/linear_inference.py --config configs/linear_debug.yaml`
+"""
+Run with
+```bash
+python src/linear_inference.py --config configs/linear.yaml
+```
+Debug with
+```bash
+python src/linear_inference.py --config configs/linear_debug.yaml
+```
+"""
+
+
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 
@@ -132,9 +142,10 @@ def run_inference():
 
     print("Killing all processes.")
     # Send kill signals to all processes
-    for worker_type, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
-        for i in range(config[type_string]['num_procs']):
-            queues[WorkerIdentifer(worker_type, i)].put("kill")
+    queues[KillTaskType].put("kill")
+    # for worker_type, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
+    #     for i in range(config[type_string]['num_procs']):
+    #         queues[WorkerIdentifer(worker_type, i)].put("kill")
     print("All kill signals sent.")
 
     # Wait for 5 minutes, then force kill all processes

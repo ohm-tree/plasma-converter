@@ -7,7 +7,7 @@ perfect information, abstract strategy game.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Generic, Hashable, Iterable, List, TypeVar
+from typing import Any, Generic, Hashable, Iterator, List, TypeVar
 
 import numpy as np
 

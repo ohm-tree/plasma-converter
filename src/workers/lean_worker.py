@@ -110,6 +110,7 @@ class LeanWorker(Worker):
             run_name=run_name,
         )
         self.child = setup_repl()
+        logging.info("Lean4 REPL setup.")
 
     def loop(self):
         input_data = self.deque_task(
@@ -117,9 +118,11 @@ class LeanWorker(Worker):
             timeout=30
         )
         if input_data is None:
+            logging.info("No tasks to complete.")
             # Spinlock, disappointing, but there's nothing to do.
             return
 
+        logging.info(f"Received task: {input_data['task']}")
         result = send_code_read_json({
             "cmd": input_data['task'],
             # "allTactics": True,

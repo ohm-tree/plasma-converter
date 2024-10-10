@@ -33,7 +33,7 @@ class CompletionWorker(LLMWorker):
         self.config = config
 
     def loop(self):
-        my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
+        my_tasks: Iterator[WorkerTask] = self.spin_deque_task(
             channel=CompletionTaskType,
             timeout=30,
             batch_size=self.config['batch_size'],
@@ -50,7 +50,6 @@ class CompletionWorker(LLMWorker):
         ]
         outputs: List[RequestOutput] = self.generate(
             input_data,
-            sampling_params=self.sampling_params
         )
         for i in range(len(outputs)):
             output = outputs[i].outputs[0].text
