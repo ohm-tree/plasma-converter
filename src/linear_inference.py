@@ -130,6 +130,7 @@ def run_inference():
             break
         time.sleep(1)
 
+    print("Killing all processes.")
     # Send kill signals to all processes
     for worker_type, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
         for i in range(config[type_string]['num_procs']):

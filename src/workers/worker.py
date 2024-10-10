@@ -90,7 +90,7 @@ class Worker(abc.ABC):
         )
 
         self._no_inbox = False
-        if self.worker_type not in self.queues:
+        if self.worker_id not in self.queues:
             self._no_inbox = True
             self.logger.warning(
                 "No inbox queue detected; worker may never terminate.")
@@ -114,9 +114,9 @@ class Worker(abc.ABC):
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
         fh = logging.FileHandler(
-            os.path.join(self.ROOT_DIR, f"logs/{self.run_name}/{self.worker_type}_worker_{self.worker_idx}.log"))
+            os.path.join(self.ROOT_DIR, f"logs/{self.run_name}/{self.worker_type.worker_type}_worker_{self.worker_idx}.log"))
 
-        logging_prefix = f'[{self.worker_type.worker_type} - {self.worker_idx}] '
+        logging_prefix = f'[{self.worker_type.worker_type} {self.worker_idx}] '
         formatter = logging.Formatter(
             logging_prefix + '%(asctime)s - %(levelname)s - %(message)s')
 
@@ -142,6 +142,11 @@ class Worker(abc.ABC):
                      ) -> None:
         if isinstance(obj, WorkerTask):
             task_type = obj.task_id.task_type
+            print("INSIDE ENQUEUE TASK")
+            print(task_type)
+            print("-"*80)
+            print(obj)
+            print("-"*80)
             self.enqueue(obj, task_type)
             return
 
@@ -172,7 +177,7 @@ class Worker(abc.ABC):
         self.enqueue(response_task, task.head_id)
 
     def spin_deque_task(self,
-                        task_type: Union[TaskType, WorkerIdentifer],
+                        channel: Union[TaskType, WorkerIdentifer],
                         blocking=True,
                         timeout: Optional[int] = None,
                         batch_size: Optional[int] = None,
@@ -193,34 +198,42 @@ class Worker(abc.ABC):
         first = blocking
         task: Union[WorkerTask, WorkerResponse]
         num_tasks = 0
+        res = []
         while num_tasks < batch_size:
             try:
                 if first:
                     first = False
-                    task = self.queues[task_type].get(
+                    task = self.queues[channel].get(
+                        block=True,
                         timeout=timeout)
+                    print("INSIDE SPIN DEQUE TASK, FIRST IS TRUE")
                 else:
-                    task = self.queues[task_type].get_nowait()
+                    task = self.queues[channel].get_nowait()
             except queue.Empty:
                 break
             else:
+                print("Found a task")
+                print(task)
+
                 if task == 'kill':
                     self.logger.info(
                         f"Received kill signal, terminating.")
                     return
-                if task.task_id.task_type not in self.worker_type.consumes:
+                if task.task_id.channel not in self.worker_type.consumes:
                     raise ValueError(
-                        f"I am a worker of type {self.worker_type}, got {task.task_id.task_type}"
+                        f"I am a worker of type {self.worker_type}, got {task.task_id.channel}"
                     )
-                yield task
+                # yield task
+                res.append(task)
                 num_tasks += 1
+        return res
 
     def deque_task(self,
-                   task_type: TaskType,
+                   channel: Union[TaskType, WorkerIdentifer],
                    timeout: Optional[int] = None,
                    ) -> Optional[Union[WorkerTask, WorkerResponse]]:
         try:
-            return self.queues[task_type].get(timeout=timeout)
+            return self.queues[channel].get(timeout=timeout)
         except queue.Empty:
             return None
 

@@ -34,9 +34,9 @@ class CompletionWorker(LLMWorker):
 
     def loop(self):
         my_tasks: Iterable[WorkerTask] = self.spin_deque_task(
-            task_type=CompletionTaskType,
+            channel=CompletionTaskType,
             timeout=30,
-            max_tasks=self.config['batch_size'],
+            batch_size=self.config['batch_size'],
         )
         self.logger.info(
             f"Received {len(my_tasks)} tasks.")

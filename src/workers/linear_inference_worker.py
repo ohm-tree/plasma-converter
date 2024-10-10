@@ -20,7 +20,7 @@ from src.workers.types import (
     LinearInferenceWorkerType,
     PolicyValueTaskType,
 )
-from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerType
+from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerTask, WorkerType
 
 
 class LinearInferenceWorker(Worker):
@@ -78,12 +78,15 @@ class LinearInferenceWorker(Worker):
                 tactic_state=tactic_state
             )
 
-            context_input = next(state.pre_comments())
+            context_input: WorkerTask = next(state.pre_comments())
+            print(context_input.head_id)
+            print(context_input.task_id)
+            print(context_input.task)
             self.enqueue_task(context_input)
             time_to_context = -time.time()
-            context_output = next(self.spin_deque_task(
-                task_type=PolicyValueTaskType
-            ))
+            context_output = self.spin_deque_task(
+                channel=self.worker_id
+            )[0]
             time_to_context += time.time()
             self.logger.info(f"Time to context: {time_to_context}")
             state.post_comments(context_output)
@@ -95,25 +98,25 @@ class LinearInferenceWorker(Worker):
                 input_data = next(state.pre_LLM_rollout())
                 self.enqueue_task(input_data)
                 time_to_completion = -time.time()
-                completion_output = next(self.spin_deque_task(
-                    task_type=CompletionTaskType
-                ))
+                completion_output = self.spin_deque_task(
+                    channel=self.worker_id
+                )[0]
                 time_to_completion += time.time()
                 self.logger.info(f"Time to completion: {time_to_completion}")
                 lean4_input = next(state.post_LLM_rollout(completion_output))
                 self.enqueue_task(lean4_input)
                 time_to_lean = -time.time()
-                lean_output = next(self.spin_deque_task(
-                    task_type=LeanTaskType
-                ))
+                lean_output = self.spin_deque_task(
+                    channel=self.worker_id
+                )[0]
                 time_to_lean += time.time()
                 self.logger.info(f"Time to lean: {time_to_lean}")
                 context_input = next(state.post_process(lean_output))
                 self.enqueue_task(context_input)
                 time_to_context = -time.time()
-                context_output = next(self.spin_deque_task(
-                    task_type=PolicyValueTaskType
-                ))
+                context_output = self.spin_deque_task(
+                    channel=self.worker_id
+                )[0]
                 time_to_context += time.time()
                 self.logger.info(f"Time to context: {time_to_context}")
                 state.post_comments(context_output)

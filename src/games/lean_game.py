@@ -261,6 +261,10 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called after the comments are generated.
         """
+        print(results)
+        print(type(results))
+        print(results.__dict__)
+        print(results.response)
         self.gen_comments = tuple(
             MetaLeanGameMove(comment) for comment in results.response['comments']
         )

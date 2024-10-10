@@ -113,7 +113,7 @@ class LeanWorker(Worker):
 
     def loop(self):
         input_data = self.deque_task(
-            task_type=LeanTaskType,
+            channel=LeanTaskType,
             timeout=30
         )
         if input_data is None:
