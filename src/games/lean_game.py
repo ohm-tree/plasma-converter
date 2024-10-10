@@ -240,6 +240,9 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called before the comments are generated.
         """
+        print("#" * 80)
+        print(self.state.header, self.state.problem,
+              self.state.old_code, self.state.tactic_state)
         task = {
             "header": self.state.header,
             "problem": self.state.problem,
@@ -278,4 +281,4 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called after the Lean task is done.
         """
-        yield from self.state.post_process(lean_output.response)
+        yield from self.state.post_process(lean_output)

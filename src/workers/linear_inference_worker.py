@@ -108,7 +108,12 @@ class LinearInferenceWorker(Worker):
                 )[0]
                 time_to_lean += time.time()
                 self.logger.info(f"Time to lean: {time_to_lean}")
-                context_input = next(state.post_process(lean_output))
+                next(state.post_process(lean_output), 0)
+                print("#" * 80)
+                print(state.state.header, state.state.problem,
+                      state.state.old_code, state.state.tactic_state)
+
+                context_input = next(state.pre_comments())
                 self.enqueue_task(context_input)
                 time_to_context = -time.time()
                 context_output = self.spin_deque_task(

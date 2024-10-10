@@ -9,7 +9,7 @@ mcts:
     num_procs: 0
 
 completion:
-    num_procs: 3
+    num_procs: 2
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
@@ -20,6 +20,8 @@ completion:
         temperature: 0.0
         top_k: 1
         top_p: 1.0
+        stop: ["\n", "```"]
+
 
 lean:
     num_procs: 24
@@ -54,7 +56,7 @@ policy_value:
         top_p: 1.0
 
 context:
-    num_procs: 3
+    num_procs: 4
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"

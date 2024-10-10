@@ -20,6 +20,8 @@ completion:
         temperature: 0.0
         top_k: 1
         top_p: 1.0
+        stop: ["\n", "```"]
+
 
 lean:
     num_procs: 1

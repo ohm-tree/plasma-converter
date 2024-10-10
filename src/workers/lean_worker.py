@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import queue
 import time
+import traceback
 from typing import Dict, Optional
 
 import pexpect
@@ -22,7 +23,7 @@ def send_code_read_json(cmd, timeout_start=600, timeout_cat=600, timeout_finish=
     try:
         return _send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, _child=_child, kill=kill)
     except Exception as e:
-        return {'system_error': str(e)}
+        return {'system_error': traceback.format_exc()}
 
 
 def _send_code_read_json(cmd, timeout_start=600, timeout_cat=600, timeout_finish=600, _child: Optional[pexpect.spawn] = None, kill=False):
@@ -122,9 +123,9 @@ class LeanWorker(Worker):
             # Spinlock, disappointing, but there's nothing to do.
             return
 
-        logging.info(f"Received task: {input_data['task']}")
+        logging.info(f"Received task: {input_data.task}")
         result = send_code_read_json({
-            "cmd": input_data['task'],
+            "cmd": input_data.task,
             # "allTactics": True,
             # "tactics": True,
             "env": 0
@@ -139,7 +140,7 @@ class LeanWorker(Worker):
                 pass
             self.child = setup_repl()
             result = send_code_read_json({
-                "cmd": input_data['task'],
+                "cmd": input_data.task,
                 # "allTactics": True,
                 # "tactics": True,
                 "env": 0

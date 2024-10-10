@@ -453,17 +453,20 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             The result of the Lean 4 verification.
 
         """
+        yield from ()  # Tell python that this function is a generator, without actually yielding anything.
+
         if self.ready():
             raise LeanGameStateError(
                 "Should not post-process a LeanGameState that has already been processed.")
 
         repl_result: dict = result.response
+        self.tactic_state = ""
+        self.valid_code = ""
+        self._dead = True
+        self._win = False
 
         if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
-            self.tactic_state = ""
-            self.valid_code = ""
-            self._dead = True
-            self._win = False
+            self.finish()
             return
 
         # 'sorries' has never been part of a repl_result
@@ -521,6 +524,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             # This is a dead state.
             self._dead = True
             self._win = False
+            self.finish()
             return
 
         if complete:
@@ -528,9 +532,10 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             print(repl_result)
             self._dead = False
             self._win = True
+            self.finish()
             return
 
         self._dead = False
         self._win = False
-
-        return ()
+        self.finish()
+        return
