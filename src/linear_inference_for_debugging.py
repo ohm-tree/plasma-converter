@@ -1,5 +1,9 @@
 """
-This file runs mcts inference quickly (no commments, policy, or value) and a yaml config.
+This file runs mcts inference with a yaml config.
+
+It is not meant for actual linear experiments, which do not require
+comments etc. It is meant to test all of the workers without the complications
+of MCTS rollouts.
 """
 
 import argparse
@@ -23,17 +27,17 @@ with open(args.config, 'r') as file:
 """
 Run with
 ```bash
-python src/linear_inference.py --config configs/fast_linear.yaml
+python src/linear_inference.py --config configs/linear.yaml
+```
+Debug with
+```bash
+python src/linear_inference.py --config configs/linear_debug.yaml
 ```
 """
 
 
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
-
-    for _, type_string, _, _ in WORKER_TYPES_AND_STRINGS:
-        if type_string not in config:
-            config[type_string] = {'num_procs': 0}
 
     # Assert that the config is valid
     fast_pv_active = (config['fast_policy_value']['num_procs'] > 0)
@@ -51,13 +55,17 @@ def run_inference():
         else:
             print("Warning: No policy value workers are active.")
 
-    assert config['linear_inference']['num_procs'] > 0
-    assert config['mcts']['num_procs'] == 0
-    assert config['lean']['num_procs'] > 0
-    assert config['completion']['num_procs'] > 0
-    assert config['policy_value']['num_procs'] == 0
-    assert config['context']['num_procs'] == 0
-    assert config['fast_policy_value']['num_procs'] == 0
+    WORKER_TYPES_AND_STRINGS: Tuple[Tuple[WorkerType, str, Callable, bool]] = (
+        (MCTSWorkerType, 'mcts', mcts_inference_entrypoint, False),
+        (LinearInferenceWorkerType, 'linear_inference',
+         linear_inference_entrypoint, False),
+        (CompletionWorkerType, 'completion', completion_entrypoint, True),
+        (PolicyValueWorkerType, 'policy_value', policy_value_entrypoint, True),
+        (LeanWorkerType, 'lean', lean_entrypoint, False),
+        (FastPolicyValueWorkerType, 'fast_policy_value',
+         fast_policy_value_entrypoint, True),
+        (ContextWorkerType, 'context', context_entrypoint, True),
+    )
 
     queues = {}
     print("Creating Queues:")

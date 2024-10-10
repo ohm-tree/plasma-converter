@@ -1,15 +1,13 @@
 run_name: fast_linear_inference_valid
-data_dir: datasets/minif2f.jsonl
 split: "valid"
+data_dir: datasets/minif2f.jsonl
 
 linear_inference:
     num_procs: 163
-
-mcts:
-    num_procs: 0
+    num_comments: 1
 
 completion:
-    num_procs: 4
+    num_procs: 8
     batch_size: 40
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
@@ -24,45 +22,3 @@ completion:
 
 lean:
     num_procs: 24
-    num_comments: 10
-
-fast_policy_value:
-    num_procs: 4
-    batch_size: 40
-    num_comments: 10
-    model:
-        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
-        max_num_batched_tokens: 8192
-        trust_remote_code: True
-    sampling:
-        max_tokens: 500
-        temperature: 1.0
-        top_p: 0.95
-        stop: ["\n"]
-
-policy_value:
-    num_procs: 0
-    batch_size: 40
-    num_comments: 10
-    model:
-        model: "deepseek-ai/deepseek-math-7b-instruct"
-        max_num_batched_tokens: 8192
-        trust_remote_code: True
-    sampling:
-        max_tokens: 512
-        temperature: 0.0
-        top_k: 1
-        top_p: 1.0
-
-context:
-    num_procs: 0
-    batch_size: 40
-    model:
-        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
-        max_num_batched_tokens: 8192
-        trust_remote_code: True
-    sampling:
-        max_tokens: 1024
-        temperature: 0.0
-        top_k: 1
-        top_p: 1.0

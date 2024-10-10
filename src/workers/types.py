@@ -10,8 +10,13 @@ KillTaskType = TaskType("kill")
 LeanWorkerType = WorkerType("lean", (LeanTaskType, KillTaskType))
 MCTSWorkerType = WorkerType(
     "mcts", (LeanTaskType, CompletionTaskType, PolicyValueTaskType, KillTaskType))
+
 LinearInferenceWorkerType = WorkerType(
-    "linear_inference", (LeanTaskType, CompletionTaskType, PolicyValueTaskType, KillTaskType))
+    "linear_inference", (LeanTaskType, CompletionTaskType, KillTaskType))
+
+
+LinearInferenceDebugWorkerType = WorkerType(
+    "linear_inference_debug", (LeanTaskType, CompletionTaskType, PolicyValueTaskType, KillTaskType))
 
 CompletionWorkerType = WorkerType(
     "completion", (CompletionTaskType, KillTaskType))

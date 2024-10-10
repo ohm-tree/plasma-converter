@@ -83,7 +83,8 @@ class Worker(abc.ABC):
     def __init__(self,
                  worker_id: WorkerIdentifer,
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
-                 run_name: str):
+                 run_name: str,
+                 poison_scream: bool = True):
         self.worker_type = worker_id.worker_type
         self.worker_idx = worker_id.worker_idx
         self.worker_id = worker_id
@@ -99,6 +100,9 @@ class Worker(abc.ABC):
         self.logger.info(
             f"Worker {self.worker_idx} of type {self.worker_type} initialized."
         )
+        self.logger.info(
+            f"Global Variables I can see: {globals().keys()}"
+        )
 
         self._no_inbox = False
         if self.worker_id not in self.queues:
@@ -111,6 +115,7 @@ class Worker(abc.ABC):
             self._no_scream_queue = True
             self.logger.warning(
                 "No scream queue detected; when worker terminates, master may not know.")
+        self.poison_scream = poison_scream
 
     def setup_logger(self):
         # I should live in src/workers/
@@ -265,6 +270,10 @@ class Worker(abc.ABC):
                     "An exception occurred in the worker loop!!")
                 self.logger.critical(traceback.format_exc())
                 break
+        else:
+            self.logger.info(
+                f"Worker {self.worker_idx} of type {self.worker_type} received kill signal."
+            )
 
     def main(self):
         """
@@ -275,7 +284,7 @@ class Worker(abc.ABC):
         self.run()
         try:
             # enqueue a kill signal to the master queue.
-            if not self._no_scream_queue:
+            if (not self._no_scream_queue and self.poison_scream):
                 self.queues[KillTaskType].put("kill")
 
             self.shutdown()
@@ -300,8 +309,6 @@ class Worker(abc.ABC):
         if not self._no_scream_queue:
             try:
                 kill_signal = self.queues[KillTaskType].get_nowait()
-                # print(
-                #     f"Received kill signal: {kill_signal}")
                 self.queues[KillTaskType].put("kill")  # echo the kill signal
             except queue.Empty:
                 pass

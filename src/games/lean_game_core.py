@@ -119,7 +119,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self.max_depth: int = max_depth
 
         self.old_tactic_state = self.parent.tactic_state if self.parent else ""
-        self.old_code = self.parent.new_code if self.parent else ""
+        self.old_code = self.parent.old_code + \
+            self.parent.valid_code if self.parent else ""
 
         self._win: Optional[bool] = win
         self._dead: Optional[bool] = dead
@@ -253,7 +254,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             parent=self,
             problem=self.problem,
             header=self.header,
-            new_code=self.new_code,
+            new_code="",
             depth=self.depth + 1,
             max_depth=self.max_depth,
             ready=False,
@@ -481,11 +482,11 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         infos = []
         goals = []
         sorries = repl_result.get('sorries', [])
+        complete = True
 
         if len(sorries) > 0:
             complete = False
 
-        complete = False
         for m in repl_result.get('messages', []):
             if m['severity'] == 'error':
                 complete = False

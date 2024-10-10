@@ -14,19 +14,11 @@ import numpy as np
 
 from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
 from src.games.lean_game_core import LeanGameState
-from src.workers.types import LinearInferenceWorkerType, PolicyValueTaskType
-from src.workers.worker import (
-    TaskIdentifier,
-    TaskType,
-    Worker,
-    WorkerIdentifer,
-    WorkerResponse,
-    WorkerTask,
-    WorkerType,
-)
+from src.workers.types import LinearInferenceDebugWorkerType
+from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerTask, WorkerType
 
 
-class LinearInferenceWorker(Worker):
+class LinearInferenceDebugWorker(Worker):
     def __init__(self,
                  global_config: dict,
                  config: dict,
@@ -37,7 +29,7 @@ class LinearInferenceWorker(Worker):
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
-                LinearInferenceWorkerType, task_id),
+                LinearInferenceDebugWorkerType, task_id),
             queues=queues,
             run_name=run_name,
             poison_scream=False
@@ -83,20 +75,14 @@ class LinearInferenceWorker(Worker):
             )
 
             context_input: WorkerTask = next(state.pre_comments())
-            state.post_comments(WorkerResponse(
-                head_id=self.worker_id,
-                tail_id=self.worker_id,
-                task_id=TaskIdentifier(
-                    task_idx=0,
-                    task_type=PolicyValueTaskType
-                ),
-                task=context_input,
-                response={
-                    "comments": ["" for i in range(self.config['num_comments'])],
-                    "policy": [1 / self.config['num_comments'] for i in range(self.config['num_comments'])],
-                    "value": 0.5
-                }
-            ))
+            self.enqueue_task(context_input)
+            time_to_context = -time.time()
+            context_output = self.spin_deque_task(
+                channel=self.worker_id
+            )[0]
+            time_to_context += time.time()
+            self.logger.info(f"Time to context: {time_to_context}")
+            state.post_comments(context_output)
 
             while not state.terminal():
                 self.logger.info(state.human_printout())
@@ -123,21 +109,15 @@ class LinearInferenceWorker(Worker):
                 # print(state.state.header, state.state.problem,
                 #       state.state.old_code, state.state.tactic_state)
 
-                context_input: WorkerTask = next(state.pre_comments())
-                state.post_comments(WorkerResponse(
-                    head_id=self.worker_id,
-                    tail_id=self.worker_id,
-                    task_id=TaskIdentifier(
-                        task_idx=0,
-                        task_type=PolicyValueTaskType
-                    ),
-                    task=context_input,
-                    response={
-                        "comments": ["" for i in range(self.config['num_comments'])],
-                        "policy": [1 / self.config['num_comments'] for i in range(self.config['num_comments'])],
-                        "value": 0.5
-                    }
-                ))
+                context_input = next(state.pre_comments())
+                self.enqueue_task(context_input)
+                time_to_context = -time.time()
+                context_output = self.spin_deque_task(
+                    channel=self.worker_id
+                )[0]
+                time_to_context += time.time()
+                self.logger.info(f"Time to context: {time_to_context}")
+                state.post_comments(context_output)
 
             self.logger.info(state.human_printout())
 

@@ -35,6 +35,7 @@ class MCTSWorker(Worker):
                 MCTSWorkerType, task_id),
             queues=queues,
             run_name=run_name,
+            poison_scream=False
         )
 
         self.config = config

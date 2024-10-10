@@ -158,7 +158,7 @@ class ContextWorker(LLMWorker):
 
         for i in range(len(outputs)):
             output = outputs[i].outputs[0].text
-            self.logger.info(output)
+            # self.logger.info(output)
             task: WorkerTask = my_tasks[i]
             wrapped_response = WorkerResponse(
                 head_id=task.head_id,
@@ -170,7 +170,7 @@ class ContextWorker(LLMWorker):
                 task=task.task,
                 response=output
             )
-            self.logger.info(wrapped_response)
+            # self.logger.info(wrapped_response)
             self.enqueue(
                 obj=wrapped_response,
                 where=PolicyValuePostProcessTaskType
@@ -225,7 +225,7 @@ class PolicyValueWorker(LLMWorker):
 
         for i in range(len(outputs)):
             output = outputs[i].outputs[0].text
-            self.logger.info(output)
+            # self.logger.info(output)
             res = parse_policy_value_output(
                 output, self.logger, num=self.num)
 
