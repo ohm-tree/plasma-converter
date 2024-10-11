@@ -1,0 +1,23 @@
+2024-10-11 17:37:33,769 - INFO - Starting policy-value worker 0.
+2024-10-11 17:37:40,195 - INFO - Note: detected 124 virtual cores but NumExpr set to maximum of 64, check "NUMEXPR_MAX_THREADS" environment variable.
+2024-10-11 17:37:40,196 - INFO - Note: NumExpr detected 124 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2024-10-11 17:37:40,197 - INFO - NumExpr defaulting to 8 threads.
+2024-10-11 17:39:27,420 - INFO - Policy-value worker initialized.
+2024-10-11 17:39:27,421 - INFO - PV Worker received 1 tasks.
+2024-10-11 17:39:27,661 - INFO - {'mcts_worker_id': 0, 'task_id': 0, 'task_output': {'comments': array(['  -- Simplify the given logarithmic equations using properties of logarithms.\n'],
+      dtype='<U78'), 'policy': array([1.]), 'value': 0.5}, 'type': 'policy_value'}
+2024-10-11 17:39:32,724 - INFO - PV Worker received 1 tasks.
+2024-10-11 17:39:32,918 - INFO - {'mcts_worker_id': 0, 'task_id': 671424473811477200, 'task_output': {'comments': array(['  -- Normalize the logarithmic expressions using properties of logarithms.\n'],
+      dtype='<U75'), 'policy': array([1.]), 'value': 0.5}, 'type': 'policy_value'}
+2024-10-11 17:39:35,763 - INFO - PV Worker received 1 tasks.
+2024-10-11 17:39:36,107 - INFO - {'mcts_worker_id': 0, 'task_id': 1492438052609024726, 'task_output': {'comments': array(['  -- The `nlinarith` tactic is used to solve the system of linear equations derived from the logarithmic equations.\n'],
+      dtype='<U116'), 'policy': array([1.]), 'value': 0.5}, 'type': 'policy_value'}
+2024-10-11 17:39:38,800 - INFO - PV Worker received 1 tasks.
+2024-10-11 17:39:38,958 - INFO - {'mcts_worker_id': 0, 'task_id': 1388151573737726681, 'task_output': {'comments': array(['  -- Simplify the equations using algebraic manipulation.\n'],
+      dtype='<U58'), 'policy': array([1.]), 'value': 0.5}, 'type': 'policy_value'}
+2024-10-11 17:39:41,831 - INFO - PV Worker received 1 tasks.
+2024-10-11 17:39:42,161 - INFO - {'mcts_worker_id': 0, 'task_id': 27740680097456860, 'task_output': {'comments': array(['  -- The `nlinarith` tactic is used again to confirm the arithmetic operations and derive the final result.\n'],
+      dtype='<U108'), 'policy': array([1.]), 'value': 0.5}, 'type': 'policy_value'}
+2024-10-11 17:40:12,192 - INFO - PV Worker received 0 tasks.
+2024-10-11 17:40:42,223 - INFO - PV Worker received 0 tasks.
+2024-10-11 17:40:42,223 - CRITICAL - Kill signal received. Dying.

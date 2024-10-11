@@ -1,0 +1,16 @@
+2024-10-11 17:37:33,773 - INFO - Starting completion worker 0.
+2024-10-11 17:37:40,200 - INFO - Note: detected 124 virtual cores but NumExpr set to maximum of 64, check "NUMEXPR_MAX_THREADS" environment variable.
+2024-10-11 17:37:40,201 - INFO - Note: NumExpr detected 124 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2024-10-11 17:37:40,201 - INFO - NumExpr defaulting to 8 threads.
+2024-10-11 17:39:29,994 - INFO - Worker 0 received 1 tasks.
+2024-10-11 17:39:30,908 - INFO - {'mcts_worker_id': 0, 'completion_task_id': 671424473811477200, 'output': '  have h₂ : a * b = 512 := by\n    field_simp [Real.logb, Real.log_rpow] at h₀ h₁ ⊢\n    ring_nf at h₀ h₁ ⊢\n    nlinarith\n  ', 'type': 'completion'}
+2024-10-11 17:39:33,750 - INFO - Worker 0 received 1 tasks.
+2024-10-11 17:39:34,174 - INFO - {'mcts_worker_id': 0, 'completion_task_id': 1492438052609024726, 'output': '  norm_num [Real.logb, Real.log_rpow] at h₀ h₁ ⊢\n  ', 'type': 'completion'}
+2024-10-11 17:39:36,783 - INFO - Worker 0 received 1 tasks.
+2024-10-11 17:39:36,913 - INFO - {'mcts_worker_id': 0, 'completion_task_id': 1388151573737726681, 'output': '  nlinarith\n  ', 'type': 'completion'}
+2024-10-11 17:39:39,818 - INFO - Worker 0 received 1 tasks.
+2024-10-11 17:39:40,124 - INFO - {'mcts_worker_id': 0, 'completion_task_id': 27740680097456860, 'output': '  <;> ring_nf at h₀ h₁ ⊢\n  ', 'type': 'completion'}
+2024-10-11 17:39:42,847 - INFO - Worker 0 received 1 tasks.
+2024-10-11 17:39:43,107 - INFO - {'mcts_worker_id': 0, 'completion_task_id': 1231716357872640735, 'output': '  <;> nlinarith\n  <;> linarith\n', 'type': 'completion'}
+2024-10-11 17:40:13,125 - INFO - Worker 0 received 0 tasks.
+2024-10-11 17:40:43,154 - INFO - Worker 0 received 0 tasks.
