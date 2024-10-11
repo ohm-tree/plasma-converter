@@ -24,7 +24,7 @@ def main(
         
     HOME_DIR = os.path.expanduser('~')
     DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
-    DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
+    DEFAULT_LEAN_WORKSPACE = 'old-mathlib4/'
 
     LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
@@ -166,6 +166,7 @@ def main(
                 f"Error in send_code_read_json: {result['system_error']}")
             print("send_code_read_json", input_data['task'])
             print("end")
+            print(f"Error in send_code_read_json: {result['system_error']}")
             try:
                 child.close()
             except:

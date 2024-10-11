@@ -3,6 +3,7 @@ import random
 import time
 from enum import IntEnum
 from typing import Callable, List, Optional
+from pprint import pprint
 
 import numpy as np
 
@@ -14,7 +15,7 @@ from src.games.game import Game
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
-DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
+DEFAULT_LEAN_WORKSPACE = 'old-mathlib4/'
 
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
@@ -242,6 +243,7 @@ class LeanGameState:
         res += fancy_field("Header", self.header)
         res += fancy_field("Problem", self.problem)
         res += fancy_field("Old Code", self.old_code)
+        # res += fancy_field("New Code", self.new_code)
         res += fancy_field("Comment", self.comment)
         if self.step == LeanGameStateStep.INITIALIZED:
             res += fancy_field("[New Code will be here]", "\n")
@@ -307,8 +309,14 @@ class LeanGameState:
             raise LeanGameStateError(
                 "Should not LLM-pre-process a LeanGameState that has already had an LLM rollout.")
         
-        # print("old_tactic_state", self.old_tactic_state)
-        return 'Complete the following Lean 4 code.' + \
+        prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
+            '\n```lean\n' + self.header + self.problem + \
+            self.old_code + '\n' + \
+            "/--\n" + self.old_tactic_state.strip() + "\n-/\n" + \
+            self.comment
+        print("prompt")
+        print(prompt)
+        return 'Complete the following Lean 4 code with explanatory comments.' + \
             '\n```lean\n' + self.header + self.problem + \
             self.old_code + '\n' + \
             "/--\n" + self.old_tactic_state.strip() + "\n-/\n" + \
@@ -384,29 +392,42 @@ class LeanGameState:
             The new code that was added to the proof.
             This will be truncated to the first error or sorry.
         """
+
+        print("TRUNCATE")
         code_no_header = ''.join(
             [self.problem, self.old_code,
                 self.new_code]
         )
 
+        print("new code")
+        print(self.new_code)
+
         _prefix_len = len(self.problem)
+        print("prefix_len", _prefix_len)
         truncate_pos = len(code_no_header)
+        print("sorries")
+        pprint(sorries)
         for info in sorries:
             info_pos = self.get_index(
                 code_no_header, info['pos']['line'], info['pos']['column'])
             if info_pos >= _prefix_len:
                 truncate_pos = min(truncate_pos, info_pos)
+        print("errors")
+        pprint(errors)
         for info in errors:
             info_pos = self.get_index(
                 code_no_header, info['pos']['line'], info['pos']['column'])
             if info_pos >= _prefix_len:
                 truncate_pos = min(truncate_pos, info_pos)
-
+        print("truncate_pos", truncate_pos)
         self.valid_code = code_no_header[:truncate_pos]
+
+        print("valid code")
+        pprint(self.valid_code)
         assert self.valid_code.startswith(self.problem)
         self.valid_code = self.valid_code[len(self.problem):]
         # I guess this might not be true in some edge cases?
-        # assert self.valid_code.startswith(self.old_code)
+        assert self.valid_code.startswith(self.old_code)
         self.valid_code = self.valid_code[len(self.old_code):]
 
     def get_goals(self, goals: List[dict]):
@@ -494,6 +515,15 @@ class LeanGameState:
                 warnings.append(m)
             elif m['severity'] == 'info':
                 infos.append(m)
+
+        print("tactics")
+        pprint(tactics)
+        print("warnings")
+        pprint(warnings)
+        print("goals")
+        pprint(goals)
+        pprint("infos")
+        pprint(infos)
 
         self.truncate(sorries, errors)
         self.get_goals(goals)
@@ -604,7 +634,7 @@ class LeanGame(Game[LeanGameState]):
 
         Parameters
         ----------
-        num_comment_seeds: int
+        num_comment_seeds: int [DEPRECATED]
             The number of comment seeds.
         max_depth: Optional[int]
             The maximum depth of the proof.

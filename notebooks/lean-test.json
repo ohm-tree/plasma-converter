@@ -1,0 +1,21 @@
+{
+  "cmd": "import Mathlib\nimport Aesop\nset_option profiler true\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n/-- If $f(x)=5x-12$, find a value for $x$ so that $f^{-1}(x)=f(x+1)$. Show that it is \frac{47}{24}.-/\ntheorem mathd_algebra_422 (x : \u211d) (\u03c3 : Equiv \u211d \u211d) (h\u2080 : \u2200 x, \u03c3.1 x = 5 * x - 12)\n  (h\u2081 : \u03c3.1 (x + 1) = \u03c3.2 x) : x = 47 / 24 := by\n  -- Simplify the given conditions using the properties of the function and its inverse.\n  simp_all [Equiv.eq_symm_apply, mul_add, mul_one, sub_eq_iff_eq_add, add_comm]\n  -- Apply the definition of the inverse function to get an equation involving \u03c3.1 and \u03c3.2.\n  apply_fun \u03c3.1 at h\u2081\n  -- Normalize the equation to simplify it further.\n  ring_nf at h\u2081 \u22a2\n  -- Simplify the equation using the definition of \u03c3.1.\n  field_simp [h\u2080] at h\u2081 \u22a2\n  -- Simplify the numerical constants in the equation.\n  -- Solve the linear equation to find the value of x.\n  linarith"
+}
+
+{
+  "cmd": "import Algebra.BigOperators\nimport Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators\n\n"
+}
+
+{
+  "cmd": "import Mathlib.Algebra.BigOperators\nimport Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators\n\n"
+}
+
+{
+  "cmd": "import Mathlib\n\nopen BigOperators\n"
+}
+
+{"cmd": "def f : Nat := by have t := 37; exact t", "allTactics": true}
+
+2f65ba7
+
+{"cmd": "/-- Determine the value of $ab$ if $\\\\log_8a+\\\\log_4b^2=5$ and $\\\\log_8b+\\\\log_4a^2=7$. Show that it is 512.-/\ntheorem aime_1984_p5 (a b : \\u211d) (h\\u2080 : Real.logb 8 a + Real.logb 4 (b ^ 2) = 5)\n  (h\\u2081 : Real.logb 8 b + Real.logb 4 (a ^ 2) = 7) : a * b = 512 := by\n  have h\\u2082 : a * b = 512 := by\n    field_simp [Real.logb, Real.log_rpow] at h\\u2080 h\\u2081 \\u22a2\n    ring_nf at h\\u2080 h\\u2081 \\u22a2\n    nlinarith"}

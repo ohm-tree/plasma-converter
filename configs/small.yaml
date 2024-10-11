@@ -1,34 +1,34 @@
-run_name: mcts_inference_valid
-data_dir: datasets/minif2f.jsonl
+run_name: mcts_inference_small
+data_dir: datasets/small_dataset.jsonl
 split: valid
-max_depth: 20
+max_depth: 4
 
 worker:
-  num_procs: 163
+  num_procs: 1
 
 context:
   num_procs: 0
   batch_size: 40
 
 lean:
-  num_procs: 12
+  num_procs: 1
 
 completion:
-  num_procs: 4
-  batch_size: 80
+  num_procs: 1
+  batch_size: 100
   max_num_batched_tokens: 8192
   sampling:
     max_tokens: 512
     temperature: 0.0
     top_k: 1
     top_p: 1.0
-    stop: ["--", "/--", "```"]
+    stop: ["--", "/--", "```"] # stop before next step (proxy = comment)
 
 policy_value:
-  num_procs: 4
+  num_procs: 1
   type: fast
   batch_size: 40
-  branching_factor: 1
+  branching_factor: 2
   sampling:
     temperature: 1.1
     max_tokens: 100

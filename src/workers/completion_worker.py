@@ -79,6 +79,7 @@ def main(
               max_num_batched_tokens=config['max_num_batched_tokens'],
               trust_remote_code=True,
               dtype="float16",
+              seed=0,
               tensor_parallel_size=len(gpu_set))
 
     sampling_params = SamplingParams(
@@ -135,11 +136,13 @@ def main(
             input_data,
             sampling_params=sampling_params
         )
+        print("outputs")
+        print(outputs[0].outputs[0].text)
         for i in range(len(outputs)):
             result = {
                 'mcts_worker_id': my_tasks[i]['mcts_worker_id'],
                 'completion_task_id': my_tasks[i]['completion_task_id'],
-                'output': outputs[i].outputs[0].text + '\n',
+                'output': outputs[i].outputs[0].text,
                 'type': 'completion'
             }
             logger.info(str(result))
