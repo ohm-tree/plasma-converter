@@ -2,6 +2,6 @@
 __pycache__/
 .venv/
 *egg-info/
-data/*
-outputs/*
-logs/*
+data/
+outputs/
+logs/
