@@ -186,6 +186,8 @@ class ConcurrentMetaGameState(Generic[ConcurrentGameStateType, MetaGameMoveType]
     def active_moves(self) -> List[MetaGameMoveType]:
         """
         Returns the active moves for the game state.
+
+        All active moves MUST have distinct hashes!!
         """
         raise NotImplementedError
 
