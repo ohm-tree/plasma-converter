@@ -26,6 +26,19 @@ def on_startup(func: Callable[[], Iterator[WorkerTask]]):
     return func
 
 
+def finisher(func):
+    """
+    Registers a function which should call the finish()
+    method of the object.
+    """
+
+    def wrapper(self, *args, **kwargs):
+        for _ in func(self, *args, **kwargs):
+            yield _
+        yield from self.finish()
+    return wrapper
+
+
 def require_ready(func):
     """
     Requires that the object is ready before calling the function.
@@ -102,13 +115,13 @@ class ConcurrentClass(ABC):
         """
         self.ready_callback = callback
 
-    def finish(self):
+    def finish(self) -> Iterator[WorkerTask]:
         """
         Call when the object is ready.
         """
         self._ready = True
         if hasattr(self, 'ready_callback'):
-            self.ready_callback()
+            yield from self.ready_callback()
 
     def tick(self, messages: Iterator[WorkerResponse]) -> Iterator[WorkerTask]:
         """
@@ -148,8 +161,8 @@ class Router(Generic[T]):
             res += f"\n{task_id} from {source}"
         return res
 
-    def startup(self, source: T):
-        for msg in source.startup():
+    def startup(self, source: T, callback: Optional[Callable[[], None]] = None):
+        for msg in source.startup(callback):
             self.enqueue_task(msg, source)
 
     def enqueue_task(self, msg: WorkerTask, source: T):

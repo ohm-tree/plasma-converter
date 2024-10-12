@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
 
 import numpy as np
 
-from src.games.concurrent import ConcurrentClass, handler, on_startup
+from src.games.concurrent import ConcurrentClass, finisher, handler, on_startup
 from src.games.game import ConcurrentGameState
 from src.uct.uct_node import UCTNode
 from src.workers.types import LeanTaskType
@@ -426,6 +426,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                     len("unsolved goals\n"):]
 
     @handler(LeanTaskType)
+    @finisher
     def post_process(self, result: WorkerResponse):
         """
         This function is called after the state is processed.
@@ -465,7 +466,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self._win = False
 
         if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
-            self.finish()
             return
 
         # 'sorries' has never been part of a repl_result
@@ -523,7 +523,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             # This is a dead state.
             self._dead = True
             self._win = False
-            self.finish()
             return
 
         if complete:
@@ -531,10 +530,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             # print(repl_result)
             self._dead = False
             self._win = True
-            self.finish()
             return
 
         self._dead = False
         self._win = False
-        self.finish()
         return

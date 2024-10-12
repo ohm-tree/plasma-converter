@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
 
 import numpy as np
 
-from src.games.concurrent import handler, on_startup, require_ready
+from src.games.concurrent import finisher, handler, on_startup, require_ready
 from src.games.game import ConcurrentGameState, ConcurrentMetaGameState
 from src.games.lean_game_core import LeanGameMove, LeanGameState, LeanGameStateError
 from src.uct.uct_node import UCTNode
@@ -260,7 +260,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         )
 
     @handler(PolicyValueTaskType)
-    def post_comments(self, results: WorkerResponse) -> None:
+    @finisher
+    def post_comments(self, results: WorkerResponse) -> Iterator[WorkerTask]:
         """
         This function is called after the comments are generated.
         """
@@ -271,7 +272,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self.gen_comments = tuple(
             MetaLeanGameMove(comment) for comment in results.response['comments']
         )
-        self._ready = True
         self._policy = np.array(results.response['policy'])
         self._value = results.response['value']
-        self.finish()
+
+        yield from ()

@@ -85,7 +85,7 @@ class MCTSWorker(Worker):
             )[0]
             time_to_context += time.time()
             self.logger.info(f"Time to context: {time_to_context}")
-            state.post_comments(context_output)
+            next(state.post_comments(context_output), None)
 
             states: List[MetaLeanGameState]
 
