@@ -40,7 +40,7 @@ def self_play(
     root = UCTNode(self.worker_id, state, -1,
                    init_type="zero", max_actions=max_actions)
 
-    root.backprop_and_expand()
+    next(root.backprop_and_expand(), None)
 
     # root.is_processed = True
     states.append(root.game_state)
