@@ -148,6 +148,7 @@ class Router(Generic[T]):
         # Debug
 
         self.active_counts_by_task_type = {}
+        self.total_counts_by_task_type = {}
         self.active_objs = {}
         self.total_active = 0
 
@@ -184,6 +185,8 @@ class Router(Generic[T]):
         # Debug
         task_type = msg.task_id.task_type
         self.active_counts_by_task_type[task_type] = self.active_counts_by_task_type.get(
+            task_type, 0) + 1
+        self.total_counts_by_task_type[task_type] = self.total_counts_by_task_type.get(
             task_type, 0) + 1
         self.active_objs[source] = msg
         self.total_active += 1
@@ -228,9 +231,9 @@ class Router(Generic[T]):
         res = f"Active tasks: {self.total_active}\n"
         for task_type, count in self.active_counts_by_task_type.items():
             res += f"TaskType {task_type}: {count} active\n"
-            if task_type in self.total_times_by_task_type:
-                if count > 0:
-                    res += f"Average time per task: {self.total_times_by_task_type[task_type] / count}\n"
+        for task_type, count in self.total_counts_by_task_type.items():
+            time_spent = self.total_times_by_task_type.get(task_type, 0)
+            res += f"TaskType {task_type}: {count} total, {time_spent} seconds, {time_spent / count} seconds per task\n"
         res += "Active objects:\n"
         for obj, task in self.active_objs.items():
             res += f"{obj}: {task}\n"

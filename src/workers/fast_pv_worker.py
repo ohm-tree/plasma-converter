@@ -14,14 +14,16 @@ def prompt(lean_game_dict: Dict) -> str:
     """
     Generate a prompt for the policy-value worker to suggest comments.
     """
-    res = r'''Complete the following Lean 4 code with short explanatory comments:
-
+    res = r'''This Lean 4 code is INCOMPLETE. Please suggest the next step.
 ```lean4
 '''
 
     res += lean_game_dict['header'] + \
         lean_game_dict['problem'] + lean_game_dict['old_code']
-
+    res += r'''
+```
+Possible next step:
+'''
     return res
 
 

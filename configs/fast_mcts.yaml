@@ -1,5 +1,5 @@
-run_name: fast_mcts_valid_100
-split: "valid"
+run_name: fast_mcts_both_100_commentary_pv
+split: ["valid", "test"]
 data_dir: datasets/minif2f.jsonl
 description: |
     This configuration is for debugging the fast MCTS inference method on the validation set.

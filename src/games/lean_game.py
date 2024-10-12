@@ -281,6 +281,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         seen = set()
         for i, comment in enumerate(self.gen_comments):
             if comment in seen:
+                # select a random comment from the list of comments
                 self.gen_comments[i] = MetaLeanGameMove(
                     f"Duplicate Comment {random.randint(0, 1 << 30)}")
             seen.add(self.gen_comments[i])

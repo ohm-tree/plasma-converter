@@ -45,19 +45,24 @@ class MCTSWorker(Worker):
         os.makedirs(self.game_data_path, exist_ok=True)
         self.output_path = f"outputs/{run_name}/"
         os.makedirs(self.output_path, exist_ok=True)
+        self.result_path = f"results/{run_name}/"
+        os.makedirs(self.result_path, exist_ok=True)
 
     def load_problems(self):
         # I live in src/workers/
         WORKER_DIR = os.path.dirname(os.path.abspath(__file__))
         SRC_DIR = os.path.dirname(WORKER_DIR)
         ROOT_DIR = os.path.dirname(SRC_DIR)
+        split = self.global_config['split']
+        if type(split) == str:
+            split = [split]
+        self.data = []
 
         with open(self.global_config['data_dir'], 'r') as file:
-            self.data = [
-                json.loads(line.strip())
-                for line in file.readlines()
-                if json.loads(line.strip()).get('split') == self.global_config['split']
-            ]
+            for line in file.readlines():
+                problem = json.loads(line.strip())
+                if problem.get('split') in split:
+                    self.data.append(problem)
 
     def run(self):
         for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
@@ -110,6 +115,11 @@ class MCTSWorker(Worker):
             with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w') as file:
                 for i, state in enumerate(states):
                     file.write(state.human_printout())
+
+            with open(os.path.join(self.result_path, f"{problem['name']}.txt"), 'w') as file:
+                file.write(f"Problem: {problem['name']}\n")
+                file.write(f"Split: {problem['split']}\n")
+                file.write(f"Result: {rewards[-1]}\n")
 
             self.logger.info(
                 f"Finished problem {problem['name']} result: {rewards[-1]}")
