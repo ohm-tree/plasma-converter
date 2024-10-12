@@ -240,6 +240,11 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called before the comments are generated.
         """
+
+        # if we're terminal, we don't need to do any of this.
+        if self.state.terminal():
+            yield from self.finish()
+            return
         # print("#" * 80)
         # print(self.state.header, self.state.problem,
         #       self.state.old_code, self.state.tactic_state)

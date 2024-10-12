@@ -191,20 +191,6 @@ class Router(Generic[T]):
             batch_size=None
         )
         for response in responses:
-            self.worker.logger.info(response.response)
-            self.worker.logger.info(response.head_id)
-            self.worker.logger.info(response.head_id.worker_idx)
-            self.worker.logger.info(response.head_id.worker_type)
-            self.worker.logger.info(response.head_id.worker_type.worker_type)
-            self.worker.logger.info(response.tail_id)
-            self.worker.logger.info(response.tail_id.worker_idx)
-            self.worker.logger.info(response.tail_id.worker_type)
-            self.worker.logger.info(response.tail_id.worker_type.worker_type)
-            self.worker.logger.info(response.task_id)
-            self.worker.logger.info(response.task_id.task_type)
-            self.worker.logger.info(response.task_id.task_type.task_type)
-            self.worker.logger.info(response.task_id.task_idx)
-
             if response.task_id not in self.active:
                 raise ValueError(
                     f"Task {response.task_id} not in active tasks.")

@@ -77,6 +77,7 @@ def uct_search(
 
             elif leaf.started():
                 self.logger.info(f"Leaf is started: {leaf.game_state}")
+                time.sleep(1)
                 # assert router.contains(hash(leaf))
                 break
             else:

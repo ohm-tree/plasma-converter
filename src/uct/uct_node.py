@@ -259,9 +259,13 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         Process the responses from the worker.
         """
 
-        self.backup(self.game_state.value())
-        self.expand(self.game_state.policy(),
-                    self.game_state.value(), train=True)
+        if not self.is_terminal:
+            self.backup(self.game_state.value())
+            self.expand(self.game_state.policy(),
+                        self.game_state.value(), train=True)
+        else:
+            # backup the reward, and there's no need to expand
+            self.backup(self.game_state.reward())
 
         yield from ()
 
