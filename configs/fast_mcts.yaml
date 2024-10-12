@@ -2,12 +2,13 @@ run_name: fast_mcts_valid_100
 split: "valid"
 data_dir: datasets/minif2f.jsonl
 description: |
-    This configuration is for running the fast MCTS inference method on the validation set.
+    This configuration is for debugging the fast MCTS inference method on the validation set.
     The loop is Lean -> Fast PV -> Completion -> Repeat.
 
 mcts:
     num_procs: 122
     num_iters: 100
+    max_actions: 10
 
 completion:
     num_procs: 4
@@ -23,10 +24,8 @@ completion:
         top_p: 1.0
         stop: ["\n", "```"]
 
-
 lean:
-    num_procs: 1
-    num_comments: 10
+    num_procs: 24
 
 fast_policy_value:
     num_procs: 4
@@ -40,5 +39,5 @@ fast_policy_value:
         max_tokens: 500
         temperature: 1.0
         top_p: 0.95
-        n: 10
+        n: 9
         stop: ["\n"]

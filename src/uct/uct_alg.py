@@ -51,7 +51,7 @@ def uct_search(
 
     router = Router(self)
 
-    while not victorious_death and (iters < num_iters or router.total_active > 0):
+    while not victorious_death and iters < num_iters:
         live_time -= time.time()
         while iters < num_iters and router.total_active < 10:
             # greedily select leaf with given exploration parameter
@@ -66,9 +66,9 @@ def uct_search(
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
                 # compute the value estimate of the player at the terminal leaf
-                value_estimate: float = leaf.game_state
+                # value_estimate: float = leaf.game_state
                 # Immediately backup the value estimate along the path to the root
-                leaf.backup(value_estimate)
+                leaf.backup(leaf.game_state.reward())
                 iters += 1
 
                 if leaf.game_state.reward() == 1.0:
@@ -103,6 +103,11 @@ def uct_search(
             self.logger.info(f"U values: {root.child_U()}")
             self.logger.info(
                 f"Live time: {live_time}, time elapsed: {time.time() - absolute_start_time}")
+
+    # wait for the rest of the leaves to finish
+    while router.total_active > 0:
+        router.tick()
+        time.sleep(1)
 
     return (
         root.child_number_visits / np.sum(root.child_number_visits),
