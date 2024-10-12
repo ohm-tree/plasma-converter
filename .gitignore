@@ -2,7 +2,5 @@
 __pycache__/
 .venv/
 *egg-info/
-data/prover-llm_v0/*
-outputs/*
-logs/*
-data/*
+
+# datasets/ should be tracked; it contains the datasets.
