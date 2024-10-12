@@ -50,9 +50,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
     nor correct, then the game continues.
     """
 
-    # global UUID
-    UUID = 0
-
     def __init__(self,
                  parent: Optional['LeanGameState'],
                  problem: str,
@@ -136,8 +133,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self.children = {}
 
         # This is just a unique identifier for the state.
-        self._id = LeanGameState.UUID
-        LeanGameState.UUID += 1
+        self._id = random.randint(0, 1 << 30)
 
     ################################################################
     # Utilities

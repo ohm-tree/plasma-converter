@@ -315,7 +315,7 @@ class ProverLLM(Network):
 
         intermediate_output = hidden_states[25][0][-1]
         # debug
-        print("Intermediate output shape:", intermediate_output.shape)
+        # print("Intermediate output shape:", intermediate_output.shape)
         return intermediate_output
 
 ########################## Part 5: Use the intermediate state to get a value estimate and a policy output ##########################

@@ -51,7 +51,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self.children = {}
 
         # This is just a unique identifier for the state.
-        self._id = self.state._id
+        self._id = random.randint(0, 1 << 30)
 
         self._policy = None
         self._value = None
@@ -274,9 +274,21 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         # print(type(results))
         # print(results.__dict__)
         # print(results.response)
-        self.gen_comments = tuple(
+        self.gen_comments = [
             MetaLeanGameMove(comment) for comment in results.response['comments']
-        )
+        ]
+        # if there are any duplicate comments, replace the second occurence with a random string of characters.
+        seen = set()
+        for i, comment in enumerate(self.gen_comments):
+            if comment in seen:
+                self.gen_comments[i] = MetaLeanGameMove(
+                    f"Duplicate Comment {random.randint(0, 1 << 30)}")
+            seen.add(self.gen_comments[i])
+
+        # print the comments
+        # print("Comments:")
+        # for i, comment in enumerate(self.gen_comments):
+        #     print(f"{i}: {comment.comment}")
         self._policy = np.array(results.response['policy'])
         self._value = results.response['value']
 

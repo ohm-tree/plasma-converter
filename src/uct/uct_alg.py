@@ -53,7 +53,7 @@ def uct_search(
 
     while not victorious_death and iters < num_iters:
         live_time -= time.time()
-        while iters < num_iters and router.total_active < 10:
+        if router.total_active < 10:
             # greedily select leaf with given exploration parameter
             leaf = root.select_leaf_no_virtual_loss(c)
 
@@ -76,17 +76,20 @@ def uct_search(
                     winning_node = leaf
 
             elif leaf.started():
+                assert router.contains(leaf)
+
                 self.logger.info(f"Leaf is started: {leaf.game_state}")
                 time.sleep(1)
-                # assert router.contains(hash(leaf))
                 break
             else:
+                assert not router.contains(leaf)
                 self.logger.info(f"Leaf is not ready: {leaf.game_state}")
                 # We have absolutely never seen this leaf before.
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
                 # Add the child priors and value estimate to the completion queue!
                 router.startup(leaf)
+                assert router.contains(leaf)
                 iters += 1
         live_time += time.time()
         # Check for completed leaves.
@@ -108,6 +111,8 @@ def uct_search(
     while router.total_active > 0:
         router.tick()
         time.sleep(1)
+
+    assert router.total_active == 0
 
     return (
         root.child_number_visits / np.sum(root.child_number_visits),

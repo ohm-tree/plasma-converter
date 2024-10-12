@@ -166,6 +166,14 @@ class Router(Generic[T]):
             self.enqueue_task(msg, source)
 
     def enqueue_task(self, msg: WorkerTask, source: T):
+        if source in self.active_objs:
+            raise ValueError(
+                f"Source {source} already in active objects. Active objects are {self.active_objs.keys()}")
+        # print(self.debug())
+        if msg.task_id in self.active:
+            raise ValueError(
+                f"Task {msg.task_id} already in active tasks. Active tasks are {self.active.keys()}")
+
         self.worker.enqueue_task(msg)
         self.active.update(
             {
@@ -193,7 +201,7 @@ class Router(Generic[T]):
         for response in responses:
             if response.task_id not in self.active:
                 raise ValueError(
-                    f"Task {response.task_id} not in active tasks.")
+                    f"Task {response.task_id} not in active tasks. Active tasks are {self.active.keys()}")
             source = self.active.pop(response.task_id)
 
             # Debug
@@ -208,8 +216,8 @@ class Router(Generic[T]):
 
             yield response, source
 
-    def contains(self, task_id: TaskIdentifier) -> bool:
-        return task_id in self.active
+    def contains(self, obj: T) -> bool:
+        return obj in self.active_objs
 
     def tick(self, blocking=False, timeout=None):
         for response, source in self.dequeue_tasks(blocking=blocking, timeout=timeout):

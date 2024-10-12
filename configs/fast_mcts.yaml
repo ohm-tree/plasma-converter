@@ -37,7 +37,7 @@ fast_policy_value:
         trust_remote_code: True
     sampling:
         max_tokens: 500
-        temperature: 1.0
+        temperature: 1.05
         top_p: 0.95
         n: 9
         stop: ["\n"]
