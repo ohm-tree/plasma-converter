@@ -73,7 +73,7 @@ class MCTSWorker(Worker):
             game: LeanGame = LeanGame(
                 # comment_seeds=comments,
                 num_comment_seeds=6,
-                max_depth=20
+                max_depth=config['max_depth']
             )
             state: LeanGameState = game.start_state(
                 problem=PROBLEM_STATEMENT,

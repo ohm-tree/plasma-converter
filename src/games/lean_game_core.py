@@ -189,7 +189,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                        problem: str,
                        header: str,
                        tactic_state: str,
-                       max_depth: int = 20) -> 'LeanGameState':
+                       max_depth: int = 5) -> 'LeanGameState':
         """
         Returns the starting state of the game.
         """
@@ -329,79 +329,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
 
         self.finish()
 
-    @classmethod
-    def get_index(cls, s: str, row: int, col: int) -> int:
-        """
-        Convert a (row, col) pair to an index in a string.
-        The Lean 4 repl convention is that rows are 1-indexed
-        and columns are 0-indexed.
-        """
-        lines = s.split('\n')
-        # Add back the newline for accurate indexing.
-        line_lengths = [len(line) + 1 for line in lines]
-        if row < 1:
-            raise ValueError(
-                f"Row must be at least 1. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
-        if col < 0:
-            raise ValueError(
-                f"Column must be at least 0. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
-        if row > len(lines):
-            raise ValueError(
-                f"Row is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
-        if col >= line_lengths[row-1]:
-            # The col should never be exactly line_lengths;
-            # If the cursor is "after the newline character"
-            # then it should really be the 0th index of the next line.
-            raise ValueError(
-                f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
-        return sum(line_lengths[:row-1]) + col
-
-    def truncate(self, sorries: List[dict], errors: List[dict]):
-        """
-        First, we need to find the last valid tactic.
-
-        Unsolved goals also show up as errors, and we ignore them;
-        they have been ommitted from the errors list in post_process()
-        already.
-
-        Parameters
-        ----------
-        sorries: List[dict]
-            A list of sorry messages.
-        errors: List[dict]
-            A list of error messages.
-
-        Modifies
-        -------
-        self.valid_code: str
-            The new code that was added to the proof.
-            This will be truncated to the first error or sorry.
-        """
-        code_no_header = ''.join(
-            [self.problem, self.old_code,
-                self.new_code]
-        )
-
-        _prefix_len = len(self.problem)
-        truncate_pos = len(code_no_header)
-        for info in sorries:
-            info_pos = self.get_index(
-                code_no_header, info['pos']['line'], info['pos']['column'])
-            if info_pos >= _prefix_len:
-                truncate_pos = min(truncate_pos, info_pos)
-        for info in errors:
-            info_pos = self.get_index(
-                code_no_header, info['pos']['line'], info['pos']['column'])
-            if info_pos >= _prefix_len:
-                truncate_pos = min(truncate_pos, info_pos)
-
-        self.valid_code = code_no_header[:truncate_pos]
-        assert self.valid_code.startswith(self.problem)
-        self.valid_code = self.valid_code[len(self.problem):]
-        # I guess this might not be true in some edge cases?
-        # assert self.valid_code.startswith(self.old_code)
-        self.valid_code = self.valid_code[len(self.old_code):]
-
     def get_goals(self, goals: List[dict]):
         """
         Get the the most recent goal from the Lean 4 verification.
@@ -421,7 +348,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         max_line = float('-inf')
         max_column = float('-inf')
         for tactic in goals:
-            if (tactic['pos']['line'] < max_line) or (tactic['pos']['line'] == max_line and tactic['pos']['column'] < max_column):
+            if (tactic['pos']['line'] > max_line) or (tactic['pos']['line'] == max_line and tactic['pos']['column'] > max_column):
                 max_line = tactic['pos']['line']
                 max_column = tactic['pos']['column']
                 self.tactic_state = tactic['data'].lstrip()[
@@ -483,6 +410,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         goals = []
         sorries = repl_result.get('sorries', [])
         complete = True
+        bad_errors = []
 
         if len(sorries) > 0:
             complete = False
@@ -492,8 +420,11 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                 complete = False
                 if m['data'].lstrip().startswith("unsolved goals\n"):
                     goals.append(m)
+                elif m['data'].lstrip().startswith("unexpected end of input"):
+                    pass
                 else:
                     errors.append(m)
+                    bad_errors.append(m)
             elif m['severity'] == 'warning':
                 if "declaration uses 'sorry'" in m['data']:
                     sorries.append(m)
@@ -517,20 +448,33 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                 raise ValueError(
                     f"Unexpected severity: {m['severity']}")
 
-        self.truncate(sorries, errors)
         self.get_goals(goals)
-        if self.valid_code.strip() == "":
-            # This means that the new code was truncated to nothing,
-            # i.e. the first new line of code written caused an error.
-            # This is a dead state.
+
+        print("old_tactic_state")
+        print(self.old_tactic_state)
+        print("tactic_state")
+        print(self.tactic_state)
+        if len(bad_errors)>0: # or self.tactic_state == self.old_tactic_state
             self._dead = True
             self._win = False
             self.finish()
             return
 
+        code_no_header = ''.join(
+            [self.problem, self.old_code,
+                self.new_code]
+        )
+        self.valid_code = code_no_header
+        assert self.valid_code.startswith(self.problem)
+        self.valid_code = self.valid_code[len(self.problem):]
+        # I guess this might not be true in some edge cases?
+        # assert self.valid_code.startswith(self.old_code)
+        self.valid_code = self.valid_code[len(self.old_code):]
+
+        
         if complete:
-            # print("Marked as complete!")
-            # print(repl_result)
+            print("Marked as complete!")
+            print(repl_result)
             self._dead = False
             self._win = True
             self.finish()

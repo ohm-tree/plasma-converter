@@ -70,10 +70,10 @@ class FastPolicyValueWorker(LLMWorker):
             comments = np.array([option.text for option in options])
             policy = np.array(
                 [option.cumulative_logprob for option in options])
-            unique_indices = [i == 0 or comments[i] != comments[i-1]
-                              for i in range(len(comments))]
-            comments = comments[unique_indices]
-            policy = policy[unique_indices]
+            # unique_indices = [i == 0 or comments[i] != comments[i-1]
+            #                   for i in range(len(comments))]
+            # comments = comments[unique_indices]
+            # policy = policy[unique_indices]
             policy = np.exp(policy)
             policy /= policy.sum()
 

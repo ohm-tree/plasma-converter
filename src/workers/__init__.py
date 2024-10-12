@@ -9,7 +9,7 @@ def completion_entrypoint(*args, **kwargs):
     worker.main()
 
 
-def policy_value_entrypoint(*args, **kwargs):
+def value_entrypoint(*args, **kwargs):
     from src.workers.policy_value_worker import PolicyValueWorker
     worker = PolicyValueWorker(*args, **kwargs)
     worker.main()
@@ -58,7 +58,7 @@ WORKER_TYPES_AND_STRINGS: Tuple[Tuple[WorkerType, str, Callable, bool]] = (
     (LinearInferenceDebugWorkerType, 'linear_inference_debug',
      linear_inference_debug_entrypoint, False),
     (CompletionWorkerType, 'completion', completion_entrypoint, True),
-    (PolicyValueWorkerType, 'policy_value', policy_value_entrypoint, True),
+    # (PolicyValueWorkerType, 'policy_value', policy_value_entrypoint, True),
     (LeanWorkerType, 'lean', lean_entrypoint, False),
     (FastPolicyValueWorkerType, 'fast_policy_value',
      fast_policy_value_entrypoint, True),

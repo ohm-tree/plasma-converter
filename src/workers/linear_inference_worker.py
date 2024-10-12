@@ -79,7 +79,8 @@ class LinearInferenceWorker(Worker):
             state: MetaLeanGameState = MetaLeanGameState.starting_state(
                 worker_id=self.worker_id,
                 problem=PROBLEM_STATEMENT,
-                tactic_state=tactic_state
+                tactic_state=tactic_state,
+                max_depth=self.config['max_depth'],
             )
 
             context_input: WorkerTask = next(state.pre_comments())
@@ -92,22 +93,26 @@ class LinearInferenceWorker(Worker):
                 ),
                 task=context_input,
                 response={
-                    "comments": ["" for i in range(self.config['num_comments'])],
+                    "comments": ["" for i in range(self.config['num_comments'])], # actually a complete move, comment+code
                     "policy": [1 / self.config['num_comments'] for i in range(self.config['num_comments'])],
                     "value": 0.5
                 }
             ))
 
             while not state.terminal():
-                self.logger.info(state.human_printout())
                 action = state.get_active_move(0)
                 state = state.next_state(action)
                 input_data = next(state.pre_LLM_rollout())
+                print("input_data")
+                print(input_data)
                 self.enqueue_task(input_data)
                 time_to_completion = -time.time()
                 completion_output = self.spin_deque_task(
                     channel=self.worker_id
                 )[0]
+
+                print("completion_output")
+                print(completion_output)
                 time_to_completion += time.time()
                 self.logger.info(f"Time to completion: {time_to_completion}")
                 lean4_input = next(state.post_LLM_rollout(completion_output))
@@ -119,6 +124,7 @@ class LinearInferenceWorker(Worker):
                 time_to_lean += time.time()
                 self.logger.info(f"Time to lean: {time_to_lean}")
                 next(state.post_process(lean_output), 0)
+                self.logger.info(state.human_printout())
                 # print("#" * 80)
                 # print(state.state.header, state.state.problem,
                 #       state.state.old_code, state.state.tactic_state)

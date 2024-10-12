@@ -1,11 +1,11 @@
 run_name: fast_linear_inference_small
 split: valid
 data_dir: datasets/small_dataset.jsonl
-max_depth: 4
 
 linear_inference:
     num_procs: 1
     num_comments: 1
+    max_depth: 10
 
 completion:
     num_procs: 1
@@ -15,11 +15,27 @@ completion:
         max_num_batched_tokens: 8192
         trust_remote_code: True
     sampling:
-        max_tokens: 1024
+        max_tokens: 100
         temperature: 0.0
         top_k: 1
         top_p: 1.0
-        stop: ["--", "```", "/--"]
+        stop: ["/--", "```"]
 
 lean:
     num_procs: 1
+
+fast_policy_value:
+  num_procs: 0
+  type: fast
+  batch_size: 40
+  branching_factor: 2
+  sampling:
+    temperature: 1.1
+    max_tokens: 100
+    top_p: 0.95
+    n: 1
+    stop: ["--", "```", "/--"]
+    logprobs: True
+
+policy_value:
+  num_procs: 0

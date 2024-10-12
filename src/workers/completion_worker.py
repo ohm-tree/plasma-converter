@@ -52,7 +52,7 @@ class CompletionWorker(LLMWorker):
             input_data,
         )
         for i in range(len(outputs)):
-            output = outputs[i].outputs[0].text
+            output = "  --"  + outputs[i].outputs[0].text
             self.logger.info(output)
             self.enqueue_response(
                 response=output,

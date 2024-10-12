@@ -29,6 +29,7 @@ class MetaLeanGameMove:
     A move in the Lean game.
     """
     comment: str
+    # code: str
 
 
 class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]):
@@ -97,6 +98,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
             worker_id=worker_id,
             problem=problem,
             header=header,
+            # old_tactic_state=tactic_state,
             tactic_state=tactic_state,
             max_depth=max_depth
         )
@@ -208,10 +210,11 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         It generates a prompt for the LLM.
         """
 
-        prompt = 'Complete the following Lean 4 code.\nHere is a hint:\n' + self.comment.strip() + \
-            '\nThe tactic state is:\n' + \
-            self.state.old_tactic_state.strip()+'\n```lean\n' + self.state.header + self.state.problem + \
-            self.state.old_code
+        prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
+            '```lean\n' + self.state.header + self.state.problem + \
+            self.state.old_code + \
+            "\n  /--\n" + self.state.old_tactic_state.strip() + "\n-/" + \
+            "  --" 
 
         yield WorkerTask(
             head_id=self.worker_id,
@@ -230,8 +233,17 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         new_code: str = completion.response
         if new_code.endswith('```'):
             new_code = new_code[:-3]
-        if not new_code.endswith('\n'):
-            new_code += '\n'
+
+        lines = new_code.split('\n')
+        def start_of_comment(line: str) -> bool:
+            # get the first character that's not a space
+            strip_str = line.lstrip()
+            first_non_space = strip_str[0] if strip_str else ''
+            return first_non_space in ['/', '-']
+        for i in range(1, len(lines)):
+            if start_of_comment(lines[i]) and not start_of_comment(lines[i-1]):
+                new_code = '\n'.join(lines[:i]) + '\n'
+                break
         self.state.new_code = new_code
 
         return self.state.startup(callback=self.pre_comments)
