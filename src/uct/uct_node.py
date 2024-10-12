@@ -263,6 +263,8 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         self.expand(self.game_state.policy(),
                     self.game_state.value(), train=True)
 
+        yield from ()
+
     def backup(self, estimate):
         """
         Propagate the estimate of the current node,
