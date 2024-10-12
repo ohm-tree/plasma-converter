@@ -102,7 +102,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @property
     def is_terminal(self):
-        if not self._ready:
+        if not self._started:
             return None
         if self._is_terminal is None:
             self._is_terminal = self.game_state.terminal()
@@ -110,7 +110,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @property
     def number_visits(self):
-        if not self._ready:
+        if not self._started:
             return None
         if self.parent is None:
             return self.root_number_visits
@@ -125,7 +125,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @property
     def total_value(self):
-        if not self._ready:
+        if not self._started:
             return None
         if self.parent is None:
             return self.root_total_value
