@@ -28,24 +28,24 @@ class MetaLeanGameMove:
     """
     A move in the Lean game.
     """
-    comment: str
-    # code: str
+    code: str
+    # comment: str
 
 
 class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]):
     def __init__(self,
                  worker_id: WorkerIdentifer,
                  internal_state: LeanGameState,
-                 comment: str,
-                 gen_comments: Optional[List[str]] = None,
+                 code: str,
+                 next_moves: Optional[List[str]] = None,
                  ):
         """
         """
         super().__init__(worker_id=worker_id,
                          internal_state=internal_state)
 
-        self.comment = comment
-        self.gen_comments = gen_comments or []
+        self.code = code
+        self.next_moves = next_moves or []
 
         # We don't want to re-generate a child when we re-do an action,
         # so pointers to the MetaLeanGameState children are stored here.
@@ -63,8 +63,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         return {
             "id": self._id,
-            "comment": self.comment,
-            "gen_comments": self.gen_comments,
+            "code": self.code,
+            "next_moves": self.next_moves,
             "state": self.state.human_json()
         }
 
@@ -91,8 +91,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
                        worker_id: WorkerIdentifer,
                        problem: str,
                        tactic_state: str,
-                       header: str = LEAN4_DEFAULT_HEADER,
-                       max_depth: int = 20) -> 'MetaLeanGameState':
+                       max_depth: int,
+                       header: str = LEAN4_DEFAULT_HEADER) -> 'MetaLeanGameState':
 
         internal_state = LeanGameState.starting_state(
             worker_id=worker_id,
@@ -106,8 +106,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         return MetaLeanGameState(
             worker_id=worker_id,
             internal_state=internal_state,
-            comment="",
-            gen_comments=[]
+            code="",
+            next_moves=[]
         )
 
     def next_state(self, action: MetaLeanGameMove) -> LeanGameState:
@@ -124,8 +124,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self.children[action] = MetaLeanGameState(
             worker_id=self.worker_id,
             internal_state=new_state,
-            comment="",
-            gen_comments=[]
+            code="",
+            next_moves=[]
         )
         return self.children[action]
 
@@ -142,19 +142,19 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
 
     @require_ready
     def get_active_move(self, index: int) -> MetaLeanGameMove:
-        return self.gen_comments[index]
+        return self.next_moves[index]
 
     @require_ready
     def active_moves(self) -> List[MetaLeanGameMove]:
-        return self.gen_comments
+        return self.next_moves
 
     @require_ready
     def index_active_move(self, move: MetaLeanGameMove) -> int:
-        return self.gen_comments.index(move)
+        return self.next_moves.index(move)
 
     @require_ready
     def len_active_moves(self) -> int:
-        return len(self.gen_comments)
+        return len(self.next_moves)
 
     @require_ready
     def require_new_move(self) -> None:
@@ -188,13 +188,13 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         res += fancy_field("Header", self.state.header)
         res += fancy_field("Problem", self.state.problem)
         res += fancy_field("Old Code", self.state.old_code)
-        res += fancy_field("Comment", self.comment)
+        res += fancy_field("New code", self.code)
         res += fancy_field("Completed Rollout without Truncation",
                            self.state.new_code)
         res += fancy_field("Valid Truncation of New Code",
                            self.state.valid_code)
         res += fancy_field("Generated Comments",
-                           '\n'.join(i.comment for i in self.gen_comments))
+                           '\n'.join(i.code for i in self.next_moves))
 
         res += fancy_field("Old Tactic State", self.state.old_tactic_state)
         res += fancy_field("New Tactic State", self.state.tactic_state)
@@ -248,9 +248,9 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
 
         return self.state.startup(callback=self.pre_comments)
 
-    def pre_comments(self) -> Iterator[WorkerTask]:
+    def pre_query(self) -> Iterator[WorkerTask]:
         """
-        This function is called before the comments are generated.
+        This function is called before the moves are generated.
         """
 
         # if we're terminal, we don't need to do any of this.
@@ -258,13 +258,15 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
             yield from self.finish()
             return
         # print("#" * 80)
-        # print(self.state.header, self.state.problem,
-        #       self.state.old_code, self.state.tactic_state)
+        print(self.state.header, self.state.problem,
+              self.state.old_code, self.state.tactic_state)
+        print(self.state.old_tactic_state)
         task = {
             "header": self.state.header,
             "problem": self.state.problem,
             "old_code": self.state.old_code,
-            "tactic_state": self.state.tactic_state
+            "tactic_state": self.state.tactic_state,
+            "old_tactic_state": self.state.old_tactic_state
         }
 
         yield WorkerTask(
@@ -273,22 +275,22 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
                 task_type=PolicyValueTaskType,
                 task_idx=hash(self)
             ),
-            task=task,
+            task=task
         )
 
     @handler(PolicyValueTaskType)
     @finisher
-    def post_comments(self, results: WorkerResponse) -> Iterator[WorkerTask]:
+    def post_query(self, results: WorkerResponse) -> Iterator[WorkerTask]:
         """
-        This function is called after the comments are generated.
+        This function is called after the code snippets (comments + completion) are generated
         """
         # print(results)
         # print(type(results))
         # print(results.__dict__)
         # print(results.response)
-        self.gen_comments = tuple(
-            MetaLeanGameMove(comment) for comment in results.response['comments']
-        )
+        self.next_moves = [
+            MetaLeanGameMove(move) for move in results.response['moves']
+        ]
         self._policy = np.array(results.response['policy'])
         self._value = results.response['value']
 

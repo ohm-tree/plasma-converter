@@ -88,7 +88,7 @@ def run_inference():
         )
         print(f"{type_string}: {config[type_string]['num_procs']} queues")
 
-    for task_type in [LeanTaskType, CompletionTaskType, PolicyValueTaskType, PolicyValuePostProcessTaskType, KillTaskType]:
+    for task_type in [LeanTaskType, PolicyValueTaskType, PolicyValuePostProcessTaskType, KillTaskType]:
         queues.update({task_type: multiprocessing.Queue()})
         print(f"{task_type}: 1 queues")
 

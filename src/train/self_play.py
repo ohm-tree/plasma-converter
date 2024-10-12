@@ -58,13 +58,6 @@ def self_play(
             num_iters=num_iters
         )
 
-        # TODO: more configurations possible for uct_search, not used right now.
-
-        """
-        TODO: In MCTS algorithms, people sometimes change up the temperature right here,
-        to sharpen the training distribution. This is something we could try.
-        """
-
         if winning_node is not None:
             root = winning_node
             break

@@ -14,15 +14,12 @@ def prompt(lean_game_dict: Dict) -> str:
     """
     Generate a prompt for the policy-value worker to suggest comments.
     """
-    res = r'''Complete the following Lean 4 code with short explanatory comments:
-
-```lean4
-'''
-
-    res += lean_game_dict['header'] + \
-        lean_game_dict['problem'] + lean_game_dict['old_code']
-
-    return res
+    prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
+            '```lean\n' + lean_game_dict['header'] + lean_game_dict['problem'] + \
+            lean_game_dict['old_code'] + \
+            "\n  /--\n" + lean_game_dict['old_tactic_state'].strip() + "\n-/" + \
+            "  --" 
+    return prompt
 
 
 class FastPolicyValueWorker(LLMWorker):
@@ -46,9 +43,7 @@ class FastPolicyValueWorker(LLMWorker):
             # sampling_kwargs=config['sampling']
         )
         self.config = config
-        self.num_comments = config['num_comments']
-
-        assert config['num_comments'] == config['sampling']['n'] + 1
+        assert global_config['branching_factor'] == config['sampling']['n'] 
 
     def loop(self):
         my_tasks: Iterator[WorkerTask] = self.spin_deque_task(
@@ -64,14 +59,20 @@ class FastPolicyValueWorker(LLMWorker):
         # We have tasks to complete.
         model_inputs = [prompt(task.task) for task in my_tasks]
 
+        self.logger.info(f"Generated {len(model_inputs)} prompts.")
+        self.logger.info(model_inputs)
+
         model_outputs: List[RequestOutput] = self.generate(
             model_inputs
         )
 
+        self.logger.info(f"Generated {len(model_outputs)} outputs.")
+        self.logger.info(model_outputs)
+
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
 
-            comments = np.array([option.text for option in options])
+            snippets = np.array([option.text for option in options])
             policy = np.array(
                 [option.cumulative_logprob for option in options])
             # unique_indices = [i == 0 or comments[i] != comments[i-1]
@@ -81,10 +82,9 @@ class FastPolicyValueWorker(LLMWorker):
             policy = np.exp(policy)
             policy /= policy.sum()
 
-            comments = [''] + [option.text for option in options]
-            assert len(comments) == self.num_comments
+            snippets = [''] + [option.text for option in options]
             res = {
-                'comments': comments,
+                'moves': snippets,
                 'policy': policy,
                 'value': 0.5
             }

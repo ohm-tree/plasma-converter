@@ -72,22 +72,25 @@ class MCTSWorker(Worker):
             state: MetaLeanGameState = MetaLeanGameState.starting_state(
                 worker_id=self.worker_id,
                 problem=PROBLEM_STATEMENT,
-                tactic_state=tactic_state
+                tactic_state=tactic_state,
+                max_depth=self.config['max_depth']
             )
 
             # Edge case: on the very first move, the completions are not available yet.
 
-            context_input: WorkerTask = next(state.pre_comments())
-            self.enqueue_task(context_input)
-            time_to_context = -time.time()
-            context_output = self.spin_deque_task(
+            query_input: WorkerTask = next(state.pre_query())
+            self.enqueue_task(query_input)
+            time_to_query = -time.time()
+            query_output = self.spin_deque_task(
                 channel=self.worker_id
             )[0]
-            time_to_context += time.time()
-            self.logger.info(f"Time to context: {time_to_context}")
-            next(state.post_comments(context_output), None)
+            time_to_query += time.time()
+            self.logger.info(f"Time to query LLM (fast_pv): {time_to_query}")
+            next(state.post_query(query_output), None)
 
             states: List[MetaLeanGameState]
+
+            print(state.next_moves)
 
             states, distributions, rewards = self_play(
                 self,
