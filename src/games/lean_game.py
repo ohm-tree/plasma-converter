@@ -11,7 +11,7 @@ from src.games.concurrent import finisher, handler, on_startup, require_ready
 from src.games.game import ConcurrentGameState, ConcurrentMetaGameState
 from src.games.lean_game_core import LeanGameMove, LeanGameState, LeanGameStateError
 from src.uct.uct_node import UCTNode
-from src.workers.types import CompletionTaskType, LeanTaskType, PolicyValueTaskType
+from src.workers.types import CompletionTaskType, LeanTaskType, PolicyValueTaskType, PolicyValuePostProcessTaskType
 from src.workers.worker import (
     TaskIdentifier,
     TaskType,
@@ -193,8 +193,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
                            self.state.new_code)
         res += fancy_field("Valid Truncation of New Code",
                            self.state.valid_code)
-        res += fancy_field("Generated Comments",
-                           '\n'.join(i.code for i in self.next_moves))
+        res += fancy_field("Generated Moves",self.next_moves)
 
         res += fancy_field("Old Tactic State", self.state.old_tactic_state)
         res += fancy_field("New Tactic State", self.state.tactic_state)
@@ -231,22 +230,11 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         This function is called after the LLM rollout is done.
         """
         new_code: str = completion.response
-        if new_code.endswith('```'):
-            new_code = new_code[:-3]
-
-        lines = new_code.split('\n')
-        def start_of_comment(line: str) -> bool:
-            # get the first character that's not a space
-            strip_str = line.lstrip()
-            first_non_space = strip_str[0] if strip_str else ''
-            return first_non_space in ['/', '-']
-        for i in range(1, len(lines)):
-            if start_of_comment(lines[i]) and not start_of_comment(lines[i-1]):
-                new_code = '\n'.join(lines[:i]) + '\n'
-                break
+        
         self.state.new_code = new_code
+        print("new_code", new_code)
 
-        return self.state.startup(callback=self.pre_comments)
+        return self.state.startup(callback=self.pre_query)
 
     def pre_query(self) -> Iterator[WorkerTask]:
         """
@@ -258,9 +246,9 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
             yield from self.finish()
             return
         # print("#" * 80)
-        print(self.state.header, self.state.problem,
-              self.state.old_code, self.state.tactic_state)
-        print(self.state.old_tactic_state)
+        # print(self.state.header, self.state.problem,
+        #       self.state.old_code, self.state.tactic_state)
+        # print(self.state.old_tactic_state)
         task = {
             "header": self.state.header,
             "problem": self.state.problem,
