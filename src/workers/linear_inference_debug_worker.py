@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
+from src.games.concurrent import Router
 from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
 from src.games.lean_game_core import LeanGameState
 from src.workers.types import LinearInferenceDebugWorkerType
@@ -82,42 +83,29 @@ class LinearInferenceDebugWorker(Worker):
             )[0]
             time_to_context += time.time()
             self.logger.info(f"Time to context: {time_to_context}")
-            state.post_comments(context_output)
+            next(state.post_comments(context_output), None)
+
+            router = Router(self)
+
+            done = False
+
+            def callback_done():
+                nonlocal done
+                done = True
+                yield from ()
 
             while not state.terminal():
+                done = False
+
                 self.logger.info(state.human_printout())
                 action = state.get_active_move(0)
                 state = state.next_state(action)
-                input_data = next(state.pre_LLM_rollout())
-                self.enqueue_task(input_data)
-                time_to_completion = -time.time()
-                completion_output = self.spin_deque_task(
-                    channel=self.worker_id
-                )[0]
-                time_to_completion += time.time()
-                self.logger.info(f"Time to completion: {time_to_completion}")
-                lean4_input = next(state.post_LLM_rollout(completion_output))
-                self.enqueue_task(lean4_input)
-                time_to_lean = -time.time()
-                lean_output = self.spin_deque_task(
-                    channel=self.worker_id
-                )[0]
-                time_to_lean += time.time()
-                self.logger.info(f"Time to lean: {time_to_lean}")
-                next(state.post_process(lean_output), 0)
-                # print("#" * 80)
-                # print(state.state.header, state.state.problem,
-                #       state.state.old_code, state.state.tactic_state)
 
-                context_input = next(state.pre_comments())
-                self.enqueue_task(context_input)
-                time_to_context = -time.time()
-                context_output = self.spin_deque_task(
-                    channel=self.worker_id
-                )[0]
-                time_to_context += time.time()
-                self.logger.info(f"Time to context: {time_to_context}")
-                state.post_comments(context_output)
+                ### Enter the gungeon ###
+                router.startup(state, callback_done)
+                while not done:
+                    router.tick(blocking=True)
+                    self.logger.info(router.debug())
 
             self.logger.info(state.human_printout())
 

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
 
 import numpy as np
 
-from src.games.concurrent import handler, on_startup, require_ready
+from src.games.concurrent import finisher, handler, on_startup, require_ready
 from src.games.game import ConcurrentGameState, ConcurrentMetaGameState
 from src.games.lean_game_core import LeanGameMove, LeanGameState, LeanGameStateError
 from src.uct.uct_node import UCTNode
@@ -203,7 +203,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
                            f"Depth: {self.state.depth} Number of Children: {len(self.children)}\n")
         return res
 
-    @ on_startup
+    @on_startup
     def pre_LLM_rollout(self) -> Iterator[WorkerTask]:
         """
         This function is called before the LLM rollout is done.
@@ -252,6 +252,11 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called before the comments are generated.
         """
+
+        # if we're terminal, we don't need to do any of this.
+        if self.state.terminal():
+            yield from self.finish()
+            return
         # print("#" * 80)
         # print(self.state.header, self.state.problem,
         #       self.state.old_code, self.state.tactic_state)
@@ -272,7 +277,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         )
 
     @handler(PolicyValueTaskType)
-    def post_comments(self, results: WorkerResponse) -> None:
+    @finisher
+    def post_comments(self, results: WorkerResponse) -> Iterator[WorkerTask]:
         """
         This function is called after the comments are generated.
         """
@@ -283,14 +289,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self.gen_comments = tuple(
             MetaLeanGameMove(comment) for comment in results.response['comments']
         )
-        self._ready = True
         self._policy = np.array(results.response['policy'])
         self._value = results.response['value']
-        self.finish()
 
-    @handler(LeanTaskType)
-    def post_process(self, lean_output: WorkerResponse) -> Iterator[WorkerTask]:
-        """
-        This function is called after the Lean task is done.
-        """
-        yield from self.state.post_process(lean_output)
+        yield from ()

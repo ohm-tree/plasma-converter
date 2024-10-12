@@ -40,11 +40,15 @@ class FastPolicyValueWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
-            LLM_kwargs=config['model'],
-            sampling_kwargs=config['sampling']
+            config=config,
+            # run_locally=global_config['run_locally'],
+            # LLM_kwargs=config['model'],
+            # sampling_kwargs=config['sampling']
         )
         self.config = config
         self.num_comments = config['num_comments']
+
+        assert config['num_comments'] == config['sampling']['n'] + 1
 
     def loop(self):
         my_tasks: Iterator[WorkerTask] = self.spin_deque_task(
@@ -58,7 +62,7 @@ class FastPolicyValueWorker(LLMWorker):
             # Spinlock, disappointing, but there's nothing to do.
             return
         # We have tasks to complete.
-        model_inputs = [prompt(task['task_input']) for task in my_tasks]
+        model_inputs = [prompt(task.task) for task in my_tasks]
 
         model_outputs: List[RequestOutput] = self.generate(
             model_inputs
@@ -79,8 +83,6 @@ class FastPolicyValueWorker(LLMWorker):
 
             comments = [''] + [option.text for option in options]
             assert len(comments) == self.num_comments
-            policy = list(range(self.num_comments, 0, -1))
-            policy = [i / sum(policy) for i in policy]
             res = {
                 'comments': comments,
                 'policy': policy,

@@ -1,12 +1,12 @@
 run_name: linear_inference_debug
 split: "valid"
 data_dir: datasets/minif2f.jsonl
+decription: |
+    This configuration is for debugging the linear inference method on the validation set.
+    The loop is Lean -> Context -> Policy Value -> Completion -> Repeat.
 
-linear_inference:
+linear_inference_debug:
     num_procs: 1
-
-mcts:
-    num_procs: 0
 
 completion:
     num_procs: 1
@@ -25,21 +25,6 @@ completion:
 
 lean:
     num_procs: 1
-    num_comments: 10
-
-fast_policy_value:
-    num_procs: 0
-    batch_size: 40
-    num_comments: 10
-    model:
-        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
-        max_num_batched_tokens: 8192
-        trust_remote_code: True
-    sampling:
-        max_tokens: 500
-        temperature: 1.0
-        top_p: 0.95
-        stop: ["\n"]
 
 policy_value:
     num_procs: 1

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
 
 import numpy as np
 
-from src.games.concurrent import ConcurrentClass, handler, on_startup
+from src.games.concurrent import ConcurrentClass, finisher, handler, on_startup
 from src.games.game import ConcurrentGameState
 from src.uct.uct_node import UCTNode
 from src.workers.types import LeanTaskType
@@ -327,7 +327,78 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             task=self.problem + self.old_code + self.new_code
         )
 
-        self.finish()
+    @classmethod
+    def get_index(cls, s: str, row: int, col: int) -> int:
+        """
+        Convert a (row, col) pair to an index in a string.
+        The Lean 4 repl convention is that rows are 1-indexed
+        and columns are 0-indexed.
+        """
+        lines = s.split('\n')
+        # Add back the newline for accurate indexing.
+        line_lengths = [len(line) + 1 for line in lines]
+        if row < 1:
+            raise ValueError(
+                f"Row must be at least 1. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+        if col < 0:
+            raise ValueError(
+                f"Column must be at least 0. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+        if row > len(lines):
+            raise ValueError(
+                f"Row is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+        if col >= line_lengths[row-1]:
+            # The col should never be exactly line_lengths;
+            # If the cursor is "after the newline character"
+            # then it should really be the 0th index of the next line.
+            raise ValueError(
+                f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
+        return sum(line_lengths[:row-1]) + col
+
+    def truncate(self, sorries: List[dict], errors: List[dict]):
+        """
+        First, we need to find the last valid tactic.
+
+        Unsolved goals also show up as errors, and we ignore them;
+        they have been ommitted from the errors list in post_process()
+        already.
+
+        Parameters
+        ----------
+        sorries: List[dict]
+            A list of sorry messages.
+        errors: List[dict]
+            A list of error messages.
+
+        Modifies
+        -------
+        self.valid_code: str
+            The new code that was added to the proof.
+            This will be truncated to the first error or sorry.
+        """
+        code_no_header = ''.join(
+            [self.problem, self.old_code,
+                self.new_code]
+        )
+
+        _prefix_len = len(self.problem)
+        truncate_pos = len(code_no_header)
+        for info in sorries:
+            info_pos = self.get_index(
+                code_no_header, info['pos']['line'], info['pos']['column'])
+            if info_pos >= _prefix_len:
+                truncate_pos = min(truncate_pos, info_pos)
+        for info in errors:
+            info_pos = self.get_index(
+                code_no_header, info['pos']['line'], info['pos']['column'])
+            if info_pos >= _prefix_len:
+                truncate_pos = min(truncate_pos, info_pos)
+
+        self.valid_code = code_no_header[:truncate_pos]
+        assert self.valid_code.startswith(self.problem)
+        self.valid_code = self.valid_code[len(self.problem):]
+        # I guess this might not be true in some edge cases?
+        # assert self.valid_code.startswith(self.old_code)
+        self.valid_code = self.valid_code[len(self.old_code):]
 
     def get_goals(self, goals: List[dict]):
         """
@@ -355,6 +426,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                     len("unsolved goals\n"):]
 
     @handler(LeanTaskType)
+    @finisher
     def post_process(self, result: WorkerResponse):
         """
         This function is called after the state is processed.
@@ -394,7 +466,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self._win = False
 
         if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
-            self.finish()
             return
 
         # 'sorries' has never been part of a repl_result
@@ -457,7 +528,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         if len(bad_errors)>0: # or self.tactic_state == self.old_tactic_state
             self._dead = True
             self._win = False
-            self.finish()
             return
 
         code_no_header = ''.join(
@@ -477,10 +547,8 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             print(repl_result)
             self._dead = False
             self._win = True
-            self.finish()
             return
 
         self._dead = False
         self._win = False
-        self.finish()
         return

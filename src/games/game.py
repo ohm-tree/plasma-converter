@@ -37,8 +37,8 @@ class ConcurrentGameState(Generic[GameMoveType], ConcurrentClass, ABC, Hashable)
     (terminal, reward, and nextstate can be called).
     """
 
-    def __init__(self, worker_id: Any):
-        super().__init__(worker_id)
+    def __init__(self, worker_id: Any, dependencies: List[ConcurrentClass] = None):
+        super().__init__(worker_id, dependencies)
 
     @classmethod
     @abstractmethod
@@ -145,7 +145,7 @@ class ConcurrentMetaGameState(Generic[ConcurrentGameStateType, MetaGameMoveType]
     """
 
     def __init__(self, worker_id: Any, internal_state: ConcurrentGameStateType = None):
-        super().__init__(worker_id=worker_id)
+        super().__init__(worker_id=worker_id, dependencies=[internal_state])
         self.state = internal_state
 
     def terminal(self) -> bool:

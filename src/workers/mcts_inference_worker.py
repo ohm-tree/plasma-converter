@@ -14,21 +14,17 @@ import numpy as np
 
 from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
 from src.train.self_play import self_play
-from src.workers.types import (
-    CompletionTaskType,
-    LeanTaskType,
-    MCTSWorkerType,
-    PolicyValueTaskType,
-)
-from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerType
+from src.workers import *
 
 
 class MCTSWorker(Worker):
     def __init__(self,
+                 global_config: dict,
                  config: dict,
                  run_name: str,
                  task_id: int,
                  queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 **kwargs  # Unused
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -39,6 +35,9 @@ class MCTSWorker(Worker):
         )
 
         self.config = config
+        self.global_config = global_config
+        self.num_iters = self.config['num_iters']
+        self.max_actions = self.config['max_actions']
 
         self.load_problems()
 
@@ -53,15 +52,15 @@ class MCTSWorker(Worker):
         SRC_DIR = os.path.dirname(WORKER_DIR)
         ROOT_DIR = os.path.dirname(SRC_DIR)
 
-        with open(self.config['data_dir'], 'r') as file:
+        with open(self.global_config['data_dir'], 'r') as file:
             self.data = [
                 json.loads(line.strip())
                 for line in file.readlines()
-                if json.loads(line.strip()).get('split') == self.config['split']
+                if json.loads(line.strip()).get('split') == self.global_config['split']
             ]
 
     def run(self):
-        for current_problem in range(self.worker_idx, len(self.data), self.config['worker']['num_procs']):
+        for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
             self.logger.info(
                 f"Working on problem {current_problem}")
             problem = self.data[current_problem]
@@ -70,26 +69,34 @@ class MCTSWorker(Worker):
             PROBLEM_STATEMENT = informal_prefix + formal_statement
             tactic_state = problem['goal']
 
-            game: LeanGame = LeanGame(
-                # comment_seeds=comments,
-                num_comment_seeds=6,
-                max_depth=config['max_depth']
-            )
-            state: LeanGameState = game.start_state(
+            state: MetaLeanGameState = MetaLeanGameState.starting_state(
+                worker_id=self.worker_id,
                 problem=PROBLEM_STATEMENT,
                 tactic_state=tactic_state
             )
 
-            states: List[LeanGameState]
+            # Edge case: on the very first move, the completions are not available yet.
+
+            context_input: WorkerTask = next(state.pre_comments())
+            self.enqueue_task(context_input)
+            time_to_context = -time.time()
+            context_output = self.spin_deque_task(
+                channel=self.worker_id
+            )[0]
+            time_to_context += time.time()
+            self.logger.info(f"Time to context: {time_to_context}")
+            next(state.post_comments(context_output), None)
+
+            states: List[MetaLeanGameState]
 
             states, distributions, rewards = self_play(
                 self,
                 state=state,
-                game=game,
-                num_iters=1000,
+                num_iters=self.num_iters,
+                max_actions=self.max_actions
             )
 
-            LeanGameState.saves(states, os.path.join(
+            MetaLeanGameState.saves(states, os.path.join(
                 self.game_data_path, f"{problem['name']}_states.npy"))
 
             with open(os.path.join(self.game_data_path, f"{problem['name']}_distributions.npy"), "wb") as file:
