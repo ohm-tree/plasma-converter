@@ -51,7 +51,7 @@ def uct_search(
 
     router = Router(self)
 
-    while not victorious_death:
+    while not victorious_death and (iters < num_iters or router.total_active > 0):
         live_time -= time.time()
         while iters < num_iters and router.total_active < 10:
             # greedily select leaf with given exploration parameter
@@ -90,9 +90,10 @@ def uct_search(
         live_time += time.time()
         # Check for completed leaves.
         router.tick()
-        self.logger.info(router.debug())
         if time.time() - last_log_time > min_log_delta:
             last_log_time = time.time()
+            self.logger.info(router.debug())
+
             self.logger.info(f"Number of iterations: {iters}")
 
             self.logger.info(f"Number visits: {root.child_number_visits}")
