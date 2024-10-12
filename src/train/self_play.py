@@ -25,6 +25,7 @@ def self_play(
     self: Worker,
     state: ConcurrentMetaGameState,
     num_iters: int,
+    max_actions: int = 10
 ) -> Tuple[List[ConcurrentMetaGameState], List[np.ndarray], float]:
     """
     Play a game using a policy, and return the game states, action distributions, and final reward.
@@ -36,11 +37,12 @@ def self_play(
     move_count = 0
 
     # Send those in.
-    root = UCTNode(self.worker_id, state, -1, init_type="zero")
+    root = UCTNode(self.worker_id, state, -1,
+                   init_type="zero", max_actions=max_actions)
 
     root.backprop_and_expand()
 
-    root.is_processed = True
+    # root.is_processed = True
     states.append(root.game_state)
     while not root.game_state.terminal():
         self.logger.info("Move: " + str(move_count))

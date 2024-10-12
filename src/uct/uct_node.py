@@ -32,6 +32,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         """
         Initialize a new UCTNode.
         """
+        super().__init__(worker_id=worker_id, dependencies=[game_state])
 
         self.game_state: ConcurrentMetaGameStateType = game_state
 
@@ -48,7 +49,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         self.is_expanded: bool = False
 
         # Whether the node has been processed.
-        self.is_processed: bool = False
+        # self.is_processed: bool = False
 
         # Cached values so that we don't need to recompute them every time
         self._is_terminal = None
@@ -62,7 +63,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
                 self.max_actions = 100
         else:
             self.max_actions = max_actions
-        self.action_mask: np.ndarray = np.zeros(self.max_actions, dtype=bool)
+        self.action_mask: np.ndarray = np.ones(self.max_actions, dtype=bool)
 
         # These values are initialized in the expand() function.
         self.child_priors: np.ndarray = np.zeros(self.max_actions)
@@ -75,9 +76,6 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
             self.root_number_visits: int = 0
 
         self.init_type = init_type
-
-        # This is done last, because certain @property decorators require the above to be set.
-        super().__init__(worker_id=worker_id)
 
     def __hash__(self):
         """
@@ -102,7 +100,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @property
     def is_terminal(self):
-        if not self._started:
+        if self.currently_starting:
             return None
         if self._is_terminal is None:
             self._is_terminal = self.game_state.terminal()
@@ -110,7 +108,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @property
     def number_visits(self):
-        if not self._started:
+        if self.currently_starting:
             return None
         if self.parent is None:
             return self.root_number_visits
@@ -125,7 +123,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @property
     def total_value(self):
-        if not self._started:
+        if self.currently_starting:
             return None
         if self.parent is None:
             return self.root_total_value
@@ -170,7 +168,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         # iterate until either you reach an un-expanded node or a terminal state
         while (
             current.is_expanded and
-            current.is_processed and
+            # current.is_processed and
             (not current.is_terminal)
         ):
             current = current.best_child(c)
@@ -184,13 +182,13 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
         current = self
 
         assert self.is_expanded, "Cannot select a leaf from an un-expanded node."
-        assert self.is_processed, "Cannot select a leaf from an un-processed node."
+        # assert self.is_processed, "Cannot select a leaf from an un-processed node."
         assert not self.is_terminal, "Cannot select a leaf from a terminal node."
 
         # iterate until either you reach an un-expanded node or a terminal state
         while (
             current.is_expanded and
-            current.is_processed and
+            # current.is_processed and
             (not current.is_terminal)
         ):
 
@@ -279,8 +277,7 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
     @on_startup
     def fire_child(self) -> Iterator[WorkerTask]:
-        for _ in self.game_state.startup(callback=self.backprop_and_expand):
-            yield _
+        yield from self.game_state.startup(callback=self.backprop_and_expand)
 
 
 def dirichlet_noise(action_mask, alpha):

@@ -8,6 +8,7 @@ description: |
 mcts:
     num_procs: 1
     num_iters: 5
+    max_actions: 2
 
 completion:
     num_procs: 1
@@ -25,7 +26,6 @@ completion:
 
 lean:
     num_procs: 1
-    num_comments: 2
 
 fast_policy_value:
     num_procs: 1

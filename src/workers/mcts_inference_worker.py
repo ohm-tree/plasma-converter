@@ -37,6 +37,7 @@ class MCTSWorker(Worker):
         self.config = config
         self.global_config = global_config
         self.num_iters = self.config['num_iters']
+        self.max_actions = self.config['max_actions']
 
         self.load_problems()
 
@@ -92,6 +93,7 @@ class MCTSWorker(Worker):
                 self,
                 state=state,
                 num_iters=self.num_iters,
+                max_actions=self.max_actions
             )
 
             MetaLeanGameState.saves(states, os.path.join(

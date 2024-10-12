@@ -26,6 +26,11 @@ Run fast linear inference with
 python src/inference.py --config configs/fast_linear.yaml
 ```
 
+Run debug linear inference with
+```bash
+python src/inference.py --config configs/linear_debug.yaml
+```
+
 Run fast mcts inference with
 ```bash
 python src/inference.py --config configs/fast_mcts.yaml
@@ -68,9 +73,9 @@ def run_inference():
         print("Running in linear inference debug mode.")
     if config['mcts']['num_procs'] > 0:
         print("Running in MCTS mode.")
-    if sum([config['completion']['num_procs'], config['policy_value']['num_procs'], config['context']['num_procs']]) != 1:
+    if sum([config['mcts']['num_procs'] > 0, config['linear_inference']['num_procs'] > 0, config['linear_inference_debug']['num_procs'] > 0]) != 1:
         raise ValueError(
-            "Exactly one of completion, policy_value, or context workers must be active.")
+            "Exactly one of mcts, linear_inference, or linear_inference_debug must be active.")
 
     queues = {}
     print("Creating Queues:")

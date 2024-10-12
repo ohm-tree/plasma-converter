@@ -39,9 +39,22 @@ def require_ready(func):
 
 
 class ConcurrentClass(ABC):
-    def __init__(self, worker_id: WorkerIdentifer):
+    def __init__(self, worker_id: WorkerIdentifer, dependencies: List['ConcurrentClass'] = None):
         self.worker_id = worker_id
         self.handlers = {}
+        self._started = False
+        self._ready = False
+        self.currently_starting = True
+
+        self._dependencies = dependencies or []
+
+        for i in self._dependencies:
+            for j in i.handlers:
+                if j in self.handlers:
+                    raise ValueError(
+                        f"TaskType {j} already registered.")
+                self.handlers[j] = i.handlers[j]
+
         for name in dir(self):
             attr = getattr(self, name)
             if hasattr(attr, '_task_type'):
@@ -49,15 +62,8 @@ class ConcurrentClass(ABC):
                     raise ValueError(
                         f"TaskType {attr._task_type} already registered.")
                 self.handlers[attr._task_type] = attr
-        # self.startup_on_init = startup_on_init
-        # if self.startup_on_init:
-        #     for name in dir(self):
-        #         attr = getattr(self, name)
-        #         if hasattr(attr, '_on_startup'):
-        #             attr()
 
-        self._started = False
-        self._ready = False
+        self.currently_starting = False
 
     def ready(self) -> bool:
         """
@@ -78,6 +84,8 @@ class ConcurrentClass(ABC):
         If callback is provided, it will be called when the object is ready.
         """
         self._started = True
+        self.currently_starting = True
+
         if callback is not None:
             self.register_ready_callback(callback)
         for name in dir(self):
@@ -85,6 +93,8 @@ class ConcurrentClass(ABC):
             if hasattr(attr, '_on_startup'):
                 for _ in attr():
                     yield _
+
+        self.currently_starting = False
 
     def register_ready_callback(self, callback: Callable[[], None]):
         """
@@ -120,12 +130,17 @@ T = TypeVar("T", bound=ConcurrentClass)
 class Router(Generic[T]):
     def __init__(self, worker: Worker):
         self.worker = worker
-        self.active = {}
+        self.active = {}  # Core, important.
+
+        # Debug
+
         self.active_counts_by_task_type = {}
-        self.total_times_by_task_type = {}
-        self.starting_times = {}
         self.active_objs = {}
         self.total_active = 0
+
+        # Timing
+        self.starting_times = {}
+        self.total_times_by_task_type = {}
 
     def __str__(self):
         res = f"Worker {self.worker}, tasks:"
@@ -144,12 +159,15 @@ class Router(Generic[T]):
                 msg.task_id: source
             }
         )
-        self.active_objs[source] = msg
+
+        # Debug
         task_type = msg.task_id.task_type
-        self.total_active += 1
         self.active_counts_by_task_type[task_type] = self.active_counts_by_task_type.get(
             task_type, 0) + 1
+        self.active_objs[source] = msg
+        self.total_active += 1
 
+        # Timing
         self.starting_times[msg.task_id] = time.time()
 
     def dequeue_tasks(self, blocking=False, timeout=None) -> Iterator[Tuple[WorkerResponse, T]]:
@@ -177,15 +195,18 @@ class Router(Generic[T]):
             if response.task_id not in self.active:
                 raise ValueError(
                     f"Task {response.task_id} not in active tasks.")
+            source = self.active.pop(response.task_id)
 
-            task_type = response.task_id.task_type
+            # Debug
+            task_type: TaskType = response.task_id.task_type
+            self.active_counts_by_task_type[task_type] -= 1
+            self.active_objs.pop(source)
+            self.total_active -= 1
+
+            # Timing
             self.total_times_by_task_type[task_type] = self.total_times_by_task_type.get(
                 task_type, 0) + time.time() - self.starting_times[response.task_id]
 
-            self.active_counts_by_task_type[task_type] -= 1
-            self.total_active -= 1
-            source = self.active.pop(response.task_id)
-            self.active_objs.pop(source)
             yield response, source
 
     def contains(self, task_id: TaskIdentifier) -> bool:
@@ -193,7 +214,7 @@ class Router(Generic[T]):
 
     def tick(self, blocking=False, timeout=None):
         for response, source in self.dequeue_tasks(blocking=blocking, timeout=timeout):
-            for msg in source.tick(response):
+            for msg in source.tick((response,)):
                 self.enqueue_task(msg, source)
 
     def debug(self):

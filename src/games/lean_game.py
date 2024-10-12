@@ -201,7 +201,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
                            f"Depth: {self.state.depth} Number of Children: {len(self.children)}\n")
         return res
 
-    @ on_startup
+    @on_startup
     def pre_LLM_rollout(self) -> Iterator[WorkerTask]:
         """
         This function is called before the LLM rollout is done.
@@ -275,10 +275,3 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         self._policy = np.array(results.response['policy'])
         self._value = results.response['value']
         self.finish()
-
-    @handler(LeanTaskType)
-    def post_process(self, lean_output: WorkerResponse) -> Iterator[WorkerTask]:
-        """
-        This function is called after the Lean task is done.
-        """
-        yield from self.state.post_process(lean_output)

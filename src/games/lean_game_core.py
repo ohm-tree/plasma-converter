@@ -327,8 +327,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             task=self.problem + self.old_code + self.new_code
         )
 
-        self.finish()
-
     @classmethod
     def get_index(cls, s: str, row: int, col: int) -> int:
         """
@@ -421,7 +419,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         max_line = float('-inf')
         max_column = float('-inf')
         for tactic in goals:
-            if (tactic['pos']['line'] < max_line) or (tactic['pos']['line'] == max_line and tactic['pos']['column'] < max_column):
+            if (tactic['pos']['line'] > max_line) or (tactic['pos']['line'] == max_line and tactic['pos']['column'] > max_column):
                 max_line = tactic['pos']['line']
                 max_column = tactic['pos']['column']
                 self.tactic_state = tactic['data'].lstrip()[

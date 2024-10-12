@@ -61,6 +61,7 @@ def uct_search(
 
             # Problem: we don't know if a leaf is terminal until we lean4-verify it!
             if leaf.game_state.ready():
+                self.logger.info(f"Leaf is ready: {leaf.game_state}")
                 assert leaf.game_state.terminal()
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
@@ -74,10 +75,12 @@ def uct_search(
                     victorious_death = True
                     winning_node = leaf
 
-            elif leaf.game_state.started():
-                assert router.contains(hash(leaf))
+            elif leaf.started():
+                self.logger.info(f"Leaf is started: {leaf.game_state}")
+                # assert router.contains(hash(leaf))
                 break
             else:
+                self.logger.info(f"Leaf is not ready: {leaf.game_state}")
                 # We have absolutely never seen this leaf before.
                 root.select_leaf(c)  # Apply the virtual loss this time.
 
@@ -87,6 +90,7 @@ def uct_search(
         live_time += time.time()
         # Check for completed leaves.
         router.tick()
+        self.logger.info(router.debug())
         if time.time() - last_log_time > min_log_delta:
             last_log_time = time.time()
             self.logger.info(f"Number of iterations: {iters}")

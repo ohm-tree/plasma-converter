@@ -104,7 +104,7 @@ class LinearInferenceDebugWorker(Worker):
                 )[0]
                 time_to_lean += time.time()
                 self.logger.info(f"Time to lean: {time_to_lean}")
-                next(state.post_process(lean_output), 0)
+                next(state.state.post_process(lean_output), 0)
                 # print("#" * 80)
                 # print(state.state.header, state.state.problem,
                 #       state.state.old_code, state.state.tactic_state)
