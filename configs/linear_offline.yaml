@@ -1,0 +1,28 @@
+run_name: linear_inference_valid_offline_gpt_4o_mini
+split: "valid"
+data_dir: datasets/minif2f.jsonl
+description: |
+    This configuration is for running the linear inference method on the validation set.
+    The loop is Lean -> Completion -> Repeat.
+    This configuration should achieve 143/244 accuracy on the validation set.
+
+linear_inference:
+    num_procs: 163
+    num_comments: 1
+
+completion:
+    num_procs: 8
+    batch_size: 40
+    model:
+        model: "gpt-4o-mini"
+        max_num_batched_tokens: 8192
+        trust_remote_code: True
+    sampling:
+        max_tokens: 1024
+        temperature: 0.0
+        top_k: 1
+        top_p: 1.0
+        stop: ["\n", "```"]
+
+lean:
+    num_procs: 24

@@ -130,6 +130,7 @@ class ContextWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
+            run_locally=config['run_locally'],
             LLM_kwargs=config['model'],
             sampling_kwargs=config['sampling']
         )
@@ -192,6 +193,7 @@ class PolicyValueWorker(LLMWorker):
             queues=queues,
             run_name=run_name,
             gpu_set=gpu_set,
+            run_locally=config['run_locally'],
             LLM_kwargs=config['model'],
             sampling_kwargs=config['sampling']
         )
