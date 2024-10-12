@@ -4,3 +4,6 @@ __pycache__/
 *egg-info/
 
 # datasets/ should be tracked; it contains the datasets.
+outputs/*
+data/*
+logs/*
