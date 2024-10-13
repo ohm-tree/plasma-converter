@@ -43,7 +43,7 @@ class FastPolicyValueWorker(LLMWorker):
             # sampling_kwargs=config['sampling']
         )
         self.config = config
-        assert global_config['branching_factor'] == config['sampling']['n'] 
+        # assert global_config['branching_factor'] == config['sampling']['n'] 
 
     def loop(self):
         my_tasks: Iterator[WorkerTask] = self.spin_deque_task(
@@ -59,20 +59,41 @@ class FastPolicyValueWorker(LLMWorker):
         # We have tasks to complete.
         model_inputs = [prompt(task.task) for task in my_tasks]
 
-        self.logger.info(f"Generated {len(model_inputs)} prompts.")
-        self.logger.info(model_inputs)
+        # self.logger.info(f"Generated {len(model_inputs)} prompts.")
+        # self.logger.info(model_inputs)
 
         model_outputs: List[RequestOutput] = self.generate(
             model_inputs
         )
 
-        self.logger.info(f"Generated {len(model_outputs)} outputs.")
-        self.logger.info(model_outputs)
+        # self.logger.info(f"Generated {len(model_outputs)} outputs.")
+        # self.logger.info(model_outputs)
 
         for i in range(len(model_outputs)):
             options = model_outputs[i].outputs
 
-            snippets = np.array([option.text for option in options])
+            snippets = [option.text for option in options]
+
+            def truncate(snippet: str) -> str:
+                new_code = snippet
+                if new_code.endswith('```'):
+                    new_code = new_code[:-3]
+
+                lines = new_code.split('\n')
+                def start_of_comment(line: str) -> bool:
+                    # get the first character that's not a space
+                    strip_str = line.lstrip()
+                    first_non_space = strip_str[0] if strip_str else ''
+                    return first_non_space in ['/', '-']
+                for i in range(1, len(lines)):
+                    if start_of_comment(lines[i]) and not start_of_comment(lines[i-1]):
+                        new_code = '\n'.join(lines[:i]) + '\n'
+                        break
+                return new_code
+            snippets = ["  --" + truncate(snippet) for snippet in snippets]
+
+            print("snippets", snippets)
+
             policy = np.array(
                 [option.cumulative_logprob for option in options])
             # unique_indices = [i == 0 or comments[i] != comments[i-1]
@@ -82,7 +103,7 @@ class FastPolicyValueWorker(LLMWorker):
             policy = np.exp(policy)
             policy /= policy.sum()
 
-            snippets = [''] + [option.text for option in options]
+            # snippets = [''] + [option.text for option in options]
             res = {
                 'moves': snippets,
                 'policy': policy,

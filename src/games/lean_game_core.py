@@ -521,10 +521,10 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
 
         self.get_goals(goals)
 
-        print("old_tactic_state")
-        print(self.old_tactic_state)
-        print("tactic_state")
-        print(self.tactic_state)
+        # print("old_tactic_state")
+        # print(self.old_tactic_state)
+        # print("tactic_state")
+        # print(self.tactic_state)
         if len(bad_errors)>0: # or self.tactic_state == self.old_tactic_state
             self._dead = True
             self._win = False
@@ -544,7 +544,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         
         if complete:
             print("Marked as complete!")
-            print(repl_result)
+            # print(repl_result)
             self._dead = False
             self._win = True
             return

@@ -90,7 +90,7 @@ class MCTSWorker(Worker):
 
             states: List[MetaLeanGameState]
 
-            print(state.next_moves)
+            # print(state.next_moves)
 
             states, distributions, rewards = self_play(
                 self,
