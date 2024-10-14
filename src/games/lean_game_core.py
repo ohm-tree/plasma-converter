@@ -254,7 +254,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             parent=self,
             problem=self.problem,
             header=self.header,
-            new_code="",
+            new_code=action.code,
             depth=self.depth + 1,
             max_depth=self.max_depth,
             ready=False,
@@ -521,10 +521,9 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
 
         self.get_goals(goals)
 
-        # print("old_tactic_state")
-        # print(self.old_tactic_state)
-        # print("tactic_state")
-        # print(self.tactic_state)
+
+        # if len(bad_errors)>0 or self.tactic_state == self.old_tactic_state:
+        # ^ Nevermind, same tactic state could be OK
         if len(bad_errors)>0: # or self.tactic_state == self.old_tactic_state
             self._dead = True
             self._win = False
@@ -539,6 +538,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self.valid_code = self.valid_code[len(self.problem):]
         # I guess this might not be true in some edge cases?
         # assert self.valid_code.startswith(self.old_code)
+        # we should fix this - claire
         self.valid_code = self.valid_code[len(self.old_code):]
 
         

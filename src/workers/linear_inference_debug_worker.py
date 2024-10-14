@@ -72,18 +72,19 @@ class LinearInferenceDebugWorker(Worker):
             state: MetaLeanGameState = MetaLeanGameState.starting_state(
                 worker_id=self.worker_id,
                 problem=PROBLEM_STATEMENT,
-                tactic_state=tactic_state
+                tactic_state=tactic_state,
+                max_depth=self.config['max_depth']
             )
 
-            context_input: WorkerTask = next(state.pre_comments())
-            self.enqueue_task(context_input)
-            time_to_context = -time.time()
-            context_output = self.spin_deque_task(
+            rollout: WorkerTask = next(state.pre_query())
+            self.enqueue_task(rollout)
+            time_to_rollout = -time.time()
+            rollout_output = self.spin_deque_task(
                 channel=self.worker_id
             )[0]
-            time_to_context += time.time()
-            self.logger.info(f"Time to context: {time_to_context}")
-            next(state.post_comments(context_output), None)
+            time_to_rollout += time.time()
+            self.logger.info(f"Time to rollout: {time_to_rollout}")
+            next(state.post_query(rollout_output), None)
 
             router = Router(self)
 
@@ -101,11 +102,11 @@ class LinearInferenceDebugWorker(Worker):
                 action = state.get_active_move(0)
                 state = state.next_state(action)
 
-                ### Enter the gungeon ###
                 router.startup(state, callback_done)
                 while not done:
                     router.tick(blocking=True)
                     self.logger.info(router.debug())
+
 
             self.logger.info(state.human_printout())
 

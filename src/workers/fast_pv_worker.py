@@ -40,7 +40,6 @@ class FastPolicyValueWorker(LLMWorker):
             config=config,
             # run_locally=global_config['run_locally'],
             # LLM_kwargs=config['model'],
-            # sampling_kwargs=config['sampling']
         )
         self.config = config
         # assert global_config['branching_factor'] == config['sampling']['n'] 

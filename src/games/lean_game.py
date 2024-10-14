@@ -140,8 +140,10 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
     def value(self) -> float:
         return self._value
 
-    @require_ready
+    # @require_ready
     def get_active_move(self, index: int) -> MetaLeanGameMove:
+        print("get_acitve_move")
+        print("next_moves", self.next_moves)
         return self.next_moves[index]
 
     @require_ready
@@ -203,39 +205,10 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         return res
 
     @on_startup
-    def pre_LLM_rollout(self) -> Iterator[WorkerTask]:
-        """
-        This function is called before the LLM rollout is done.
-        It generates a prompt for the LLM.
-        """
-
-        prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
-            '```lean\n' + self.state.header + self.state.problem + \
-            self.state.old_code + \
-            "\n  /--\n" + self.state.old_tactic_state.strip() + "\n-/" + \
-            "  --" 
-
-        yield WorkerTask(
-            head_id=self.worker_id,
-            task_id=TaskIdentifier(
-                task_type=CompletionTaskType,
-                task_idx=hash(self)
-            ),
-            task=prompt,
-        )
-
-    @handler(CompletionTaskType)
-    def post_LLM_rollout(self, completion: WorkerResponse) -> Iterator[WorkerTask]:
-        """
-        This function is called after the LLM rollout is done.
-        """
-        new_code: str = completion.response
-        
-        self.state.new_code = new_code
-        print("new_code", new_code)
-
+    def start_lean_state(self) -> Iterator[WorkerTask]:
+        # I don't know a better way to enforce calling pre_query right after state.startup
         return self.state.startup(callback=self.pre_query)
-
+    
     def pre_query(self) -> Iterator[WorkerTask]:
         """
         This function is called before the moves are generated.
@@ -245,10 +218,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         if self.state.terminal():
             yield from self.finish()
             return
-        # print("#" * 80)
-        # print(self.state.header, self.state.problem,
-        #       self.state.old_code, self.state.tactic_state)
-        # print(self.state.old_tactic_state)
+        
         task = {
             "header": self.state.header,
             "problem": self.state.problem,
@@ -272,10 +242,6 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         """
         This function is called after the code snippets (comments + completion) are generated
         """
-        # print(results)
-        # print(type(results))
-        # print(results.__dict__)
-        # print(results.response)
         self.next_moves = [
             MetaLeanGameMove(move) for move in results.response['moves']
         ]
