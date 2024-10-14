@@ -45,18 +45,20 @@ Then, please discuss whether or not the proof is on the right track. Are we prov
 def policy_value_suggest_comments(lean_game_dict: Dict, discussion_context: str, num: int = 5) -> str:
     # We should call the LLM now.
 
-    res = discussion_context + f"""Here is the tactic state at this point:
+    res = f"""Here is the tactic state at this point:
 ```lean4
 """
     res += lean_game_dict['tactic_state']
     res += f"""
 ```
-Then, please suggest {num} ideas to complete the proof.
+"""
+    res += discussion_context.strip()
+    res += f"""
+Please suggest {num} SHORT ONE SENTENCE ideas to complete the proof.
 Please delimit each idea with <IDEA></IDEA> tags.
 
 Rate the likelihood that this proof will succeed on a scale of 1 (very unlikely) to 10 (very likely).
 Please delimit this rating with a single number inside <RATING></RATING> tags.
-
 <IDEA>"""
     return res
 
@@ -115,7 +117,6 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
 
 
 class ContextWorker(LLMWorker):
-
     def __init__(self,
                  config: dict,
                  run_name: str,
