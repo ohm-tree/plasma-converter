@@ -140,10 +140,8 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
     def value(self) -> float:
         return self._value
 
-    # @require_ready
+    @require_ready
     def get_active_move(self, index: int) -> MetaLeanGameMove:
-        print("get_acitve_move")
-        print("next_moves", self.next_moves)
         return self.next_moves[index]
 
     @require_ready
