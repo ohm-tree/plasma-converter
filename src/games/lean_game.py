@@ -188,11 +188,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
         res += fancy_field("Header", self.state.header)
         res += fancy_field("Problem", self.state.problem)
         res += fancy_field("Old Code", self.state.old_code)
-        res += fancy_field("New code", self.code)
-        res += fancy_field("Completed Rollout without Truncation",
-                           self.state.new_code)
-        res += fancy_field("Valid Truncation of New Code",
-                           self.state.valid_code)
+        res += fancy_field("Valid code", self.state.valid_code)
         res += fancy_field("Generated Moves",self.next_moves)
 
         res += fancy_field("Old Tactic State", self.state.old_tactic_state)
@@ -221,6 +217,7 @@ class MetaLeanGameState(ConcurrentMetaGameState[LeanGameState, MetaLeanGameMove]
             "header": self.state.header,
             "problem": self.state.problem,
             "old_code": self.state.old_code,
+            "valid_code": self.state.valid_code,
             "tactic_state": self.state.tactic_state,
             "old_tactic_state": self.state.old_tactic_state
         }

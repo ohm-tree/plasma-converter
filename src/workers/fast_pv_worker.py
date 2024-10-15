@@ -8,17 +8,23 @@ from vllm import RequestOutput
 from src.workers.llm_worker import LLMWorker
 from src.workers.types import FastPolicyValueWorkerType, PolicyValueTaskType
 from src.workers.worker import TaskType, WorkerIdentifer, WorkerTask
+from pprint import pprint
 
 
 def prompt(lean_game_dict: Dict) -> str:
     """
     Generate a prompt for the policy-value worker to suggest comments.
     """
+    print("lean_game_dict")
+    pprint(lean_game_dict)
     prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
             '```lean\n' + lean_game_dict['header'] + lean_game_dict['problem'] + \
             lean_game_dict['old_code'] + \
-            "\n  /--\n" + lean_game_dict['old_tactic_state'].strip() + "\n-/" + \
+            lean_game_dict['valid_code'] + \
+            "\n  /-- The tactic state is:\n" + '\n'.join(['  ' + line for line in lean_game_dict['tactic_state'].strip().splitlines()]) + "\n  -/\n" + \
             "  --" 
+    print("prompt")
+    print(prompt)
     return prompt
 
 

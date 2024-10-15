@@ -63,6 +63,8 @@ class MCTSWorker(Worker):
         for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
             self.logger.info(
                 f"Working on problem {current_problem}")
+            # log the config
+            self.logger.info(f"Config: {self.config}")
             problem = self.data[current_problem]
             informal_prefix = problem['informal_prefix']
             formal_statement = problem['formal_statement']
@@ -76,17 +78,15 @@ class MCTSWorker(Worker):
                 max_depth=self.config['max_depth']
             )
 
-            # Edge case: on the very first move, the completions are not available yet.
-
-            query_input: WorkerTask = next(state.pre_query())
-            self.enqueue_task(query_input)
-            time_to_query = -time.time()
-            query_output = self.spin_deque_task(
+            rollout: WorkerTask = next(state.pre_query())
+            self.enqueue_task(rollout)
+            time_to_rollout = -time.time()
+            rollout_output = self.spin_deque_task(
                 channel=self.worker_id
             )[0]
-            time_to_query += time.time()
-            self.logger.info(f"Time to query LLM (fast_pv): {time_to_query}")
-            next(state.post_query(query_output), None)
+            time_to_rollout += time.time()
+            self.logger.info(f"Time to rollout: {time_to_rollout}")
+            next(state.post_query(rollout_output), None)
 
             states: List[MetaLeanGameState]
 

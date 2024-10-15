@@ -121,6 +121,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self.old_tactic_state = self.parent.tactic_state if self.parent else ""
         self.old_code = self.parent.old_code + \
             self.parent.valid_code if self.parent else ""
+        print("initialized leangamesate with old_code", self.old_code)
 
         self._win: Optional[bool] = win
         self._dead: Optional[bool] = dead
@@ -264,6 +265,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             valid_code=None,
             worker_id=self.worker_id
         )
+        print("new_state", new_state)
         self.children[action] = new_state
         return new_state
 
@@ -354,52 +356,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
                 f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         return sum(line_lengths[:row-1]) + col
 
-    def truncate(self, sorries: List[dict], errors: List[dict]):
-        """
-        First, we need to find the last valid tactic.
-
-        Unsolved goals also show up as errors, and we ignore them;
-        they have been ommitted from the errors list in post_process()
-        already.
-
-        Parameters
-        ----------
-        sorries: List[dict]
-            A list of sorry messages.
-        errors: List[dict]
-            A list of error messages.
-
-        Modifies
-        -------
-        self.valid_code: str
-            The new code that was added to the proof.
-            This will be truncated to the first error or sorry.
-        """
-        code_no_header = ''.join(
-            [self.problem, self.old_code,
-                self.new_code]
-        )
-
-        _prefix_len = len(self.problem)
-        truncate_pos = len(code_no_header)
-        for info in sorries:
-            info_pos = self.get_index(
-                code_no_header, info['pos']['line'], info['pos']['column'])
-            if info_pos >= _prefix_len:
-                truncate_pos = min(truncate_pos, info_pos)
-        for info in errors:
-            info_pos = self.get_index(
-                code_no_header, info['pos']['line'], info['pos']['column'])
-            if info_pos >= _prefix_len:
-                truncate_pos = min(truncate_pos, info_pos)
-
-        self.valid_code = code_no_header[:truncate_pos]
-        assert self.valid_code.startswith(self.problem)
-        self.valid_code = self.valid_code[len(self.problem):]
-        # I guess this might not be true in some edge cases?
-        # assert self.valid_code.startswith(self.old_code)
-        self.valid_code = self.valid_code[len(self.old_code):]
-
     def get_goals(self, goals: List[dict]):
         """
         Get the the most recent goal from the Lean 4 verification.
@@ -468,13 +424,6 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
             return
 
-        # 'sorries' has never been part of a repl_result
-        # if 'sorries' in repl_result:
-            # raise ValueError(
-            # "Unexpected key 'sorries' in repl_result.")
-
-            # tactics = repl_result.get('tactics', [])
-
         errors = []
         warnings = []
         infos = []
@@ -540,6 +489,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         # assert self.valid_code.startswith(self.old_code)
         # we should fix this - claire
         self.valid_code = self.valid_code[len(self.old_code):]
+        print("self.valid_code", self.valid_code)
 
         
         if complete:
