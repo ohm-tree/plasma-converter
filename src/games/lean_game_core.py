@@ -121,7 +121,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         self.old_tactic_state = self.parent.tactic_state if self.parent else ""
         self.old_code = self.parent.old_code + \
             self.parent.valid_code if self.parent else ""
-        print("initialized leangamesate with old_code", self.old_code)
+        # print("initialized leangamesate with old_code", self.old_code)
 
         self._win: Optional[bool] = win
         self._dead: Optional[bool] = dead
@@ -265,7 +265,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
             valid_code=None,
             worker_id=self.worker_id
         )
-        print("new_state", new_state)
+        # print("new_state", new_state)
         self.children[action] = new_state
         return new_state
 
@@ -489,7 +489,7 @@ class LeanGameState(ConcurrentGameState[LeanGameMove]):
         # assert self.valid_code.startswith(self.old_code)
         # we should fix this - claire
         self.valid_code = self.valid_code[len(self.old_code):]
-        print("self.valid_code", self.valid_code)
+        # print("self.valid_code", self.valid_code)
 
         
         if complete:

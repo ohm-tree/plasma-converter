@@ -15,6 +15,7 @@ import numpy as np
 from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
 from src.train.self_play import self_play
 from src.workers import *
+from src.utils import upload_to_gcs
 
 
 class MCTSWorker(Worker):
@@ -85,7 +86,7 @@ class MCTSWorker(Worker):
                 channel=self.worker_id
             )[0]
             time_to_rollout += time.time()
-            self.logger.info(f"Time to rollout: {time_to_rollout}")
+            # self.logger.info(f"Time to rollout: {time_to_rollout}")
             next(state.post_query(rollout_output), None)
 
             states: List[MetaLeanGameState]
@@ -110,9 +111,12 @@ class MCTSWorker(Worker):
                 np.save(file, rewards, allow_pickle=False)
 
             # save the human printout to a file
-            with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w') as file:
+            with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w', encoding='utf-8') as file:
                 for i, state in enumerate(states):
                     file.write(state.human_printout())
+            
+            upload_to_gcs(os.path.join(self.output_path, f"{problem['name']}.txt"),
+                          f"mcts-inference/{self.run_name}/outputs/{problem['name']}.txt")
 
             self.logger.info(
                 f"Finished problem {problem['name']} result: {rewards[-1]}")

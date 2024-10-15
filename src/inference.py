@@ -11,6 +11,7 @@ import yaml
 
 from src.workers import *
 from src.workers.worker import TaskType, WorkerIdentifer, WorkerType
+from src.utils import upload_to_gcs
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, required=True)
@@ -46,6 +47,8 @@ python src/inference.py --config configs/fast_mcts_debug.yaml
 
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
+
+    upload_to_gcs(args.config, "mcts-inference/" + run_name + "/config.yaml")
 
     for _, type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         if type_string not in config:

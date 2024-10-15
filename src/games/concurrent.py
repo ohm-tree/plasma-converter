@@ -192,6 +192,7 @@ class Router(Generic[T]):
         )
         for response in responses:
             if response.task_id not in self.active:
+                continue
                 raise ValueError(
                     f"Task {response.task_id} not in active tasks.")
             source = self.active.pop(response.task_id)

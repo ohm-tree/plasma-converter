@@ -1,21 +1,23 @@
-run_name: linear_inference_debug
+run_name: one-step-quickstart
 split: "valid"
-data_dir: datasets/small_dataset.jsonl
-decription: |
-    This configuration is for debugging the linear inference method on the validation set.
-    The loop is Lean -> Context -> Policy Value -> Completion -> Repeat.
+data_dir: datasets/quickstart_problem.jsonl
+description: |
+    This configuration is for debugging the fast MCTS inference method on the validation set.
+    The loop is Lean -> Fast PV -> Completion -> Repeat.
 
-linear_inference_debug:
+mcts:
     num_procs: 1
+    num_iters: 1
+    max_actions: 10
     max_depth: 6
 
 lean:
     num_procs: 1
 
 fast_policy_value:
-    num_procs: 1
+    num_procs: 2
     batch_size: 40
-    num_comments: 2
+    num_comments: 10
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
         max_num_batched_tokens: 8192
@@ -24,7 +26,7 @@ fast_policy_value:
         max_tokens: 200
         temperature: 1.0
         top_p: 0.95
-        n: 2
+        n: 10
         stop: ["/--", "```"]
         logprobs: True
 

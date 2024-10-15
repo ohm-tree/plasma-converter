@@ -100,9 +100,9 @@ class Worker(abc.ABC):
         self.logger.info(
             f"Worker {self.worker_idx} of type {self.worker_type} initialized."
         )
-        self.logger.info(
-            f"Global Variables I can see: {globals().keys()}"
-        )
+        # self.logger.info(
+        #     f"Global Variables I can see: {globals().keys()}"
+        # )
 
         self._no_inbox = False
         if self.worker_id not in self.queues:

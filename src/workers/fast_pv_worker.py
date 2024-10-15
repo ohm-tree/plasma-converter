@@ -15,16 +15,16 @@ def prompt(lean_game_dict: Dict) -> str:
     """
     Generate a prompt for the policy-value worker to suggest comments.
     """
-    print("lean_game_dict")
-    pprint(lean_game_dict)
+    # print("lean_game_dict")
+    # pprint(lean_game_dict)
     prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
             '```lean\n' + lean_game_dict['header'] + lean_game_dict['problem'] + \
             lean_game_dict['old_code'] + \
             lean_game_dict['valid_code'] + \
             "\n  /-- The tactic state is:\n" + '\n'.join(['  ' + line for line in lean_game_dict['tactic_state'].strip().splitlines()]) + "\n  -/\n" + \
             "  --" 
-    print("prompt")
-    print(prompt)
+    # print("prompt")
+    # print(prompt)
     return prompt
 
 
@@ -97,16 +97,18 @@ class FastPolicyValueWorker(LLMWorker):
                 return new_code
             snippets = ["  --" + truncate(snippet) for snippet in snippets]
 
-            print("snippets", snippets)
+            # print("snippets", snippets)
 
             policy = np.array(
                 [option.cumulative_logprob for option in options])
+            # print("log probs", policy)
             # unique_indices = [i == 0 or comments[i] != comments[i-1]
             #                   for i in range(len(comments))]
             # comments = comments[unique_indices]
             # policy = policy[unique_indices]
-            policy = np.exp(policy)
+            policy = np.exp(policy/3)
             policy /= policy.sum()
+            # print("policy", policy)
 
             # snippets = [''] + [option.text for option in options]
             res = {
