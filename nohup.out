@@ -211,3 +211,1355 @@ One of the lean processes has died.
 Killing all processes.
 All kill signals sent.
 All processes terminated.
+Running in normal PV mode.
+Running in MCTS mode.
+Creating Queues:
+mcts: 122 queues
+linear_inference: 0 queues
+linear_inference_debug: 0 queues
+completion: 2 queues
+policy_value: 3 queues
+lean: 24 queues
+fast_policy_value: 0 queues
+context: 3 queues
+TaskType(task_type='lean'): 1 queues
+TaskType(task_type='completion'): 1 queues
+TaskType(task_type='policy_value'): 1 queues
+TaskType(task_type='policy_value_post_process'): 1 queues
+TaskType(task_type='kill'): 1 queues
+Starting Processes:
+mcts: 122 processes
+linear_inference: 0 processes
+linear_inference_debug: 0 processes
+completion: 2 processes
+policy_value: 3 processes
+lean: 24 processes
+fast_policy_value: 0 processes
+context: 3 processes
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+Process Process-126:
+Process Process-154:
+Process Process-152:
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+Process Process-153:
+Process Process-127:
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+TimeoutError: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+TimeoutError: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+TimeoutError: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+TimeoutError: The read operation timed out
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+TimeoutError: The read operation timed out
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 15, in policy_value_entrypoint
+    worker = PolicyValueWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/policy_value_worker.py", line 192, in __init__
+    super().__init__(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 21, in context_entrypoint
+    worker = ContextWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/policy_value_worker.py", line 128, in __init__
+    super().__init__(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 121, in get_config
+    if is_gguf or file_or_path_exists(model,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 96, in file_or_path_exists
+    return file_exists(model, config_name, revision=revision, token=token)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 21, in context_entrypoint
+    worker = ContextWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/policy_value_worker.py", line 128, in __init__
+    super().__init__(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 2833, in file_exists
+    get_hf_file_metadata(url, token=token)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 21, in context_entrypoint
+    worker = ContextWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/policy_value_worker.py", line 128, in __init__
+    super().__init__(
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 15, in policy_value_entrypoint
+    worker = PolicyValueWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/policy_value_worker.py", line 192, in __init__
+    super().__init__(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 121, in get_config
+    if is_gguf or file_or_path_exists(model,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 96, in file_or_path_exists
+    return file_exists(model, config_name, revision=revision, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 2833, in file_exists
+    get_hf_file_metadata(url, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 121, in get_config
+    if is_gguf or file_or_path_exists(model,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 96, in file_or_path_exists
+    return file_exists(model, config_name, revision=revision, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 121, in get_config
+    if is_gguf or file_or_path_exists(model,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 96, in file_or_path_exists
+    return file_exists(model, config_name, revision=revision, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 2833, in file_exists
+    get_hf_file_metadata(url, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: 24cadb29-1235-407c-8016-98ce850075f8)')
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 2833, in file_exists
+    get_hf_file_metadata(url, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 121, in get_config
+    if is_gguf or file_or_path_exists(model,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 96, in file_or_path_exists
+    return file_exists(model, config_name, revision=revision, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 2833, in file_exists
+    get_hf_file_metadata(url, token=token)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: eefb147c-6d84-4a7e-afa9-1528b4f04359)')
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: 3121b753-5059-4642-9000-51482cc2498d)')
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: 5a06da83-bb61-4f83-80b2-5145e60500ed)')
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: a0f724be-601a-4828-a484-884f2b8df41b)')
+Process Process-125:
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+TimeoutError: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1746, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: 89271643-b986-4e1c-b637-d04e9e344278)')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/utils/hub.py", line 403, in cached_file
+    resolved_file = hf_hub_download(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_deprecation.py", line 101, in inner_f
+    return f(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1232, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1339, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1857, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 15, in policy_value_entrypoint
+    worker = PolicyValueWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/policy_value_worker.py", line 192, in __init__
+    super().__init__(
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 144, in get_config
+    config_dict, _ = PretrainedConfig.get_config_dict(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 567, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 626, in _get_config_dict
+    resolved_config_file = cached_file(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/utils/hub.py", line 446, in cached_file
+    raise EnvironmentError(
+OSError: We couldn't connect to 'https://huggingface.co' to load this file, couldn't find it in the cached files and it looks like deepseek-ai/deepseek-math-7b-instruct is not the path to a directory containing a file named config.json.
+Checkout your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.
+Process Process-123:
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+TimeoutError: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1746, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1666, in get_hf_file_metadata
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 364, in _request_wrapper
+    response = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: e5e19bc2-fb96-492d-ac3d-94c1b2a8e0ce)')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/utils/hub.py", line 403, in cached_file
+    resolved_file = hf_hub_download(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_deprecation.py", line 101, in inner_f
+    return f(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1232, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1339, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1857, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 9, in completion_entrypoint
+    worker = CompletionWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/completion_worker.py", line 24, in __init__
+    super().__init__(
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 144, in get_config
+    config_dict, _ = PretrainedConfig.get_config_dict(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 567, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 626, in _get_config_dict
+    resolved_config_file = cached_file(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/utils/hub.py", line 446, in cached_file
+    raise EnvironmentError(
+OSError: We couldn't connect to 'https://huggingface.co' to load this file, couldn't find it in the cached files and it looks like deepseek-ai/DeepSeek-Prover-V1.5-RL is not the path to a directory containing a file named config.json.
+Checkout your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.
+Process Process-124:
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 446, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 441, in _make_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+  File "/usr/lib/python3.10/ssl.py", line 1303, in recv_into
+    return self.read(nbytes, buffer)
+  File "/usr/lib/python3.10/ssl.py", line 1159, in read
+    return self._sslobj.read(len, buffer)
+TimeoutError: The read operation timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 756, in urlopen
+    retries = retries.increment(
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 532, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/usr/lib/python3/dist-packages/six.py", line 719, in reraise
+    raise value
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 700, in urlopen
+    httplib_response = self._make_request(
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 448, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 337, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 9, in completion_entrypoint
+    worker = CompletionWorker(*args, **kwargs)
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/completion_worker.py", line 24, in __init__
+    super().__init__(
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/llm_worker.py", line 91, in __init__
+    self.llm = LLM(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/entrypoints/llm.py", line 214, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/llm_engine.py", line 561, in from_engine_args
+    engine_config = engine_args.create_engine_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 874, in create_engine_config
+    model_config = self.create_model_config()
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 811, in create_model_config
+    return ModelConfig(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/config.py", line 183, in __init__
+    self.hf_config = get_config(self.model, trust_remote_code, revision,
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/vllm/transformers_utils/config.py", line 144, in get_config
+    config_dict, _ = PretrainedConfig.get_config_dict(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 567, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/configuration_utils.py", line 626, in _get_config_dict
+    resolved_config_file = cached_file(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/transformers/utils/hub.py", line 403, in cached_file
+    resolved_file = hf_hub_download(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_deprecation.py", line 101, in inner_f
+    return f(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1232, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1381, in _hf_hub_download_to_cache_dir
+    _download_to_tmp_and_move(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 1915, in _download_to_tmp_and_move
+    http_get(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 455, in http_get
+    r = _request_wrapper(
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/file_download.py", line 387, in _request_wrapper
+    response = get_session().request(method=method, url=url, **params)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 93, in send
+    return super().send(request, *args, **kwargs)
+  File "/home/ubuntu/.local/lib/python3.10/site-packages/requests/adapters.py", line 713, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: e9ddd866-16ad-4fea-bd94-060ea3eb5d7c)')
+Process Process-145:
+Process Process-132:
+Process Process-144:
+Process Process-8:
+Process Process-150:
+Process Process-151:
+Process Process-149:
+Process Process-137:
+Traceback (most recent call last):
+Process Process-139:
+Process Process-138:
+Process Process-141:
+Process Process-130:
+Process Process-128:
+Process Process-134:
+Process Process-136:
+Process Process-133:
+Process Process-135:
+Process Process-129:
+Process Process-140:
+Process Process-131:
+Traceback (most recent call last):
+Process Process-143:
+Process Process-142:
+Process Process-148:
+Process Process-147:
+Process Process-146:
+Process Process-47:
+Process Process-45:
+Process Process-58:
+Process Process-52:
+Process Process-60:
+Process Process-78:
+Process Process-72:
+Process Process-49:
+Process Process-50:
+Process Process-56:
+Process Process-42:
+Process Process-59:
+Process Process-41:
+Process Process-40:
+Process Process-48:
+Process Process-61:
+Process Process-27:
+Process Process-28:
+Process Process-70:
+Process Process-57:
+Process Process-16:
+Process Process-54:
+Process Process-43:
+Process Process-55:
+Process Process-32:
+Process Process-24:
+Process Process-38:
+Process Process-30:
+Process Process-18:
+Process Process-4:
+Process Process-51:
+Process Process-39:
+Process Process-5:
+Process Process-53:
+Process Process-29:
+Process Process-1:
+Process Process-21:
+Process Process-26:
+Process Process-17:
+Process Process-9:
+Process Process-46:
+Process Process-25:
+Process Process-37:
+Process Process-7:
+Process Process-44:
+Process Process-20:
+Traceback (most recent call last):
+Process Process-35:
+policy_value process number 1 has died.
+Still alive:
+mcts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
+linear_inference: []
+linear_inference_debug: []
+completion: [0, 1]
+policy_value: [0, 1, 2]
+lean: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+fast_policy_value: []
+context: [0, 1, 2]
+policy_value process number 2 has died.
+Still alive:
+mcts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
+linear_inference: []
+linear_inference_debug: []
+completion: [0, 1]
+policy_value: [0, 2]
+lean: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+fast_policy_value: []
+context: [0, 1, 2]
+context process number 0 has died.
+Still alive:
+mcts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
+linear_inference: []
+linear_inference_debug: []
+completion: [0, 1]
+policy_value: [0]
+lean: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+fast_policy_value: []
+context: [0, 1, 2]
+context process number 1 has died.
+Still alive:
+mcts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
+linear_inference: []
+linear_inference_debug: []
+completion: [0, 1]
+policy_value: [0]
+lean: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+fast_policy_value: []
+context: [1, 2]
+context process number 2 has died.
+Still alive:
+mcts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
+linear_inference: []
+linear_inference_debug: []
+completion: [0, 1]
+policy_value: [0]
+lean: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+fast_policy_value: []
+context: [2]
+An essential worker has died.
+Killing all processes.
+All kill signals sent.
+Process Process-36:
+Process Process-3:
+Process Process-11:
+Process Process-31:
+Process Process-2:
+Process Process-33:
+Process Process-19:
+Process Process-22:
+Process Process-12:
+Process Process-14:
+Process Process-15:
+Process Process-13:
+Process Process-34:
+Process Process-23:
+Process Process-10:
+Process Process-6:
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/inference.py", line 186, in <module>
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+Process Process-89:
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 33, in lean_entrypoint
+    worker = LeanWorker(*args, **kwargs)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 33, in lean_entrypoint
+    worker = LeanWorker(*args, **kwargs)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 40, in mcts_inference_entrypoint
+    worker.main()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+    run_inference()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/workers/__init__.py", line 33, in lean_entrypoint
+    worker = LeanWorker(*args, **kwargs)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+Process Process-121:
+Process Process-113:
+Process Process-118:
+Process Process-119:
+Process Process-122:
+Process Process-120:
+Process Process-117:
+Process Process-116:
+Process Process-114:
+Process Process-115:
+Process Process-112:
+Process Process-111:
+Process Process-109:
+Process Process-108:
+Process Process-106:
+Process Process-110:
+Process Process-107:
+Process Process-104:
+Process Process-103:
+Process Process-96:
+Process Process-101:
+Process Process-93:
+Process Process-100:
+Process Process-98:
+Process Process-99:
+Process Process-105:
+Process Process-97:
+Process Process-95:
+Process Process-102:
+Process Process-94:
+Process Process-92:
+Process Process-91:
+Process Process-88:
+Process Process-90:
+Process Process-73:
+Process Process-81:
+Process Process-85:
+Process Process-86:
+Traceback (most recent call last):
+Process Process-69:
+Process Process-84:
+Process Process-83:
+Process Process-87:
+Process Process-82:
+Process Process-76:
+Process Process-75:
+Process Process-77:
+Process Process-67:
+Process Process-74:
+Process Process-80:
+Process Process-71:
+Process Process-68:
+Process Process-65:
+Process Process-63:
+Process Process-66:
+Process Process-62:
+Process Process-64:
+Process Process-79:
+Traceback (most recent call last):
+  File "/home/ubuntu/ohm-illinois/plasma-converter/src/inference.py", line 178, in run_inference
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+Traceback (most recent call last):
+Traceback (most recent call last):
+    time.sleep(30)
+  File "/usr/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+Traceback (most recent call last):
+KeyboardInterrupt
