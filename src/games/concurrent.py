@@ -98,6 +98,7 @@ class ConcurrentClass(ABC):
         """
         self._started = True
         self.currently_starting = True
+        print("concurrent.py startup", self.__dict__)
 
         if callback is not None:
             self.register_ready_callback(callback)

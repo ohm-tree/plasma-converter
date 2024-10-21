@@ -4,6 +4,7 @@ uct_node.py
 This module contains the UCTNode class, which represents a node in the UCT search tree.
 """
 
+import random
 from typing import Any, Dict, Generic, Hashable, Iterator, Optional, TypeVar
 
 import numpy as np
@@ -77,11 +78,13 @@ class UCTNode(Generic[ConcurrentMetaGameStateType], ConcurrentClass):
 
         self.init_type = init_type
 
+        self._id = random.randint(0, 1 << 30)
+
     def __hash__(self):
         """
         Hash the node based on the game state.
         """
-        return hash(self.game_state)
+        return self._id
 
     def root(self):
         """

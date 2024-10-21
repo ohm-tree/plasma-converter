@@ -1,6 +1,6 @@
 run_name: minif2f-valid-one-step
 split: "valid"
-data_dir: datasets/minif2f.jsonl
+data_dir: datasets/small_dataset.jsonl
 description: |
     This configuration is for debugging the fast MCTS inference method on the validation set.
     The loop is Lean -> Fast PV -> Completion -> Repeat.

@@ -22,6 +22,7 @@ from src.games.game import (
 )
 from src.uct.uct_node import UCTNode
 from src.workers.worker import TaskIdentifier, Worker, WorkerResponse, WorkerTask
+from pprint import pprint
 
 
 def uct_search(
@@ -53,32 +54,39 @@ def uct_search(
 
     while not victorious_death and iters < num_iters:
         live_time -= time.time()
-        if router.total_active < 10:
+        if router.total_active < 5:
+            router.tick()
             # greedily select leaf with given exploration parameter
             leaf = root.select_leaf_no_virtual_loss(c)
+            print("UCTNode started", leaf._started)
+            print("UCTNode ready", leaf._ready)
+            pprint(leaf.__dict__)
+            print("META LeanGameState ready", leaf.game_state._ready)
+            print("LeanGameState Ready", leaf.game_state.state._ready)
+            pprint(leaf.game_state.state.__dict__)
 
             assert (not leaf.is_expanded) or (leaf.is_terminal)
 
             # Problem: we don't know if a leaf is terminal until we lean4-verify it!
-            if leaf.game_state.ready():
+            if leaf.ready() and leaf.game_state.terminal():
                 self.logger.info(f"Leaf is ready: {leaf.game_state}")
-                if leaf.game_state.terminal():
-                    root.select_leaf(c)  # Apply the virtual loss this time.
+                root.select_leaf(c)  # Apply the virtual loss this time.
 
-                    # compute the value estimate of the player at the terminal leaf
-                    # value_estimate: float = leaf.game_state
-                    # Immediately backup the value estimate along the path to the root
-                    leaf.backup(leaf.game_state.reward())
-                    iters += 1
+                # compute the value estimate of the player at the terminal leaf
+                # value_estimate: float = leaf.game_state
+                # Immediately backup the value estimate along the path to the root
+                leaf.backup(leaf.game_state.reward())
+                iters += 1
 
-                    if leaf.game_state.reward() == 1.0:
-                        victorious_death = True
-                        winning_node = leaf
+                if leaf.game_state.reward() == 1.0:
+                    victorious_death = True
+                    winning_node = leaf
 
             elif leaf.started():
                 # assert router.contains(leaf)
 
                 self.logger.info(f"Leaf is started: {leaf.game_state}")
+                router.tick()
                 time.sleep(1)
                 break
             else:
@@ -89,9 +97,10 @@ def uct_search(
 
                 # Add the child priors and value estimate to the completion queue!
                 router.startup(leaf)
+                assert(leaf._started)
+                assert(leaf.started())
+                # print("startup", leaf.game_state.state._id)
                 # assert router.contains(leaf)
-                # commented, because now we startup in onstart, so there's buffer time before leaf enters queue
-                # which is OK
                 iters += 1
         live_time += time.time()
         # Check for completed leaves.

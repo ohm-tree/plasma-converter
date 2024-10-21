@@ -20,6 +20,8 @@ from src.uct.uct_alg import uct_search
 from src.uct.uct_node import UCTNode
 from src.workers import *
 
+from pprint import pprint
+
 
 def self_play(
     self: Worker,
@@ -35,6 +37,9 @@ def self_play(
     distributions: List[np.ndarray] = []
 
     move_count = 0
+
+    print("State")
+    pprint(state.__dict__)
 
     # Send those in.
     root = UCTNode(self.worker_id, state, -1,
