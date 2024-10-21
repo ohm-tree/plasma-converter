@@ -32,7 +32,7 @@ def human_play_lean_game() -> None:
     import io
     import pstats
 
-    from src.games.lean_game import LeanGame, LeanGameState
+    from src.games.lean_game import Lean, LeanState
     from src.networks.prover_llm import ProverLLM
 
     pr = cProfile.Profile()  # Initialize the profiler
@@ -48,11 +48,11 @@ def human_play_lean_game() -> None:
     with open("src/sample-data/comments.txt", 'r') as file:
         comments = [line.strip() for line in file.readlines()]
 
-    game: LeanGame = LeanGame(
+    game: Lean = Lean(
         comment_seeds=comments,
         completion_model=ProverLLM(),
     )
-    state: LeanGameState = game.start_state(PROBLEM_STATEMENT)
+    state: LeanState = game.start_state(PROBLEM_STATEMENT)
     modal.interact()
     while not game.is_terminal(state):
         print("HUMAN", state.human_printout())

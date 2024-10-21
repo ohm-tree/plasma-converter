@@ -8,7 +8,7 @@ from typing import List, Set, Tuple
 import numpy as np
 import torch
 
-from src.games.lean_game import LeanGameState
+from src.games.lean_game import LeanState
 from src.networks.prover_llm import ProverLLM
 
 logger = logging.getLogger()
@@ -93,7 +93,7 @@ class DataMuncher():
         self.completion_model = completion_model
 
     def load_states(self, state_path):
-        states: List[LeanGameState] = np.load(state_path)
+        states: List[LeanState] = np.load(state_path)
         state_representations: List[torch.Tensor] = []
         for state in states:
             prompt = self.completion_model.value_policy_prompter(

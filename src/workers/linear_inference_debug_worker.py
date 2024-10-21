@@ -13,8 +13,8 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 
 from src.games.concurrent import Router
-from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
-from src.games.lean_game_core import LeanGameState
+from src.games.lean_game import MetaLeanMove, MetaLeanState
+from src.games.lean_game_core import LeanState
 from src.workers.types import LinearInferenceDebugWorkerType
 from src.workers.worker import TaskType, Worker, WorkerIdentifer, WorkerTask, WorkerType
 
@@ -69,7 +69,7 @@ class LinearInferenceDebugWorker(Worker):
             PROBLEM_STATEMENT = informal_prefix + formal_statement
             tactic_state = problem['goal']
 
-            state: MetaLeanGameState = MetaLeanGameState.starting_state(
+            state: MetaLeanState = MetaLeanState.starting_state(
                 worker_id=self.worker_id,
                 problem=PROBLEM_STATEMENT,
                 tactic_state=tactic_state

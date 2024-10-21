@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-from src.games.lean_game import MetaLeanGameMove, MetaLeanGameState
+from src.games.lean_game import MetaLeanMove, MetaLeanState
 from src.train.self_play import self_play
 from src.workers import *
 
@@ -69,7 +69,7 @@ class MCTSWorker(Worker):
             PROBLEM_STATEMENT = informal_prefix + formal_statement
             tactic_state = problem['goal']
 
-            state: MetaLeanGameState = MetaLeanGameState.starting_state(
+            state: MetaLeanState = MetaLeanState.starting_state(
                 worker_id=self.worker_id,
                 problem=PROBLEM_STATEMENT,
                 tactic_state=tactic_state
@@ -87,7 +87,7 @@ class MCTSWorker(Worker):
             self.logger.info(f"Time to context: {time_to_context}")
             next(state.post_comments(context_output), None)
 
-            states: List[MetaLeanGameState]
+            states: List[MetaLeanState]
 
             states, distributions, rewards = self_play(
                 self,
@@ -96,7 +96,7 @@ class MCTSWorker(Worker):
                 max_actions=self.max_actions
             )
 
-            MetaLeanGameState.saves(states, os.path.join(
+            MetaLeanState.saves(states, os.path.join(
                 self.game_data_path, f"{problem['name']}_states.npy"))
 
             with open(os.path.join(self.game_data_path, f"{problem['name']}_distributions.npy"), "wb") as file:
