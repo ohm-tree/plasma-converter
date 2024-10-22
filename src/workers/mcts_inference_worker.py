@@ -2,19 +2,20 @@
 In this file, we will let a human play a game of Lean.
 """
 
+import asyncio
 import json
 import logging
 import multiprocessing
 import os
 import queue
 import time
-from typing import Optional, Union, dict, list
+from typing import Optional, Union
 
 import numpy as np
+from wayfinder.uct.self_play import async_self_play
 
-from src.games.lean_game import MetaLeanMove, MetaLeanState
-from src.train.self_play import self_play
-from src.workers import *
+from src.games.lean_game import LeanGame, LeanState
+from src.workers.worker import Worker
 
 
 class MCTSWorker(Worker):
@@ -27,11 +28,11 @@ class MCTSWorker(Worker):
                  **kwargs  # Unused
                  ):
         super().__init__(
-            worker_id=WorkerIdentifer(
-                MCTSWorkerType, task_id),
+            name="MCTS" + "_" + str(task_id),
+            worker_type="MCTS",
+            worker_idx=task_id,
             queues=queues,
             run_name=run_name,
-            poison_scream=False
         )
 
         self.config = config
@@ -60,6 +61,9 @@ class MCTSWorker(Worker):
             ]
 
     def run(self):
+        asyncio.run(self.async_run())
+
+    async def async_run(self):
         for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
             self.logger.info(
                 f"Working on problem {current_problem}")
@@ -69,34 +73,25 @@ class MCTSWorker(Worker):
             PROBLEM_STATEMENT = informal_prefix + formal_statement
             tactic_state = problem['goal']
 
-            state: MetaLeanState = MetaLeanState.starting_state(
-                worker_id=self.worker_id,
+            game: LeanGame = LeanGame(
+                worker=self,
                 problem=PROBLEM_STATEMENT,
-                tactic_state=tactic_state
+                tactic_state=tactic_state,
+                max_depth=20
             )
 
-            # Edge case: on the very first move, the completions are not available yet.
+            state: LeanState = await game.starting_state()
 
-            context_input: WorkerTask = next(state.pre_comments())
-            self.enqueue_task(context_input)
-            time_to_context = -time.time()
-            context_output = self.spin_deque_task(
-                channel=self.worker_id
-            )[0]
-            time_to_context += time.time()
-            self.logger.info(f"Time to context: {time_to_context}")
-            next(state.post_comments(context_output), None)
+            states: list[LeanState]
 
-            states: list[MetaLeanState]
-
-            states, distributions, rewards = self_play(
+            states, distributions, rewards = await async_self_play(
                 self,
                 state=state,
                 num_iters=self.num_iters,
                 max_actions=self.max_actions
             )
 
-            MetaLeanState.saves(states, os.path.join(
+            LeanState.saves(states, os.path.join(
                 self.game_data_path, f"{problem['name']}_states.npy"))
 
             with open(os.path.join(self.game_data_path, f"{problem['name']}_distributions.npy"), "wb") as file:
@@ -109,7 +104,7 @@ class MCTSWorker(Worker):
             # save the human printout to a file
             with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w') as file:
                 for i, state in enumerate(states):
-                    file.write(state.human_printout())
+                    file.write(state.__str__())
 
             self.logger.info(
                 f"Finished problem {problem['name']} result: {rewards[-1]}")

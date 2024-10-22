@@ -1,14 +1,10 @@
 import os
-import random
-import time
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import TYPE_CHECKING, Callable, Coroutine, Iterator, Optional
 
 import numpy as np
 from wayfinder.games import *
 
-# from src.workers.types import LeanTaskType
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
@@ -74,9 +70,9 @@ class LeanGame(Game[LeanMove, LeanState]):
     def __init__(self,
                  worker: Worker,
                  problem: str,
-                 header: str,
-                 max_depth: int,
-                 tactic_state: Optional[str] = None,
+                 tactic_state: str,
+                 header: str = LEAN4_DEFAULT_HEADER,
+                 max_depth: int = 20,
                  **kwargs
                  ):
         super().__init__(**kwargs)
