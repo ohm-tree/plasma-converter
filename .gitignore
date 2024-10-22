@@ -6,3 +6,10 @@ data/prover-llm_v0/*
 outputs/*
 logs/*
 data/*
+datasets/*
+bin/*
+
+# pretraining
+notebooks/model_weights/
+notebooks/ohm-tree/
+notebooks/truncated_llm/
