@@ -10,7 +10,7 @@ import sys
 import tempfile
 import time
 from socket import gethostname
-from typing import List, Set, Tuple, Union
+from typing import Set, Tuple, Union, list
 
 import numpy as np
 import torch

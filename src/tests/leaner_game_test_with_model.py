@@ -11,7 +11,7 @@ import pexpect
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
 
-from src.games.lean_game import LeanGame, LeanGameState
+from src.games.lean_game import Lean, LeanState
 
 # set "VLLM_LOGGING_LEVEL" to "WARNING" to suppress logging
 os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
@@ -131,11 +131,11 @@ for problem in tqdm(data):
     PROBLEM_STATEMENT = informal_prefix + formal_statement
     tactic_state = problem['goal']
 
-    game: LeanGame = LeanGame(
+    game: Lean = Lean(
         comment_seeds=comments,
         max_depth=20
     )
-    state: LeanGameState = game.start_state(
+    state: LeanState = game.start_state(
         problem=PROBLEM_STATEMENT,
         tactic_state=tactic_state
     )

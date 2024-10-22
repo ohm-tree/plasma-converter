@@ -10,25 +10,28 @@ import tempfile
 import time
 import traceback
 from pprint import pprint
-from typing import List
+from typing import list
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import numpy as np
 
 from src.games.ast_parser import lean4_parser
 
 HOME_DIR = os.path.expanduser('~')
-DEFAULT_LAKE_dir = f'{HOME_DIR}/.elan/bin/lake' # 'lake build' should run itself
+# 'lake build' should run itself
+DEFAULT_LAKE_dir = f'{HOME_DIR}/.elan/bin/lake'
 DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 
 POLICY_PROMPT = "What is the next step? This is the remainder of the proof:"
 
+
 class AttrDict(dict):
     """A dictionary that allows attribute-style access."""
+
     def __getattr__(self, name):
         return self[name]
 
@@ -38,16 +41,17 @@ class AttrDict(dict):
     def __delattr__(self, name):
         del self[name]
 
+
 def verify_lean4_file(code,
-    lake_dir=DEFAULT_LAKE_dir,
-    lean_workspace=DEFAULT_LEAN_WORKSPACE,
-    last_env=None,
-    verbose=False,
-    timeout=300,
-    allTactics=False,
-    ast=False,
-    premises=False,
-    tactics=False):
+                      lake_dir=DEFAULT_LAKE_dir,
+                      lean_workspace=DEFAULT_LEAN_WORKSPACE,
+                      last_env=None,
+                      verbose=False,
+                      timeout=300,
+                      allTactics=False,
+                      ast=False,
+                      premises=False,
+                      tactics=False):
     command = dict(cmd=code, allTactics=allTactics, ast=ast,
                    tactics=tactics, premises=premises)
     if last_env is not None:
@@ -92,32 +96,33 @@ def verify_lean4_file(code,
     result['verify_time'] = time.time() - start_time
     return result
 
+
 class Proof(object):
     def __init__(self,
-                 code: List[str],
+                 code: list[str],
                  formal_statement,
-                 header = LEAN4_DEFAULT_HEADER,
-                 segments = None,
+                 header=LEAN4_DEFAULT_HEADER,
+                 segments=None,
                  problem_name: str = "",
                  nl_statement: str = "",
                  ):
-        
+
         self.code = code
         self.header = header
         self.formal_statement = formal_statement
-        self.full_code = ''.join([self.header, self.formal_statement, code.rstrip(' \n')])
+        self.full_code = ''.join(
+            [self.header, self.formal_statement, code.rstrip(' \n')])
 
         print("verifying")
-        self.result = verify_lean4_file(self.full_code, ast = True, tactics = True)
+        self.result = verify_lean4_file(self.full_code, ast=True, tactics=True)
         print("verified")
-            
+
         self._parse_full_code_lines()
 
         print("full_code".center(80, '-'))
         print(self.full_code)
 
         self.segments = self.segmentation()
-
 
     def _parse_full_code_lines(self):
         """
@@ -143,7 +148,7 @@ class Proof(object):
         if 'errors' not in self.result:
             # compiler timeout
             return []
-        
+
         """
         First, we need to find the last valid tactic.
 
@@ -158,18 +163,18 @@ class Proof(object):
             info_pos = self._get_idx(info['pos'])
             # if info_pos >= _prefix_len:
             truncate_pos = min(truncate_pos, info_pos)
-        
+
         if truncate_pos <= _prefix_len:
             # all proof lines are invalid
             return []
-        
+
         partial_code = self.full_code[:truncate_pos]
 
         code_lines = partial_code.split('\n')
         pos_last, segments = _prefix_len, []
         for line_idx in range(len(code_lines)):
             if self._line_offset[line_idx] >= _prefix_len:
-                
+
                 def compute_last_valid_char_pos(line):
                     idx, last_non_blank = 0, len(line) + 1
                     while idx < len(line):
@@ -184,7 +189,6 @@ class Proof(object):
                             last_non_blank = idx
                         idx += 1
                     return last_non_blank
-                
 
                 line_lastChar = self._line_offset[line_idx] + \
                     compute_last_valid_char_pos(code_lines[line_idx])
@@ -199,7 +203,7 @@ class Proof(object):
                         goal = tactic_info['stateAfter']
                 if goal is None:
                     continue
-                
+
                 for tactic_info in result['ast']['tactics']:
                     pos, endPos = tactic_info['pos'], tactic_info['endPos']
                     if pos_last < endPos and endPos <= line_endPos and pos < pos_min:
@@ -239,7 +243,7 @@ class Proof(object):
             ))
         segments = [seg for seg in segments if len(
             seg.tactic_code.strip(' \n')) > 0]
-        
+
         # segments.insert(0, {
         #     "tactic_code": "",
         #     "indent": 2,
@@ -247,10 +251,11 @@ class Proof(object):
         # })
         return segments
 
+
 def load_workbook_problems(
         data_dir: str = "/home/ubuntu/ohm-tree-filesys/plasma-converter/datasets/lean_workbook_with_proofs.json",
         save_dir: str = "data/prover-llm_v0/lean_workbook_parsed.jsonl"
-        ):
+):
     with open(data_dir, 'r') as f:
         data = json.load(f)
 
@@ -269,8 +274,8 @@ def load_workbook_problems(
             code = '\n'.join('  ' + line for line in proof.split('\n'))
             formal_statement = problem['formal_statement']
             proof = Proof(code=code,
-                        formal_statement=formal_statement,
-                        nl_statement=problem['natural_language_statement'])
+                          formal_statement=formal_statement,
+                          nl_statement=problem['natural_language_statement'])
             if not proof.result['complete']:
                 continue
             data = {
@@ -284,8 +289,9 @@ def load_workbook_problems(
             with open(save_dir, 'ab') as f:
                 f.write(json.dumps(data).encode('utf-8'))
                 f.write(b'\n')
-            break # OOPS, whatever we can prioritize diverisry
+            break  # OOPS, whatever we can prioritize diverisry
         # break
+
 
 def load_deepseekv1_problems():
     pass
@@ -295,6 +301,7 @@ def load_IMO_problems(file_dir: str = "data/prover-llm_v0/IMO_problems/Bulgaria1
     data = []
     with open(file_dir, 'r') as f:
         data = json.load(f)
+
     def format(raw_proof) -> Proof:
         code = '\n'.join('  ' + line for line in raw_proof['proof'])
         formal_statement = raw_proof['formal_statement']
@@ -303,15 +310,18 @@ def load_IMO_problems(file_dir: str = "data/prover-llm_v0/IMO_problems/Bulgaria1
 
     return [format(raw_proof) for raw_proof in data]
 
+
 def annotate_proof():
     # first run policy
     pass
 
-def value_policy_prompter(partial_code: List[str], tactic_comment: str) -> str:
+
+def value_policy_prompter(partial_code: list[str], tactic_comment: str) -> str:
     """
     Generates a prompt for the model based on the current game state and a comment.
     """
     return "\n".join(partial_code) + "\n" + tactic_comment
+
 
 def internlm_prompter(full_code, i: int, comment: str = ""):
     prompt = "```lean4\n"
@@ -326,13 +336,16 @@ def internlm_prompter(full_code, i: int, comment: str = ""):
     print("prompt", prompt)
     return prompt
 
+
 def prepare_policy_data(
         proof_dir: str = "data/prover-llm_v0/lean_workbook_parsed.jsonl",
         save_dir: str = "data/prover-llm_v0/workbook_policy.jsonl",
         comments_dir: str = "data/prover-llm_v0/comments/comments_v2.txt"):
-    tokenizer = AutoTokenizer.from_pretrained("internlm/internlm2-math-7b", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "internlm/internlm2-math-7b", trust_remote_code=True)
     # Set `torch_dtype=torch.float16` to load model in float16, otherwise it will be loaded as float32 and might cause OOM Error.
-    model = AutoModelForCausalLM.from_pretrained("internlm/internlm2-math-7b", trust_remote_code=True, torch_dtype=torch.float16).cuda()
+    model = AutoModelForCausalLM.from_pretrained(
+        "internlm/internlm2-math-7b", trust_remote_code=True, torch_dtype=torch.float16).cuda()
     model = model.eval()
 
     with open(comments_dir, 'r') as f:
@@ -342,10 +355,12 @@ def prepare_policy_data(
         probs = []
         prompt_ids = tokenizer.encode(prompt, return_tensors='pt').to(device)
         for target in comments:
-            target_ids = tokenizer.encode(target, return_tensors='pt').to(device)
+            target_ids = tokenizer.encode(
+                target, return_tensors='pt').to(device)
 
             # Concatenate the prompt and target ids
-            input_ids = torch.cat([prompt_ids, target_ids[:, 1:]], dim=-1)  # Exclude the first token of target_ids if it's a special token like BOS
+            # Exclude the first token of target_ids if it's a special token like BOS
+            input_ids = torch.cat([prompt_ids, target_ids[:, 1:]], dim=-1)
 
             # Get the length of the prompt to know where the target starts
             prompt_length = prompt_ids.size(1)
@@ -374,12 +389,12 @@ def prepare_policy_data(
             # print("Log probabilities of the target tokens:", target_log_probs)
             # print(f"Cum. log probability of {target}:", total_log_prob)
         return probs
-    
+
     with open(proof_dir, 'r') as f:
         proof_data = [json.loads(line) for line in f]
     with open(save_dir, 'r') as f:
         num_saved = sum(1 for _ in f)
-    
+
     idx = 0
     for i, problem in enumerate(proof_data):
         formal_statement = problem['formal_statement']
@@ -390,32 +405,34 @@ def prepare_policy_data(
         prev_tactic_comment = "  -- " + nl_statement
 
         k = 0
-        while("by" not in code_lines[k]):
+        while ("by" not in code_lines[k]):
             k += 1
         k += 1
         for j in range(len(segments)):
             idx += 1
             if idx > num_saved:
-            # index of segments['tactic_code'] in code_lines
+                # index of segments['tactic_code'] in code_lines
                 print("code_lines", code_lines)
                 print("k", k)
                 full_code = code_lines
-                intern_prompt = internlm_prompter(full_code, k, prev_tactic_comment)
-                pv_prompt = value_policy_prompter(full_code[:k], prev_tactic_comment)
+                intern_prompt = internlm_prompter(
+                    full_code, k, prev_tactic_comment)
+                pv_prompt = value_policy_prompter(
+                    full_code[:k], prev_tactic_comment)
                 # print("prompt", prompt)
 
                 data_point = {
                     "prompt": pv_prompt,
-                    "logits": get_log_probs(intern_prompt) 
+                    "logits": get_log_probs(intern_prompt)
                 }
 
                 print("data point")
                 pprint(data_point)
-                
+
                 with open(save_dir, 'ab') as f:
                     f.write(json.dumps(data_point).encode('utf-8'))
                     f.write(b'\n')
-                
+
                 prev_tactic_comment = segments[j]['state_comment']
             k += segments[j]['tactic_code'].count('\n')
         # break
@@ -424,16 +441,17 @@ def prepare_policy_data(
 def len_to_value(len):
     return np.exp(-len)
 
+
 def prepare_value_data(
-        proof_dir: str = "data/prover-llm_v0/lean_workbook_parsed.jsonl",
-        save_dir: str = "data/prover-llm_v0/workbook_value.jsonl"
-    ):
-    
+    proof_dir: str = "data/prover-llm_v0/lean_workbook_parsed.jsonl",
+    save_dir: str = "data/prover-llm_v0/workbook_value.jsonl"
+):
+
     with open(proof_dir, 'r') as f:
         proof_data = [json.loads(line) for line in f]
     with open(save_dir, 'r') as f:
         num_saved = sum(1 for _ in f)
-    
+
     idx = 0
 
     for i, problem in enumerate(proof_data):
@@ -445,7 +463,7 @@ def prepare_value_data(
         prev_tactic_comment = "  -- " + nl_statement
 
         k = 0
-        while("by" not in code_lines[k]):
+        while ("by" not in code_lines[k]):
             k += 1
         k += 1
         for j in range(len(segments)):
@@ -454,7 +472,8 @@ def prepare_value_data(
                 print("code_lines", code_lines)
                 print("k", k)
                 full_code = code_lines
-                prompt = value_policy_prompter(full_code[:k], prev_tactic_comment)
+                prompt = value_policy_prompter(
+                    full_code[:k], prev_tactic_comment)
                 # print("prompt", prompt)
 
                 data_point = {
@@ -464,11 +483,11 @@ def prepare_value_data(
 
                 print("data point")
                 pprint(data_point)
-                
+
                 with open(save_dir, 'ab') as f:
                     f.write(json.dumps(data_point).encode('utf-8'))
                     f.write(b'\n')
-                
+
                 prev_tactic_comment = segments[j]['state_comment']
             k += segments[j]['tactic_code'].count('\n')
 

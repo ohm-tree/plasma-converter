@@ -3,12 +3,12 @@
 import logging
 import os
 import time
-from typing import List, Set, Tuple
+from typing import Set, Tuple, list
 
 import numpy as np
 import torch
 
-from src.games.lean_game import LeanGameState
+from src.games.lean_game import LeanState
 from src.networks.prover_llm import ProverLLM
 
 logger = logging.getLogger()
@@ -67,10 +67,10 @@ class DataMuncher():
         self.world_size: int = world_size
         self.num_worker_tasks: int = num_worker_tasks
 
-        self.my_workers: List[int] = list(
+        self.my_workers: list[int] = list(
             range(rank, num_worker_tasks, world_size))
         self.live_workers: Set[int] = set(self.my_workers)
-        self.worker_seen: List[int] = [0 for _ in range(num_worker_tasks)]
+        self.worker_seen: list[int] = [0 for _ in range(num_worker_tasks)]
 
         self.num_groups: int = num_groups
         self.run_name: str = run_name
@@ -78,10 +78,10 @@ class DataMuncher():
         self.use_linear_wgt: bool = use_linear_wgt
         self.worker_ttk: int = worker_ttk
 
-        self.all_state_tensors: List[torch.Tensor] = []
-        self.all_distr_tensors: List[torch.Tensor] = []
-        self.all_outco_tensors: List[torch.Tensor] = []
-        self.all_tmstp_tensors: List[torch.Tensor] = []
+        self.all_state_tensors: list[torch.Tensor] = []
+        self.all_distr_tensors: list[torch.Tensor] = []
+        self.all_outco_tensors: list[torch.Tensor] = []
+        self.all_tmstp_tensors: list[torch.Tensor] = []
 
         self.sync: bool = sync
         self.iter: int = iter
@@ -93,8 +93,8 @@ class DataMuncher():
         self.completion_model = completion_model
 
     def load_states(self, state_path):
-        states: List[LeanGameState] = np.load(state_path)
-        state_representations: List[torch.Tensor] = []
+        states: list[LeanState] = np.load(state_path)
+        state_representations: list[torch.Tensor] = []
         for state in states:
             prompt = self.completion_model.value_policy_prompter(
                 state)
@@ -108,13 +108,13 @@ class DataMuncher():
 
         return torch.Tensor(state_representations)
 
-    def sync_collate(self) -> Tuple[List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:
+    def sync_collate(self) -> Tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """Synchronously collate data for this iteration from all workers."""
 
-        new_states: List[torch.Tensor] = []
-        new_distrs: List[torch.Tensor] = []
-        new_outcos: List[torch.Tensor] = []
-        new_tmstps: List[torch.Tensor] = []
+        new_states: list[torch.Tensor] = []
+        new_distrs: list[torch.Tensor] = []
+        new_outcos: list[torch.Tensor] = []
+        new_tmstps: list[torch.Tensor] = []
 
         start_time = None
 
@@ -234,14 +234,14 @@ class DataMuncher():
             logger.info(
                 f"Worker {task_id} has {num_games} games, setting worker_seen to {self.worker_seen[task_id]}")
 
-    def async_collate(self) -> Tuple[List[torch.Tensor], List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:
+    def async_collate(self) -> Tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """For each worker, scoop up all data that has not already been scooped up."""
         if not self.async_setup_called:
             self.async_setup()
-        new_states: List[torch.Tensor] = []
-        new_distrs: List[torch.Tensor] = []
-        new_outcos: List[torch.Tensor] = []
-        new_tmstps: List[torch.Tensor] = []
+        new_states: list[torch.Tensor] = []
+        new_distrs: list[torch.Tensor] = []
+        new_outcos: list[torch.Tensor] = []
+        new_tmstps: list[torch.Tensor] = []
 
         for task_id in self.my_workers:
             group = task_id // (self.num_worker_tasks // self.num_groups)

@@ -11,7 +11,7 @@ import time
 
 import pexpect
 
-from src.games.lean_game import LeanGame, LeanGameState
+from src.games.lean_game import Lean, LeanState
 
 pr = cProfile.Profile()  # Initialize the profiler
 pr.enable()              # Start profiling
@@ -109,10 +109,10 @@ comments = None
 with open("src/sample-data/comments.txt", 'r') as file:
     comments = [line.strip() for line in file.readlines()]
 
-game: LeanGame = LeanGame(
+game: Lean = Lean(
     comment_seeds=comments,
 )
-state: LeanGameState = game.start_state(
+state: LeanState = game.start_state(
     problem=PROBLEM_STATEMENT,
     tactic_state=tactic_state
 )

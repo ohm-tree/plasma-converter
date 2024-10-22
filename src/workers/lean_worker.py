@@ -4,11 +4,10 @@ import os
 import queue
 import time
 import traceback
-from typing import Dict, Optional
+from typing import Optional
 
 import pexpect
 
-from src.workers.types import LeanTaskType, LeanWorkerType
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
@@ -23,14 +22,18 @@ class LeanWorker(Worker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 queues: dict[str, multiprocessing.Queue],
                  **kwargs  # Unused
                  ):
         super().__init__(
-            worker_id=WorkerIdentifer(
-                LeanWorkerType, task_id),
+            name="lean" + "_" + str(task_id),
+            worker_type="lean",
+            worker_idx=task_id,
             queues=queues,
             run_name=run_name,
+        )
+        self.logger.info(
+            f"Global Variables I can see: {globals().keys()}"
         )
         self.setup_repl()
         self.logger.info("Lean4 REPL setup.")
@@ -113,7 +116,7 @@ class LeanWorker(Worker):
 
     def loop(self):
         input_data = self.deque_task(
-            channel=LeanTaskType,
+            channel="lean",
             timeout=30
         )
         if input_data is None:
@@ -121,9 +124,9 @@ class LeanWorker(Worker):
             # Spinlock, disappointing, but there's nothing to do.
             return
 
-        self.logger.info(f"Received task: {input_data.task}")
+        self.logger.info(f"Received task: {input_data['task']}")
         result = self.send_code_read_json({
-            "cmd": input_data.task,
+            "cmd": input_data['task'],
             # "allTactics": True,
             # "tactics": True,
             "env": 0
@@ -138,14 +141,14 @@ class LeanWorker(Worker):
                 pass
             self.setup_repl()
             result = self.send_code_read_json({
-                "cmd": input_data.task,
+                "cmd": input_data['task'],
                 # "allTactics": True,
                 # "tactics": True,
                 "env": 0
             })
 
-        self.enqueue_response(
+        self.enqueue(
             response=result,
-            task=input_data
+            channel=input_data['channel']  # The response channel.
         )
         self.logger.info(str(result))
