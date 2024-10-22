@@ -4,7 +4,7 @@ import os
 import queue
 import time
 import traceback
-from typing import Optional, dict
+from typing import Optional
 
 import pexpect
 
@@ -145,6 +145,7 @@ class LeanWorker(Worker):
             })
 
         self.enqueue(
-            response=result
+            response=result,
+            channel=input_data['channel']  # The response channel.
         )
         self.logger.info(str(result))

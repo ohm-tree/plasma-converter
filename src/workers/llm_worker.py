@@ -1,5 +1,6 @@
 # Set up vllm stuff.
 import gc
+from secrets import token_bytes
 
 # remote queries to openai
 from openai import OpenAI
@@ -43,22 +44,26 @@ from src.workers.worker import *
 
 class LLMWorker(Worker):
     def __init__(self,
-                 worker_id: WorkerIdentifer,
-                 queues: dict[Union[WorkerType, WorkerIdentifer], multiprocessing.Queue],
-                 run_name: str,
-                 gpu_set: list[int],
                  config: dict,
-                 #  run_locally=True,
-                 #  model_name: Optional[str] = "deepseek-ai/DeepSeek-Prover-V1.5-RL",
-                 #  LLM_kwargs: Optional[dict] = None,
-                 #  sampling_kwargs: Optional[dict] = None,
-                 use_tqdm: bool = True  # Dopamine
+                 run_name: str,
+                 task_id: int,
+                 queues: dict[str, multiprocessing.Queue],
+                 gpu_set: list[int],
+                 use_tqdm: bool = True,  # Dopamine
+                 **kwargs  # Unused
                  ):
-        super().__init__(worker_id, queues, run_name)
+        super().__init__(
+            name="LLM" + "_" + str(task_id),
+            worker_type="LLM",
+            worker_idx=task_id,
+            queues=queues,
+            run_name=run_name,
+        )
 
         LLM_kwargs = config['model'] if 'model' in config else None
         sampling_kwargs = config['sampling'] if 'sampling' in config else None
-        run_locally = config['run_locally'] if 'run_locally' in config else True
+
+        self.channel = config['channel']  # Required.
 
         if LLM_kwargs is None:
             LLM_kwargs = {
@@ -82,48 +87,53 @@ class LLMWorker(Worker):
             **sampling_kwargs
         )
 
-        self.run_locally = run_locally
-        if run_locally:
-            os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
+        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
-            self.llm: LLM
-
-            self.llm = LLM(
-                **LLM_kwargs
-            )
-            self.gpu_set = gpu_set
-        else:
-            # We query openai api.
-            # read the API key from the environment variable
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key is None:
-                raise ValueError(
-                    "OPENAI_API_KEY environment variable is not set.")
-            self.client: OpenAI = OpenAI(api_key)
-
+        self.llm = LLM(
+            **LLM_kwargs
+        )
+        self.gpu_set = gpu_set
         self.use_tqdm = use_tqdm
 
     def generate(self, input_data: Union[list[str], list[dict]]) -> list[RequestOutput]:
-        if self.run_locally:
-            return self.llm.generate(
-                input_data,
-                sampling_params=self.sampling_params,
-                use_tqdm=self.use_tqdm
-            )
-        else:
-            response = self.client.chat.completions.create(
-                model=self.LLM_kwargs["model"],
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant."
-                    },
-                    {
-                        "role": "user",
-                        "content": input_data
-                    }
-                ],
-                **self.sampling_params
+        return self.llm.generate(
+            input_data,
+            sampling_params=self.sampling_params,
+            use_tqdm=self.use_tqdm
+        )
+
+    def loop(self):
+        my_tasks = self.spin_deque_tasks(
+            channel=self.channel,
+            timeout=self.config['timeout'],
+            batch_size=self.config['batch_size'],
+        )
+        self.logger.info(
+            f"Received {len(my_tasks)} tasks.")
+
+        if len(my_tasks) == 0:
+            # Spinlock, disappointing, but there's nothing to do.
+            return
+        # We have tasks to complete.
+        input_data = [i['prompt'] for i in my_tasks]
+        outputs: list[RequestOutput] = self.generate(input_data)
+        for i in range(len(outputs)):
+            text = outputs[i].outputs[0].text
+            token_ids = outputs[i].outputs[0].token_ids
+            cumulative_logprob = outputs[i].outputs[0].cumulative_logprob
+            self.logger.info(text)
+            self.logger.info(token_ids)
+            self.logger.info(cumulative_logprob)
+
+            response = {
+                'text': text,
+                'token_ids': token_ids,
+                'cumulative_logprob': cumulative_logprob
+            }
+
+            self.enqueue(
+                response=response,
+                channel=my_tasks[i]['channel']  # The response channel.
             )
 
 

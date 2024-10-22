@@ -4,7 +4,7 @@ import re
 import time
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Callable, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional
 
 import numpy as np
 from wayfinder.games import *
@@ -67,8 +67,9 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
 
             active_move_set = set(self.active_move_cache[state])
             for i in range(num_queries_needed):
-                move = LeanMove(completions[i][0])
-                probability = completions[i][1]
+                move = LeanMove(completions[i]['text'])
+                probability = completions[i]['cumulative_logprob']
+                probability = np.exp(probability)
                 if move not in active_move_set:
                     self.active_move_cache[state].append(move)
                     self.policy_cache[(state, move)] = probability
@@ -96,13 +97,13 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             channel='completion'
         )
 
-        res: list[list[str, float]] = completion['result']
+        res: list[dict[str, Any]] = completion['result']
 
         for i in range(num_completions):
-            if res[i][0].endswith('```'):
-                res[i][0] = res[i][0][:-3]
-            if not res[i][0].endswith('\n'):
-                res[i][0] += '\n'
+            if res[i]['text'].endswith('```'):
+                res[i]['text'] = res[i]['text'][:-3]
+            if not res[i]['text'].endswith('\n'):
+                res[i]['text'] += '\n'
         return res
 
     async def value(self, state: LeanState):
