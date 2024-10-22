@@ -1,6 +1,5 @@
-from typing import Callable, Tuple
+from typing import Callable
 
-from src.workers.types import *
 from src.workers.worker import *
 
 
@@ -28,7 +27,7 @@ def llm_entrypoint(*args, **kwargs):
     worker.main()
 
 
-WORKER_TYPES_AND_STRINGS: Tuple[Tuple[str, Callable, bool]] = (
+WORKER_TYPES_AND_STRINGS: tuple[tuple[str, Callable, bool]] = (
     ('mcts', mcts_inference_entrypoint, False, True),
     ('linear',
      linear_entrypoint, False, True),

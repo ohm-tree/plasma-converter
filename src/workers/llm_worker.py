@@ -4,6 +4,7 @@ from secrets import token_bytes
 
 # remote queries to openai
 from openai import OpenAI
+from ray import worker
 from vllm import LLM, RequestOutput, SamplingParams
 from vllm.distributed.parallel_state import (
     destroy_distributed_environment,
@@ -46,6 +47,7 @@ class LLMWorker(Worker):
     def __init__(self,
                  config: dict,
                  run_name: str,
+                 worker_type: str,
                  task_id: int,
                  queues: dict[str, multiprocessing.Queue],
                  gpu_set: list[int],
@@ -53,8 +55,10 @@ class LLMWorker(Worker):
                  **kwargs  # Unused
                  ):
         super().__init__(
-            name="LLM" + "_" + str(task_id),
-            worker_type="LLM",
+            # name="LLM" + "_" + str(task_id),
+            # worker_type="LLM",
+            name=worker_type + "_" + str(task_id),
+            worker_type=worker_type,
             worker_idx=task_id,
             queues=queues,
             run_name=run_name,
@@ -62,11 +66,12 @@ class LLMWorker(Worker):
         self.logger.info(
             f"Global Variables I can see: {globals().keys()}"
         )
+        self.config = config
 
         LLM_kwargs = config['model'] if 'model' in config else None
         sampling_kwargs = config['sampling'] if 'sampling' in config else None
 
-        self.channel = config['channel']  # Required.
+        self.channel = self.worker_type
 
         if LLM_kwargs is None:
             LLM_kwargs = {
@@ -83,12 +88,15 @@ class LLMWorker(Worker):
                 "max_tokens": 1024,
                 "temperature": 0.0,
                 "top_k": 1,
-                "top_p": 1.0
+                "top_p": 1.0,
+                "logprobs": 0,  # Return the logprobs
             }
 
-        self.sampling_params = SamplingParams(
-            **sampling_kwargs
-        )
+        self.sampling_kwargs = sampling_kwargs
+
+        # self.sampling_params = SamplingParams(
+        #     **sampling_kwargs
+        # )
 
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
@@ -98,10 +106,12 @@ class LLMWorker(Worker):
         self.gpu_set = gpu_set
         self.use_tqdm = use_tqdm
 
-    def generate(self, input_data: Union[list[str], list[dict]]) -> list[RequestOutput]:
+    def generate(self, input_data: list[str],
+                 sampling_params: list[SamplingParams],
+                 ) -> list[RequestOutput]:
         return self.llm.generate(
             input_data,
-            sampling_params=self.sampling_params,
+            sampling_params=sampling_params,
             use_tqdm=self.use_tqdm
         )
 
@@ -119,23 +129,50 @@ class LLMWorker(Worker):
             return
         # We have tasks to complete.
         input_data = [i['prompt'] for i in my_tasks]
-        outputs: list[RequestOutput] = self.generate(input_data)
-        for i in range(len(outputs)):
-            text = outputs[i].outputs[0].text
-            token_ids = outputs[i].outputs[0].token_ids
-            cumulative_logprob = outputs[i].outputs[0].cumulative_logprob
-            self.logger.info(text)
-            self.logger.info(token_ids)
-            self.logger.info(cumulative_logprob)
 
-            response = {
-                'text': text,
-                'token_ids': token_ids,
-                'cumulative_logprob': cumulative_logprob
-            }
+        sampling_param_keys = [
+            'n',
+            'temperature',
+        ]
+        sampling_kwarg_inputs = [
+            {k: i[k] for k in i.keys() if i in sampling_param_keys}
+            for i in my_tasks
+        ]
+
+        # take the union of all keys
+        sampling_kwarg_inputs = [
+            dict(
+                self.sampling_kwargs,
+                **i  # resolves in favor of i.
+            )
+            for i in sampling_kwarg_inputs
+        ]
+        sampling_param_inputs = [
+            SamplingParams(
+                **i
+            )
+            for i in sampling_kwarg_inputs
+        ]
+
+        # sampling_param_inputs = [i['sampling_params'] for i in my_tasks]
+        outputs: list[RequestOutput] = self.generate(
+            input_data, sampling_param_inputs)
+        for i in range(len(outputs)):
+            response = []
+            for j in outputs[i].outputs:
+                response.append({
+                    'text': j.text,
+                    'token_ids': j.token_ids,
+                    'cumulative_logprob': j.cumulative_logprob
+                })
+
+            full_response = my_tasks[i]
+            full_response.update({
+                'result': response
+            })
 
             self.enqueue(
-                response=response,
+                obj=full_response,
                 channel=my_tasks[i]['channel']  # The response channel.
             )
 

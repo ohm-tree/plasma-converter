@@ -24,12 +24,13 @@ class LeanMove:
 
 
 @dataclass(frozen=True)
-class LeanState(State[LeanMove]):
+class LeanState(State):
     code: str
     depth: int
     tactic_state: str
     dead: bool
 
+    @classmethod
     def saves(cls, states: list['LeanState'], filename: str):
         """
         Save a collection of states to a file.
@@ -41,15 +42,13 @@ class LeanState(State[LeanMove]):
             'dead': state.dead
         } for state in states])
 
+    @classmethod
     def loads(cls, filename: str) -> list['LeanState']:
         """
         Load a collection of states from a file.
         """
         states = np.load(filename, allow_pickle=True)
         return [cls(**state) for state in states]
-
-
-DEAD_LEAN_STATE = LeanState(code="", depth=0, tactic_state="")
 
 
 class LeanGame(Game[LeanMove, LeanState]):
@@ -89,6 +88,10 @@ class LeanGame(Game[LeanMove, LeanState]):
     # Implementing the Game Interface
     ################################################################
 
+    @property
+    def death_value(self):
+        return -1.0
+
     async def starting_state(self) -> 'LeanState':
         """
         Returns the starting state of the game.
@@ -100,6 +103,7 @@ class LeanGame(Game[LeanMove, LeanState]):
             dead=False
         )
         self._win[res] = False
+        return res
 
     async def is_legal(self, state: LeanState, action: LeanMove) -> bool:
         return True
@@ -130,10 +134,10 @@ class LeanGame(Game[LeanMove, LeanState]):
             channel='lean'
         )
         repl_result = response['response']
-        process_result = await self.process(state.code, action.new_code, repl_result)
+        process_result = self.process(state.code, action.new_code, repl_result)
 
         new_state = LeanState(
-            code=process_result['valid_code'],
+            code=state.code + process_result['valid_code'],
             depth=state.depth + 1,
             tactic_state=process_result['tactic_state'],
             dead=process_result['dead']
@@ -141,25 +145,27 @@ class LeanGame(Game[LeanMove, LeanState]):
 
         self._win[new_state] = process_result['win']
 
-    def terminal(self, state: LeanState) -> bool:
+        return new_state
+
+    async def terminal(self, state: LeanState) -> bool:
         return state.dead or state.depth >= self.max_depth or self._win[state]
 
-    def reward(self, state: LeanState) -> float:
+    async def reward(self, state: LeanState) -> float:
         """
         Returns a float consisting of the reward for the player.
         """
-        if not self.terminal(state):
+        if not await self.terminal(state):
             raise LeanStateError(
                 "Cannot get the reward of a non-terminal LeanState.")
         return 1.0 if self._win[state] else -1.0
 
-    def victorious(self, state: LeanState) -> bool:
-        if not self.terminal(state):
+    async def victorious(self, state: LeanState) -> bool:
+        if not await self.terminal(state):
             raise LeanStateError(
                 "Cannot check if a non-terminal LeanState is victorious.")
         return self._win[state]
 
-    def make_root(self) -> None:
+    async def make_root(self) -> None:
         """
         Severs any references to the parent of
         this state, making it the root of the tree.

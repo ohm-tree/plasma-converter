@@ -39,8 +39,6 @@ class InferenceWorker(Worker, ABC):
 
         self.config = config
         self.global_config = global_config
-        self.num_iters = self.config['num_iters']
-        self.max_actions = self.config['max_actions']
 
         self.load_problems()
 
@@ -48,6 +46,8 @@ class InferenceWorker(Worker, ABC):
         os.makedirs(self.game_data_path, exist_ok=True)
         self.output_path = f"outputs/{run_name}/"
         os.makedirs(self.output_path, exist_ok=True)
+        self.result_path = f"results/{run_name}/"
+        os.makedirs(self.result_path, exist_ok=True)
 
     def load_problems(self):
         # I live in src/workers/
@@ -94,7 +94,7 @@ class InferenceWorker(Worker, ABC):
             results = await self.solve(game)
 
             if "states" in results:
-                LeanState.saves(results['states'], os.path.join(
+                LeanState.saves(states=results['states'], filename=os.path.join(
                     self.game_data_path, f"{problem['name']}_states.npy"))
             if "distributions" in results:
                 np.save(os.path.join(self.game_data_path,
@@ -106,11 +106,15 @@ class InferenceWorker(Worker, ABC):
                 # save the human printout to a file
                 with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w') as file:
                     for i, state in enumerate(results['states']):
-                        file.write(state.__str__())
+                        file.write(state.__str__() + "\n")
 
             if "result" in results:
                 self.logger.info(
                     f"Finished problem {problem['name']} result: {results['result']}")
+                with open(os.path.join(self.result_path, f"{problem['name']}.txt"), 'w') as file:
+                    file.write(f"Problem: {problem['name']}\n")
+                    file.write(f"Split: {self.global_config['split']}\n")
+                    file.write(f"Result: {results['result']}\n")
 
         listener.cancel()
 

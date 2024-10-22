@@ -7,6 +7,7 @@ import traceback
 from typing import Optional
 
 import pexpect
+from numpy import full
 
 from src.workers.worker import *
 
@@ -147,8 +148,15 @@ class LeanWorker(Worker):
                 "env": 0
             })
 
+        full_result = input_data
+        full_result.update(
+            {
+                'response': result
+            }
+        )
+
         self.enqueue(
-            response=result,
+            obj=full_result,
             channel=input_data['channel']  # The response channel.
         )
         self.logger.info(str(result))

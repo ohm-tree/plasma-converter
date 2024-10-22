@@ -76,9 +76,9 @@ class Worker(ABC):
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
         fh = logging.FileHandler(
-            os.path.join(self.ROOT_DIR, f"logs/{self.run_name}/{self.worker_type.worker_type}_worker_{self.worker_idx}.log"))
+            os.path.join(self.ROOT_DIR, f"logs/{self.run_name}/{self.worker_type}_worker_{self.worker_idx}.log"))
 
-        logging_prefix = f'[{self.worker_type.worker_type} {self.worker_idx}] '
+        logging_prefix = f'[{self.worker_type} {self.worker_idx}] '
         formatter = logging.Formatter(
             logging_prefix + '%(asctime)s - %(levelname)s - %(message)s')
 
@@ -88,13 +88,12 @@ class Worker(ABC):
             f"Starting {self.worker_type} worker {self.worker_idx}."
         )
 
-    @abstractmethod
     def validate(self, task: dict) -> None:
         """
         This method should be overridden to validate tasks
         that are dequeued.
         """
-        pass
+        return True
 
     def enqueue(self,
                 obj: dict,
@@ -112,6 +111,7 @@ class Worker(ABC):
                     "No channel specified for enqueue.")
             channel = obj["channel"]
         self.queues[channel].put(obj)
+        self.logger.info(f"Enqueued task {obj} to channel {channel}.")
 
     def enqueue_with_handler(self, obj: dict, channel: str) -> None:
         if "_task_idx" not in obj:
@@ -157,6 +157,7 @@ class Worker(ABC):
             Whether to validate tasks before returning.
 
         """
+        # self.logger.info("Entered spin_deque_tasks.")
         if batch_size is None:
             batch_size = float('inf')
 
@@ -217,15 +218,26 @@ class Worker(ABC):
         validate : bool
             Whether to validate tasks before returning.
         """
+        # self.logger.info("Entered spin_deque_tasks_with_handler.")
         res = self.spin_deque_tasks(
             channel, blocking, timeout, batch_size, validate)
+        # self.logger.info("Res is: " + str(res))
         for task in res:
             if "_task_idx" not in task:
+                self.logger.fatal(
+                    "Task does not have a _task_idx field."
+                )
                 raise ValueError(
                     "Task does not have a _task_idx field.")
             if task["_task_idx"] not in self.dequeue_events:
+                self.logger.fatal(
+                    "Task does not have a corresponding dequeue event.")
                 raise ValueError(
                     "Task does not have a corresponding dequeue event.")
+            self.logger.info(
+                "Dequeued task with _task_idx " + task["_task_idx"] + "."
+            )
+            self.logger.info(f"Task: {task}")
             self.dequeue_results[task["_task_idx"]] = task
             self.dequeue_events[task["_task_idx"]].set()
         return res
@@ -241,7 +253,15 @@ class Worker(ABC):
         This method is an async wrapper around spin_deque_tasks_with_handler;
         it is the main entrypoint for the event-based query system.
         """
+        self.logger.info("Starting to listen.")
+        self.logger.info("channel = " + channel)
+        self.logger.info("blocking = " + str(blocking))
+        self.logger.info("timeout = " + str(timeout))
+        self.logger.info("batch_size = " + str(batch_size))
+        self.logger.info("validate = " + str(validate))
         while True:
+            # self.logger.info(
+            #     f"Listening for tasks on channel {channel}.")
             self.spin_deque_tasks_with_handler(
                 channel, blocking, timeout, batch_size, validate)
 
@@ -267,6 +287,8 @@ class Worker(ABC):
             channel = task["channel"]
         self.enqueue_with_handler(task, channel)
         await self.dequeue_events[task["_task_idx"]].wait()
+        self.logger.info(
+            f"Received response for task with _task_idx {task['_task_idx']}.")
         res = self.dequeue_results[task["_task_idx"]]
         del self.dequeue_results[task["_task_idx"]]
         del self.dequeue_events[task["_task_idx"]]

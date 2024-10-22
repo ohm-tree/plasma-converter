@@ -76,7 +76,7 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         Completes a state.
         """
 
-        prompt = 'Complete the following Lean 4 code with comments.\n' + \
+        prompt = 'Complete the following Lean 4 code.\n' + \
             'The tactic state is:\n' + \
             state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
             state.code
@@ -84,7 +84,7 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         completion = await self.worker.query(
             task={
                 'prompt': prompt,
-                'num_completions': num_completions,
+                'n': num_completions,
                 'temperature': temperature,
                 'channel': self.worker.name,
             },
@@ -100,6 +100,16 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             if not res[i]['text'].endswith('\n'):
                 res[i]['text'] += '\n'
         return res
+
+    async def policy(self, state: LeanState, move: LeanMove) -> float:
+        """
+        Returns the policy for the game state.
+        """
+        if hash((state, move)) in self.policy_cache:
+            return self.policy_cache[hash((state, move))]
+        else:
+            raise ValueError(
+                "The probability of this move in this state has not been calculated.")
 
     async def value(self, state: LeanState):
         """
