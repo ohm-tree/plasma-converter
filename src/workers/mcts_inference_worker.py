@@ -9,6 +9,7 @@ import multiprocessing
 from wayfinder.uct.self_play import async_self_play
 
 from src.agents.lazy_agent import LazyLeanAgent
+from src.agents.lazy_valueless_agent import LazyValuelessLeanAgent
 from src.lean.lean_game import LeanGame, LeanState
 from src.workers.inference_worker import InferenceWorker
 
@@ -32,6 +33,12 @@ class MCTSWorker(InferenceWorker):
             run_name=run_name,
         )
 
+        if "tree_kwargs" not in self.config:
+            self.config["tree_kwargs"] = {}
+
+        if "search_kwargs" not in self.config:
+            self.config["search_kwargs"] = {}
+
         self.logger.info(
             f"Global Variables I can see: {globals().keys()}"
         )
@@ -41,14 +48,15 @@ class MCTSWorker(InferenceWorker):
 
         states: list[LeanState]
 
-        agent = LazyLeanAgent(
+        # TODO: add config flag for switching between valueless and regular agents
+        agent = LazyValuelessLeanAgent(
             game=game,
             worker=self,
             max_num_completions=self.config['max_num_completions'],
         )
 
         states, distributions, rewards = await async_self_play(
-            self,
+            self.logger,
             state=state,
             game=game,
             agent=agent,

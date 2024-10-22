@@ -1,18 +1,21 @@
-run_name: fast_mcts_valid_100
+run_name: fast_mcts_debug
 split: "valid"
 data_dir: datasets/minif2f.jsonl
 description: |
     This configuration is for debugging the fast MCTS inference method on the validation set.
-    The loop is Lean -> Fast PV -> Completion -> Repeat.
+    The loop is Lean -> Completion -> Repeat.
+    Value-less agent.
 
 mcts:
     num_procs: 122
-    num_iters: 100
-    max_actions: 10
+    max_num_completions: 100
+    search_kwargs:
+        num_iters: 1000
 
 completion:
-    num_procs: 4
+    num_procs: 8
     batch_size: 40
+    timeout: 30
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
         max_num_batched_tokens: 8192
@@ -23,21 +26,7 @@ completion:
         top_k: 1
         top_p: 1.0
         stop: ["\n", "```"]
+        logprobs: 0
 
 lean:
     num_procs: 24
-
-fast_policy_value:
-    num_procs: 4
-    batch_size: 40
-    num_comments: 10
-    model:
-        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
-        max_num_batched_tokens: 8192
-        trust_remote_code: True
-    sampling:
-        max_tokens: 500
-        temperature: 1.05
-        top_p: 0.95
-        n: 9
-        stop: ["\n"]

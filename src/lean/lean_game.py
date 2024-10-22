@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Coroutine, Iterator, Optional
 
 import numpy as np
 from wayfinder.games import *

@@ -109,6 +109,10 @@ class LLMWorker(Worker):
     def generate(self, input_data: list[str],
                  sampling_params: list[SamplingParams],
                  ) -> list[RequestOutput]:
+        # self.logger.info(
+        #     "input_data: " + str(input_data) + "\n" +
+        #     "sampling_params: " + str(sampling_params)
+        # )
         return self.llm.generate(
             input_data,
             sampling_params=sampling_params,
@@ -135,7 +139,7 @@ class LLMWorker(Worker):
             'temperature',
         ]
         sampling_kwarg_inputs = [
-            {k: i[k] for k in i.keys() if i in sampling_param_keys}
+            {k: i[k] for k in i.keys() if k in sampling_param_keys}
             for i in my_tasks
         ]
 
@@ -147,6 +151,8 @@ class LLMWorker(Worker):
             )
             for i in sampling_kwarg_inputs
         ]
+        # self.logger.info("Sampling kwargs:")
+        # self.logger.info(sampling_kwarg_inputs)
         sampling_param_inputs = [
             SamplingParams(
                 **i

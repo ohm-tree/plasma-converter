@@ -3,7 +3,8 @@ split: "valid"
 data_dir: datasets/minif2f.jsonl
 description: |
     This configuration is for debugging the fast MCTS inference method on the validation set.
-    The loop is Lean -> Fast PV -> Completion -> Repeat.
+    The loop is Lean -> Completion -> Repeat.
+    Value-less agent.
 
 mcts:
     num_procs: 1
