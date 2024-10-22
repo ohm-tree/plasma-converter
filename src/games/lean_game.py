@@ -3,19 +3,13 @@ import random
 import time
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Coroutine, Iterator, Optional
 
 import numpy as np
 from wayfinder.games import *
 
-from src.workers.types import LeanTaskType
-from src.workers.worker import (
-    TaskIdentifier,
-    TaskType,
-    WorkerIdentifer,
-    WorkerResponse,
-    WorkerTask,
-)
+# from src.workers.types import LeanTaskType
+from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
@@ -33,7 +27,36 @@ class LeanMove:
     new_code: str
 
 
+@dataclass(frozen=True)
 class LeanState(State[LeanMove]):
+    code: str
+    depth: int
+    tactic_state: str
+    dead: bool
+
+    def saves(cls, states: list['LeanState'], filename: str):
+        """
+        Save a collection of states to a file.
+        """
+        np.save(filename, [{
+            'code': state.code,
+            'depth': state.depth,
+            'tactic_state': state.tactic_state,
+            'dead': state.dead
+        } for state in states])
+
+    def loads(cls, filename: str) -> list['LeanState']:
+        """
+        Load a collection of states from a file.
+        """
+        states = np.load(filename, allow_pickle=True)
+        return [cls(**state) for state in states]
+
+
+DEAD_LEAN_STATE = LeanState(code="", depth=0, tactic_state="")
+
+
+class LeanGame(Game[LeanMove, LeanState]):
     """
     The LeanState class implements the game state for a Lean 4 proof assistant game.
     This is the "core" of the game, and does not involve implementation details which
@@ -49,280 +72,117 @@ class LeanState(State[LeanMove]):
     """
 
     def __init__(self,
-                 parent: Optional['LeanState'],
+                 worker: Worker,
                  problem: str,
                  header: str,
-                 new_code: Optional[str],
-                 depth: int,
                  max_depth: int,
-                 ready: bool = False,
-                 win: Optional[bool] = None,
-                 dead: Optional[bool] = None,
                  tactic_state: Optional[str] = None,
-                 valid_code: Optional[str] = None,
                  **kwargs
                  ):
-        """
-        Here are the fields and their statuses in each state:
-
-        | Field            | Initialized     | Ready    |
-        | ---------------- | --------------- | -------- |
-        | parent           | Required        | Required |
-        | problem          | Required        | Required |
-        | header           | Required        | Required |
-        | new_code         | Not Required    | Required |
-        | ready            | False           | True     |
-        | win              | None            | Required |
-        | dead             | None            | Required |
-        | tactic_state     | None            | Required |
-        | valid_code       | None            | Required |
-
-        Parameters
-        ----------
-        parent: Optional[LeanState]
-            The parent state. If None, this is the root state.
-        problem: str
-            The problem statement to be solved.
-        header: str
-            The header for the Lean code.
-        new_code: str
-            The new code that was added to the proof.
-            This will generally not be truncated to a valid proof
-            nor truncated to the first goal change.
-        ready: bool
-            Whether the proof is ready. This will be False
-            if the proof is not fully processed.
-        win: Optional[bool]
-            Whether the proof is complete. This will be None
-            if the proof is not fully processed.
-        dead: Optional[bool]
-            Whether the proof is dead. This will be None
-            if the proof is not fully processed.
-        tactic_state: Optional[str]
-            The tactic state after the new code was added.
-            This will be None if the proof is not fully processed.
-        valid_code: Optional[str]
-            The new code that was added to the proof.
-            This will be None if the proof is not fully processed.
-        """
         super().__init__(**kwargs)
-        self.parent: Optional[LeanState] = parent
+        self.worker = worker
+
         self.problem: str = problem
         self.header: str = header
-        self.new_code: str = new_code
-        self.depth: int = depth
         self.max_depth: int = max_depth
+        self.root_tactic_state: str = tactic_state
 
-        self.old_tactic_state = self.parent.tactic_state if self.parent else ""
-        self.old_code = self.parent.old_code + \
-            self.parent.valid_code if self.parent else ""
-
-        self._win: Optional[bool] = win
-        self._dead: Optional[bool] = dead
-        self.tactic_state: Optional[str] = tactic_state
-        self.valid_code: Optional[str] = valid_code
-
-        self._ready = ready
-
-        self.check_state()
-
-        # We don't want to re-generate a child when we re-do an action,
-        # so pointers to the children are stored here.
-        self.children = {}
-
-        # This is just a unique identifier for the state.
-        self._id = random.randint(0, 1 << 30)
+        self._win = {}
 
     ################################################################
-    # Utilities
+    # Implementing the Game Interface
     ################################################################
 
-    ################################################################
-    # Implementing the ConcurrentGameState Interface
-    ################################################################
-
-    @classmethod
-    def saves(cls, states: List['LeanState'], filename: str):
-        """
-        Save a collection of states to a file.
-
-        This is super important. During MCTS,
-        this is what gets saved to the replay buffer.
-        """
-        np.save(filename, [state.human_json() for state in states])
-
-    @classmethod
-    def loads(cls, filename: str) -> List['LeanState']:
-        """
-        Load a collection of states from a file.
-        """
-        states = np.load(filename, allow_pickle=True)
-        return [cls(**state) for state in states]
-
-    def human_json(self):
-        """
-        Return a human-readable JSON representation of the state.
-        """
-
-        return {
-            "header": self.header,
-            "problem": self.problem,
-            "old_code": self.old_code,
-            "new_code": self.new_code,
-            "valid_code": self.valid_code,
-            "tactic_state": self.tactic_state,
-            "old_tactic_state": self.old_tactic_state,
-            "win": self._win,
-            "dead": self._dead,
-            "depth": self.depth,
-        }
-
-    @classmethod
-    def starting_state(cls,
-                       worker_id: WorkerIdentifer,
-                       problem: str,
-                       header: str,
-                       tactic_state: str,
-                       max_depth: int = 20) -> 'LeanState':
+    async def starting_state(self) -> 'LeanState':
         """
         Returns the starting state of the game.
         """
-        return LeanState(
-            parent=None,
-            problem=problem,
-            header=header,
-            new_code="",
+        res = LeanState(
+            code="",
             depth=0,
-            max_depth=max_depth,
-            ready=True,
-            win=False,
-            dead=False,
-            tactic_state=tactic_state,
-            valid_code="",
-            worker_id=worker_id
+            tactic_state=self.root_tactic_state,
+            dead=False
         )
+        self._win[res] = False
 
-    def check_state(self) -> None:
-        """
-        Check that the state is valid.
-        """
-        if None in [self.problem, self.header]:
-            raise ValueError(
-                "problem, header are required.")
+    async def is_legal(self, state: LeanState, action: LeanMove) -> bool:
+        return True
 
-        if self.ready():
-            if None in [self._win, self._dead, self.tactic_state, self.valid_code]:
-                raise ValueError(
-                    "win, dead, tactic_state, and valid_code are required if ready is True.")
-        else:
-            if [self._win, self._dead, self.tactic_state, self.valid_code].count(None) != 4:
-                raise ValueError(
-                    "win, dead, tactic_state, and valid_code must be None if ready is False.")
-
-    def next_state(self, action: LeanMove) -> 'LeanState':
+    async def next_state(self, state: LeanState, action: LeanMove) -> 'LeanState':
         """
         Returns the next state of the game given a current state and action.
         Requires that the state is non-terminal and action is legal.
 
-        This method cannot be called if the state is terminal or not ready!
-        Check with terminal() and ready() before calling this method.
+        This method cannot be called if the state is terminal!
 
         Parameters
         ----------
+        state: LeanState
+            The current state of the game.
         action: LeanMove
             The action to be taken.
         """
-        if not self.ready():
-            raise LeanStateError(
-                "Cannot get the next state of a LeanState that has not been processed.")
-
-        if self.terminal():
+        if await self.terminal(state):
             raise LeanStateError(
                 "Cannot get the next state of a terminal LeanState.")
 
-        if action in self.children:
-            # We've already computed this child, and we can return the cached result.
-            return self.children[action]
+        response = await self.worker.query(
+            task={
+                'task': self.problem + state.code + action.new_code,
+                'channel': self.worker.name
+            },
+            channel='lean'
+        )
+        repl_result = response['response']
+        process_result = await self.process(state.code, action.new_code, repl_result)
 
         new_state = LeanState(
-            parent=self,
-            problem=self.problem,
-            header=self.header,
-            new_code="",
-            depth=self.depth + 1,
-            max_depth=self.max_depth,
-            ready=False,
-            win=None,
-            dead=None,
-            tactic_state=None,
-            valid_code=None,
-            worker_id=self.worker_id
+            code=process_result['valid_code'],
+            depth=state.depth + 1,
+            tactic_state=process_result['tactic_state'],
+            dead=process_result['dead']
         )
-        self.children[action] = new_state
-        return new_state
 
-    def terminal(self) -> bool:
-        """
-        We should be able to check if we're terminal
-        even if we haven't done the PV or comment generation
-        yet; this is useful because I have a lot of while not state.terminal()
-        loops in the code.
-        """
-        if not self.ready():
-            raise LeanStateError(
-                "Cannot check if a LeanState is terminal if it has not been processed.")
-        return self._win or self._dead or self.depth >= self.max_depth
+        self._win[new_state] = process_result['win']
 
-    def reward(self) -> float:
+    def terminal(self, state: LeanState) -> bool:
+        return state.dead or state.depth >= self.max_depth or self._win[state]
+
+    def reward(self, state: LeanState) -> float:
         """
         Returns a float consisting of the reward for the player.
         """
-        if not self.ready():
-            raise LeanStateError(
-                "Cannot get the reward of a LeanState that has not been processed.")
-        if not self.terminal():
+        if not self.terminal(state):
             raise LeanStateError(
                 "Cannot get the reward of a non-terminal LeanState.")
-        return 1.0 if self._win else -1.0
+        return 1.0 if self._win[state] else -1.0
 
-    def __hash__(self) -> int:
-        """
-        Hash the state based on the id.
-        """
-        return self._id
+    def victorious(self, state: LeanState) -> bool:
+        if not self.terminal(state):
+            raise LeanStateError(
+                "Cannot check if a non-terminal LeanState is victorious.")
+        return self._win[state]
 
     def make_root(self) -> None:
         """
         Severs any references to the parent of
         this state, making it the root of the tree.
         """
-        if self.parent is not None:
-            self.parent.children = {}
-            self.parent = None
+        pass
+
+    async def clear_cache(self) -> None:
+        """
+        Clear the cache of the game.
+        """
+        self._win = {}
+        self._dead = {}
+        super().clear_cache()
 
     ################################################################
-    # Details of the ConcurrentClass Interface
+    # Helper Functions
     ################################################################
 
-    @on_startup
-    def pre_process(self) -> Iterator[WorkerTask]:
-        """
-        This function is called before the state is processed.
-        It prepares a string query for the lean 4 verifier.
-        """
-
-        if self.ready():
-            raise LeanStateError(
-                "Should not pre-process a LeanState that has already been processed.")
-
-        yield WorkerTask(
-            head_id=self.worker_id,
-            task_id=TaskIdentifier(task_type=LeanTaskType, task_idx=self._id),
-            task=self.problem + self.old_code + self.new_code
-        )
-
-    @classmethod
-    def get_index(cls, s: str, row: int, col: int) -> int:
+    def get_index(self, s: str, row: int, col: int) -> int:
         """
         Convert a (row, col) pair to an index in a string.
         The Lean 4 repl convention is that rows are 1-indexed
@@ -348,31 +208,23 @@ class LeanState(State[LeanMove]):
                 f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         return sum(line_lengths[:row-1]) + col
 
-    def truncate(self, sorries: List[dict], errors: List[dict]):
+    def truncate(self, old_code: str, new_code: str, sorries: list[dict], errors: list[dict]) -> str:
         """
         First, we need to find the last valid tactic.
 
         Unsolved goals also show up as errors, and we ignore them;
-        they have been ommitted from the errors list in post_process()
+        they have been omitted from the errors list in post_process()
         already.
 
         Parameters
         ----------
-        sorries: List[dict]
+        sorries: list[dict]
             A list of sorry messages.
-        errors: List[dict]
+        errors: list[dict]
             A list of error messages.
 
-        Modifies
-        -------
-        self.valid_code: str
-            The new code that was added to the proof.
-            This will be truncated to the first error or sorry.
         """
-        code_no_header = ''.join(
-            [self.problem, self.old_code,
-                self.new_code]
-        )
+        code_no_header = self.problem + old_code + new_code
 
         _prefix_len = len(self.problem)
         truncate_pos = len(code_no_header)
@@ -387,41 +239,38 @@ class LeanState(State[LeanMove]):
             if info_pos >= _prefix_len:
                 truncate_pos = min(truncate_pos, info_pos)
 
-        self.valid_code = code_no_header[:truncate_pos]
-        assert self.valid_code.startswith(self.problem)
-        self.valid_code = self.valid_code[len(self.problem):]
+        valid_code = code_no_header[:truncate_pos]
+        assert valid_code.startswith(self.problem)
+        valid_code = valid_code[len(self.problem):]
         # I guess this might not be true in some edge cases?
-        # assert self.valid_code.startswith(self.old_code)
-        self.valid_code = self.valid_code[len(self.old_code):]
+        # assert valid_code.startswith(self.old_code)
+        valid_code = valid_code[len(old_code):]
 
-    def get_goals(self, goals: List[dict]):
+        return valid_code
+
+    def get_goals(self, goals: list[dict]) -> str:
         """
         Get the the most recent goal from the Lean 4 verification.
 
         Parameters
         ----------
-        goals: List[dict]
+        goals: list[dict]
             A list of goal messages.
-
-        Modifies
-        -------
-        self.tactic_state: str
-            The tactic state after the new code was added.
         """
 
-        self.tactic_state = ""
+        tactic_state = ""
         max_line = float('-inf')
         max_column = float('-inf')
         for tactic in goals:
             if (tactic['pos']['line'] > max_line) or (tactic['pos']['line'] == max_line and tactic['pos']['column'] > max_column):
                 max_line = tactic['pos']['line']
                 max_column = tactic['pos']['column']
-                self.tactic_state = tactic['data'].lstrip()[
+                tactic_state = tactic['data'].lstrip()[
                     len("unsolved goals\n"):]
 
-    @handler(LeanTaskType)
-    @finisher
-    def post_process(self, result: WorkerResponse):
+        return tactic_state
+
+    def process(self, old_code: str, new_code: str, repl_result: dict[str, list[dict[str, str]]]):
         """
         This function is called after the state is processed.
 
@@ -447,20 +296,16 @@ class LeanState(State[LeanMove]):
             The result of the Lean 4 verification.
 
         """
-        yield from ()  # Tell python that this function is a generator, without actually yielding anything.
 
-        if self.ready():
-            raise LeanStateError(
-                "Should not post-process a LeanState that has already been processed.")
-
-        repl_result: dict = result.response
-        self.tactic_state = ""
-        self.valid_code = ""
-        self._dead = True
-        self._win = False
+        dead_result = {
+            'tactic_state': "",
+            'valid_code': "",
+            'dead': True,
+            'win': False
+        }
 
         if 'system_error' in repl_result or 'message' in repl_result or ('ast' not in repl_result):
-            return
+            return dead_result
 
         # 'sorries' has never been part of a repl_result
         # if 'sorries' in repl_result:
@@ -509,23 +354,26 @@ class LeanState(State[LeanMove]):
                 raise ValueError(
                     f"Unexpected severity: {m['severity']}")
 
-        self.truncate(sorries, errors)
-        self.get_goals(goals)
-        if self.valid_code.strip() == "":
+        valid_code = self.truncate(old_code, new_code, sorries, errors)
+
+        if valid_code.strip() == "":
             # This means that the new code was truncated to nothing,
             # i.e. the first new line of code written caused an error.
             # This is a dead state.
-            self._dead = True
-            self._win = False
-            return
+            return dead_result
 
+        tactic_state = self.get_goals(goals)
         if complete:
-            # print("Marked as complete!")
-            # print(repl_result)
-            self._dead = False
-            self._win = True
-            return
+            return {
+                'tactic_state': tactic_state,
+                'valid_code': valid_code,
+                'dead': False,
+                'win': True
+            }
 
-        self._dead = False
-        self._win = False
-        return
+        return {
+            'tactic_state': tactic_state,
+            'valid_code': valid_code,
+            'dead': False,
+            'win': False
+        }

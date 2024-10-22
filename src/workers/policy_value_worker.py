@@ -4,7 +4,7 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Dict, List
+from typing import dict, list
 
 from vllm import RequestOutput
 
@@ -18,7 +18,7 @@ from src.workers.types import (
 from src.workers.worker import *
 
 
-def construct_context(lean_game_dict: Dict) -> str:
+def construct_context(lean_game_dict: dict) -> str:
     """
     Generate a prompt for the policy-value worker to suggest comments.
     """
@@ -42,7 +42,7 @@ Then, please discuss whether or not the proof is on the right track. Are we prov
     return res
 
 
-def policy_value_suggest_comments(lean_game_dict: Dict, discussion_context: str, num: int = 5) -> str:
+def policy_value_suggest_comments(lean_game_dict: dict, discussion_context: str, num: int = 5) -> str:
     # We should call the LLM now.
 
     res = discussion_context + f"""Here is the tactic state at this point:
@@ -62,7 +62,7 @@ Please delimit this rating with a single number inside <RATING></RATING> tags.
 
 
 def parse_policy_value_output(output: str, logger: logging.Logger,
-                              num: int = 5) -> Dict:
+                              num: int = 5) -> dict:
     """
     Parse the output of the policy-value worker into a dict.
 
@@ -78,7 +78,7 @@ def parse_policy_value_output(output: str, logger: logging.Logger,
 
     Returns:
     -------
-    res: Dict
+    res: dict
         A dictionary containing the rating, comments, policy, and value.
     """
     res = {}
@@ -120,8 +120,8 @@ class ContextWorker(LLMWorker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 gpu_set: List[int],
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 gpu_set: list[int],
+                 queues: dict[str, multiprocessing.Queue],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -138,7 +138,7 @@ class ContextWorker(LLMWorker):
         self.config = config
 
     def loop(self):
-        my_tasks: List[WorkerTask] = self.spin_deque_task(
+        my_tasks: list[WorkerTask] = self.spin_deque_task(
             channel=PolicyValueTaskType,
             timeout=30,
             batch_size=self.config['batch_size'],
@@ -154,7 +154,7 @@ class ContextWorker(LLMWorker):
             construct_context(i.task)
             for i in my_tasks
         ]
-        outputs: List[RequestOutput] = self.generate(
+        outputs: list[RequestOutput] = self.generate(
             input_data
         )
 
@@ -184,8 +184,8 @@ class PolicyValueWorker(LLMWorker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 gpu_set: List[int],
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 gpu_set: list[int],
+                 queues: dict[str, multiprocessing.Queue],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -203,7 +203,7 @@ class PolicyValueWorker(LLMWorker):
         self.num = config['num_comments']
 
     def loop(self):
-        my_tasks: List[WorkerResponse] = self.spin_deque_task(
+        my_tasks: list[WorkerResponse] = self.spin_deque_task(
             channel=PolicyValuePostProcessTaskType,
             timeout=30,
             batch_size=self.config['batch_size'],
@@ -223,7 +223,7 @@ class PolicyValueWorker(LLMWorker):
             )
             for i in my_tasks
         ]
-        outputs: List[RequestOutput] = self.generate(
+        outputs: list[RequestOutput] = self.generate(
             input_data
         )
 

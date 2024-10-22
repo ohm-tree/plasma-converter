@@ -1,6 +1,6 @@
 
 import multiprocessing
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Iterator, Optional, Tuple, Union, dict, list
 
 import numpy as np
 from vllm import RequestOutput
@@ -10,7 +10,7 @@ from src.workers.types import FastPolicyValueWorkerType, PolicyValueTaskType
 from src.workers.worker import TaskType, WorkerIdentifer, WorkerTask
 
 
-def prompt(lean_game_dict: Dict) -> str:
+def prompt(lean_game_dict: dict) -> str:
     """
     Generate a prompt for the policy-value worker to suggest comments.
     """
@@ -31,8 +31,8 @@ class FastPolicyValueWorker(LLMWorker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 gpu_set: List[int],
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 gpu_set: list[int],
+                 queues: dict[str, multiprocessing.Queue],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -64,7 +64,7 @@ class FastPolicyValueWorker(LLMWorker):
         # We have tasks to complete.
         model_inputs = [prompt(task.task) for task in my_tasks]
 
-        model_outputs: List[RequestOutput] = self.generate(
+        model_outputs: list[RequestOutput] = self.generate(
             model_inputs
         )
 

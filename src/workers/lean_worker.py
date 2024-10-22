@@ -4,11 +4,10 @@ import os
 import queue
 import time
 import traceback
-from typing import Dict, Optional
+from typing import Optional, dict
 
 import pexpect
 
-from src.workers.types import LeanTaskType, LeanWorkerType
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
@@ -23,12 +22,13 @@ class LeanWorker(Worker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 queues: dict[str, multiprocessing.Queue],
                  **kwargs  # Unused
                  ):
         super().__init__(
-            worker_id=WorkerIdentifer(
-                LeanWorkerType, task_id),
+            name="Lean" + "_" + str(task_id),
+            worker_type="Lean",
+            worker_idx=task_id,
             queues=queues,
             run_name=run_name,
         )
@@ -113,7 +113,7 @@ class LeanWorker(Worker):
 
     def loop(self):
         input_data = self.deque_task(
-            channel=LeanTaskType,
+            channel="Lean",
             timeout=30
         )
         if input_data is None:
@@ -121,9 +121,9 @@ class LeanWorker(Worker):
             # Spinlock, disappointing, but there's nothing to do.
             return
 
-        self.logger.info(f"Received task: {input_data.task}")
+        self.logger.info(f"Received task: {input_data['task']}")
         result = self.send_code_read_json({
-            "cmd": input_data.task,
+            "cmd": input_data['task'],
             # "allTactics": True,
             # "tactics": True,
             "env": 0
@@ -138,14 +138,13 @@ class LeanWorker(Worker):
                 pass
             self.setup_repl()
             result = self.send_code_read_json({
-                "cmd": input_data.task,
+                "cmd": input_data['task'],
                 # "allTactics": True,
                 # "tactics": True,
                 "env": 0
             })
 
-        self.enqueue_response(
-            response=result,
-            task=input_data
+        self.enqueue(
+            response=result
         )
         self.logger.info(str(result))

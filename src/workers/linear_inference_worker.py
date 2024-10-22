@@ -8,7 +8,7 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union, dict, list
 
 import numpy as np
 
@@ -32,7 +32,7 @@ class LinearInferenceWorker(Worker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 queues: dict[str, multiprocessing.Queue],
                  **kwargs  # Unused
                  ):
         super().__init__(

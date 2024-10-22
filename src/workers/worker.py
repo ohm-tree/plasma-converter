@@ -1,99 +1,49 @@
-import abc
+import asyncio
 import logging
 import multiprocessing
 import os
 import queue
+import random
 import traceback
-from collections.abc import Iterator
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from abc import ABC, abstractmethod
+from typing import Optional, Union
 
 """
-I'm still not very happy with the current messaging scheme.
-We should have atomic TaskTypes, atomic TaskIndicies,
-no taskidentifiers, uhhh
+All Tasks should be dict-like objects.
 
-basically Tasks should be classes to themselves that you can register.
-joever.
 
+Event-based query system:
+ - listen() is the main entrypoint for the event-based query system. This should run forever in the async loop.
+ - query() is the high-level function that sends a query and awaits a response.
+
+Other lower-level functions for synchronous querying:
+ - spin_deque_tasks()
+ - enqueue()
 """
 
 
-@dataclass(frozen=True)
-class TaskType:
-    """
-    A type of task.
-    """
-    task_type: str
+class KillSignalException(Exception):
+    pass
 
 
-@dataclass(frozen=True)
-class TaskIdentifier:
-    """
-    A unique identifier for a task.
-    """
-    task_idx: int
-    task_type: TaskType
-
-
-KillTaskType = TaskType("kill")
-
-
-@dataclass(frozen=True)
-class WorkerType:
-    """
-    A type of worker.
-    """
-    worker_type: str
-    consumes: Iterator[TaskType]
-
-
-@dataclass(frozen=True)
-class WorkerIdentifer:
-    """
-    A unique identifier for a worker.
-    """
-    worker_type: WorkerType
-    worker_idx: int
-
-
-@dataclass(frozen=True)
-class WorkerTask:
-    """
-    A task for a worker to complete.
-    """
-    head_id: WorkerIdentifer
-    task_id: TaskIdentifier
-    task: Any
-
-
-@dataclass(frozen=True)
-class WorkerResponse:
-    """
-    A response from a worker to a task.
-    """
-    head_id: WorkerIdentifer
-    tail_id: WorkerIdentifer
-    task_id: TaskIdentifier
-    task: Any
-    response: Any
-
-
-class Worker(abc.ABC):
+class Worker(ABC):
     def __init__(self,
-                 worker_id: WorkerIdentifer,
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
-                 run_name: str,
-                 poison_scream: bool = True):
-        self.worker_type = worker_id.worker_type
-        self.worker_idx = worker_id.worker_idx
-        self.worker_id = worker_id
+                 name: str,
+                 worker_type: str,
+                 worker_idx: int,
+                 queues: dict[str, multiprocessing.Queue],
+                 run_name: str
+                 ):
+        self.name = name
+        self.worker_type = worker_type
+        self.worker_idx = worker_idx
 
         self.run_name = run_name
-
         self.queues = queues
-
         self.setup_logger()
+
+        self.dequeue_events: dict[str, asyncio.Event] = {}
+        self.dequeue_results: dict[str, dict] = {}
 
         self._task_idx = 0
 
@@ -105,17 +55,16 @@ class Worker(abc.ABC):
         )
 
         self._no_inbox = False
-        if self.worker_id not in self.queues:
+        if self.name not in self.queues:
             self._no_inbox = True
             self.logger.warning(
                 "No inbox queue detected; worker may never terminate.")
 
         self._no_scream_queue = False
-        if KillTaskType not in self.queues:
+        if "kill" not in self.queues:
             self._no_scream_queue = True
             self.logger.warning(
                 "No scream queue detected; when worker terminates, master may not know.")
-        self.poison_scream = poison_scream
 
     def setup_logger(self):
         # I should live in src/workers/
@@ -142,62 +91,47 @@ class Worker(abc.ABC):
             f"Starting {self.worker_type} worker {self.worker_idx}."
         )
 
+    @abstractmethod
+    def validate(self, task: dict) -> None:
+        """
+        This method should be overridden to validate tasks
+        that are dequeued.
+        """
+        pass
+
     def enqueue(self,
-                obj: Any,
-                where: Union[TaskType, WorkerIdentifer]
+                obj: dict,
+                channel: Optional[str] = None,
                 ) -> None:
         """
         General-purpose enqueue function.
+
+        If channel is None, it is inferred from the task
+        by checking the "channel" field.
         """
-        self.queues[where].put(obj)
+        if channel is None:
+            if "channel" not in obj:
+                raise ValueError(
+                    "No channel specified for enqueue.")
+            channel = obj["channel"]
+        self.queues[channel].put(obj)
 
-    def enqueue_task(self,
-                     obj: Any,
-                     task_idx: Optional[int] = None,
-                     task_type: Optional[TaskType] = None
-                     ) -> None:
-        if isinstance(obj, WorkerTask):
-            task_type = obj.task_id.task_type
-            # print("INSIDE ENQUEUE TASK")
-            # print(task_type)
-            # print("-"*80)
-            # print(obj)
-            # print("-"*80)
-            self.enqueue(obj, task_type)
-            return
+    def enqueue_with_handler(self, obj: dict, channel: str) -> None:
+        if "_task_idx" not in obj:
+            obj["_task_idx"] = self.name + "_" + \
+                str(self._task_idx) + "_" + str(random.randint(0, 1 << 30))
+            self._task_idx += 1
 
-        assert task_idx is not None
-        assert task_type is not None
+        self.dequeue_events[obj["_task_idx"]] = asyncio.Event()
+        self.enqueue(obj, channel)
 
-        task = WorkerTask(
-            head_id=self.worker_id,
-            task_id=TaskIdentifier(
-                task_idx=task_idx, task_type=task_type),
-            task=obj
-        )
-        self.enqueue(task, task_type)
-
-    def enqueue_response(self,
-                         response: Any,
-                         task: Union[WorkerTask, WorkerResponse],
-                         ) -> None:
-
-        response_task = WorkerResponse(
-            head_id=task.head_id,
-            tail_id=self.worker_id,
-            task_id=task.task_id,
-            task=task.task,
-            response=response
-        )
-        self.logger.info("Enqueued response" + str(response_task))
-        self.enqueue(response_task, task.head_id)
-
-    def spin_deque_task(self,
-                        channel: Union[TaskType, WorkerIdentifer],
-                        blocking=True,
-                        timeout: Optional[int] = None,
-                        batch_size: Optional[int] = None,
-                        ) -> List[Union[WorkerTask, WorkerResponse]]:
+    def spin_deque_tasks(self,
+                         channel: str,
+                         blocking=True,
+                         timeout: Optional[int] = None,
+                         batch_size: Optional[int] = None,
+                         validate=True,
+                         ) -> list[dict]:
         """
         If batch_size is None, return all tasks available.
         If batch_size is not None, return a batch of tasks
@@ -207,12 +141,29 @@ class Worker(abc.ABC):
 
         If timeout is not None, blocks for up to timeout seconds
         before returning; possibly returns fewer than batch_size tasks.
+
+        If a kill signal is received, will raise a KillSignalException.
+
+        Parameters
+        ----------
+        self : Worker
+            The worker object.
+        channel : str
+            The channel to dequeue tasks from.
+        blocking : bool
+            Whether to block until a task is available.
+        timeout : Optional[int]
+            The number of seconds to wait before returning.
+        batch_size : Optional[int]
+            The number of tasks to return.
+        validate : bool
+            Whether to validate tasks before returning.
+
         """
         if batch_size is None:
             batch_size = float('inf')
 
         first = blocking
-        task: Union[WorkerTask, WorkerResponse]
         num_tasks = 0
         res = []
         while num_tasks < batch_size:
@@ -222,36 +173,107 @@ class Worker(abc.ABC):
                     task = self.queues[channel].get(
                         block=True,
                         timeout=timeout)
-                    # print("INSIDE SPIN DEQUE TASK, FIRST IS TRUE")
                 else:
                     task = self.queues[channel].get_nowait()
             except queue.Empty:
                 break
             else:
-                # print("Found a task")
-                # print(task)
-
                 if task == 'kill':
-                    self.logger.info(
+                    self.logger.fatal(
                         f"Received kill signal, terminating.")
-                    return
-                if task.task_id.task_type not in self.worker_type.consumes:
-                    raise ValueError(
-                        f"I am a worker of type {self.worker_type}, got {task.task_id.task_type}"
-                    )
-                # yield task
+                    raise KillSignalException()
+                if validate:
+                    self.validate(task)
                 res.append(task)
                 num_tasks += 1
         return res
 
+    def spin_deque_tasks_with_handler(self,
+                                      channel: str,
+                                      blocking=True,
+                                      timeout: Optional[int] = None,
+                                      batch_size: Optional[int] = None,
+                                      validate=True,
+                                      ) -> list[dict]:
+        """
+        If batch_size is None, return all tasks available.
+        If batch_size is not None, return a batch of tasks
+        of size at most batch_size.
+
+        If timeout is None, block until a task is available.
+
+        If timeout is not None, blocks for up to timeout seconds
+        before returning; possibly returns fewer than batch_size tasks.
+
+        If a kill signal is received, will raise a KillSignalException.
+
+        Parameters
+        ----------
+        channel : str
+            The channel to dequeue tasks from.
+        blocking : bool
+            Whether to block until a task is available.
+        timeout : Optional[int]
+            The number of seconds to wait before returning.
+        batch_size : Optional[int]
+            The number of tasks to return.
+        validate : bool
+            Whether to validate tasks before returning.
+        """
+        res = self.spin_deque_tasks(
+            channel, blocking, timeout, batch_size, validate)
+        for task in res:
+            if "_task_idx" not in task:
+                raise ValueError(
+                    "Task does not have a _task_idx field.")
+            if task["_task_idx"] not in self.dequeue_events:
+                raise ValueError(
+                    "Task does not have a corresponding dequeue event.")
+            self.dequeue_results[task["_task_idx"]] = task
+            self.dequeue_events[task["_task_idx"]].set()
+        return res
+
+    async def listen(self,
+                     channel: str,
+                     blocking=False,
+                     timeout: Optional[int] = None,
+                     batch_size: Optional[int] = None,
+                     validate=True,
+                     ) -> list[dict]:
+        """
+        This method is an async wrapper around spin_deque_tasks_with_handler;
+        it is the main entrypoint for the event-based query system.
+        """
+        while True:
+            self.spin_deque_tasks_with_handler(
+                channel, blocking, timeout, batch_size, validate)
+
+            await asyncio.sleep(0)
+
     def deque_task(self,
-                   channel: Union[TaskType, WorkerIdentifer],
+                   channel: str,
                    timeout: Optional[int] = None,
-                   ) -> Optional[Union[WorkerTask, WorkerResponse]]:
+                   ) -> Optional[dict]:
         try:
             return self.queues[channel].get(timeout=timeout)
         except queue.Empty:
             return None
+
+    async def query(self, task: dict, channel: Optional[str] = None) -> dict:
+        """
+        Send a query to the master process and wait for a response.
+        """
+        if channel is None:
+            if "channel" not in task:
+                raise ValueError(
+                    "No channel specified for query.")
+            channel = task["channel"]
+        self.enqueue_with_handler(task, channel)
+        await self.dequeue_events[task["_task_idx"]].wait()
+        res = self.dequeue_results[task["_task_idx"]]
+        del self.dequeue_results[task["_task_idx"]]
+        del self.dequeue_events[task["_task_idx"]]
+        return res
 
     def run(self):
         """
@@ -262,7 +284,7 @@ class Worker(abc.ABC):
         not the main method.
         """
         # check for kill signals from the master queue.
-        while self.no_poison():
+        while True:
             try:
                 self.loop()
             except Exception as e:
@@ -281,42 +303,28 @@ class Worker(abc.ABC):
 
         This method should not be overridden.
         """
-        self.run()
         try:
-            # enqueue a kill signal to the master queue.
-            if (not self._no_scream_queue and self.poison_scream):
-                self.queues[KillTaskType].put("kill")
+            self.run()
+        except KillSignalException:
+            self.logger.info(
+                f"Worker {self.worker_idx} of type {self.worker_type} received kill signal.")
+        except Exception as e:
+            self.logger.critical(
+                "An exception occurred in the worker main!!")
+            self.logger.critical(traceback.format_exc())
+        finally:
+            try:
+                self.shutdown()
+            except Exception as e:
+                self.logger.critical(
+                    "An exception occurred in the worker shutdown!!")
+                self.logger.critical(traceback.format_exc())
 
-            self.shutdown()
             self.logger.info(
                 f"Worker {self.worker_idx} of type {self.worker_type} terminated."
             )
 
-        except Exception as e:
-            self.logger.critical(
-                "An exception occurred in the worker shutdown!!")
-            self.logger.critical(e)
-
-    def no_poison(self) -> bool:
-        """
-        Check for kill signals from the master queue.
-
-        Returns
-        -------
-        bool
-            True if no kill signal has been received, False otherwise.
-        """
-        if not self._no_scream_queue:
-            try:
-                kill_signal = self.queues[KillTaskType].get_nowait()
-                self.queues[KillTaskType].put("kill")  # echo the kill signal
-            except queue.Empty:
-                pass
-            else:
-                return False
-        return True
-
-    @abc.abstractmethod
+    @abstractmethod
     def loop(self):
         pass
 

@@ -3,7 +3,7 @@ Entry point for the completion worker process.
 """
 
 import multiprocessing
-from typing import Dict, List
+from typing import dict, list
 
 from vllm import RequestOutput
 
@@ -18,8 +18,8 @@ class CompletionWorker(LLMWorker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 gpu_set: List[int],
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 gpu_set: list[int],
+                 queues: dict[str, multiprocessing.Queue],
                  ):
         super().__init__(
             worker_id=WorkerIdentifer(
@@ -50,7 +50,7 @@ class CompletionWorker(LLMWorker):
         input_data = [
             i.task for i in my_tasks
         ]
-        outputs: List[RequestOutput] = self.generate(
+        outputs: list[RequestOutput] = self.generate(
             input_data,
         )
         for i in range(len(outputs)):

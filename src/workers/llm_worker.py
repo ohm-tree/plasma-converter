@@ -44,9 +44,9 @@ from src.workers.worker import *
 class LLMWorker(Worker):
     def __init__(self,
                  worker_id: WorkerIdentifer,
-                 queues: Dict[Union[WorkerType, WorkerIdentifer], multiprocessing.Queue],
+                 queues: dict[Union[WorkerType, WorkerIdentifer], multiprocessing.Queue],
                  run_name: str,
-                 gpu_set: List[int],
+                 gpu_set: list[int],
                  config: dict,
                  #  run_locally=True,
                  #  model_name: Optional[str] = "deepseek-ai/DeepSeek-Prover-V1.5-RL",
@@ -103,7 +103,7 @@ class LLMWorker(Worker):
 
         self.use_tqdm = use_tqdm
 
-    def generate(self, input_data: Union[List[str], List[dict]]) -> List[RequestOutput]:
+    def generate(self, input_data: Union[list[str], list[dict]]) -> list[RequestOutput]:
         if self.run_locally:
             return self.llm.generate(
                 input_data,

@@ -5,7 +5,7 @@ This file runs mcts inference with fast_pv_worker and a yaml config.
 import argparse
 import multiprocessing
 import time
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Tuple, dict, list
 
 import yaml
 
@@ -94,7 +94,7 @@ def run_inference():
 
     # Create inference processes
     gpu_offset = 0
-    procs: Dict[str, List[multiprocessing.Process]] = {}
+    procs: dict[str, list[multiprocessing.Process]] = {}
     for _, type_string, entrypoint, gpu, _ in WORKER_TYPES_AND_STRINGS:
         procs.update({type_string: []})
         for i in range(config[type_string]['num_procs']):
@@ -118,7 +118,7 @@ def run_inference():
     time.sleep(1)  # Debug: let us see the processes start up
 
     # These should all just be references, arranged in nice ways.
-    all_procs: List[multiprocessing.Process] = []
+    all_procs: list[multiprocessing.Process] = []
     for proc_type, proc_list in procs.items():
         for w in proc_list:
             all_procs.append(w)

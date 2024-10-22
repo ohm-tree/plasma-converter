@@ -8,7 +8,7 @@ import multiprocessing
 import os
 import queue
 import time
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union, dict, list
 
 import numpy as np
 
@@ -23,7 +23,7 @@ class MCTSWorker(Worker):
                  config: dict,
                  run_name: str,
                  task_id: int,
-                 queues: Dict[Union[TaskType, WorkerIdentifer], multiprocessing.Queue],
+                 queues: dict[str, multiprocessing.Queue],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -87,7 +87,7 @@ class MCTSWorker(Worker):
             self.logger.info(f"Time to context: {time_to_context}")
             next(state.post_comments(context_output), None)
 
-            states: List[MetaLeanState]
+            states: list[MetaLeanState]
 
             states, distributions, rewards = self_play(
                 self,
