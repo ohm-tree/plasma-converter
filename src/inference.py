@@ -10,7 +10,6 @@ from typing import Callable, Tuple, dict, list
 import yaml
 
 from src.workers import *
-from src.workers.worker import TaskType, WorkerIdentifer, WorkerType
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, required=True)
@@ -25,64 +24,48 @@ Run fast linear inference with
 ```bash
 python src/inference.py --config configs/fast_linear.yaml
 ```
-
-Run debug linear inference with
-```bash
-python src/inference.py --config configs/linear_debug.yaml
-```
-
-Run fast mcts inference with
-```bash
-python src/inference.py --config configs/fast_mcts.yaml
-```
-
-Debug fast mcts inference with
-```bash
-python src/inference.py --config configs/fast_mcts_debug.yaml
-```
-
 """
 
 
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 
-    for _, type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
+    for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         if type_string not in config:
             config[type_string] = {'num_procs': 0}
 
     # Assert that the config is valid
-    fast_pv_active = (config['fast_policy_value']['num_procs'] > 0)
-    pv_active = (config['policy_value']['num_procs'] >
-                 0 or config['context']['num_procs'] > 0)
-    if fast_pv_active:
-        if pv_active:
-            raise ValueError(
-                "fast_policy_value and policy_value/context workers cannot be run at the same time.")
-        else:
-            print("Running in fast PV mode.")
-    else:
-        if pv_active:
-            print("Running in normal PV mode.")
-        else:
-            print("Warning: No policy value workers are active.")
+    # fast_pv_active = (config['fast_policy_value']['num_procs'] > 0)
+    # pv_active = (config['policy_value']['num_procs'] >
+    #              0 or config['context']['num_procs'] > 0)
+    # if fast_pv_active:
+    #     if pv_active:
+    #         raise ValueError(
+    #             "fast_policy_value and policy_value/context workers cannot be run at the same time.")
+    #     else:
+    #         print("Running in fast PV mode.")
+    # else:
+    #     if pv_active:
+    #         print("Running in normal PV mode.")
+    #     else:
+    #         print("Warning: No policy value workers are active.")
 
-    if config['linear_inference']['num_procs'] > 0:
-        print("Running in linear inference mode.")
-    if config['linear_inference_debug']['num_procs'] > 0:
-        print("Running in linear inference debug mode.")
-    if config['mcts']['num_procs'] > 0:
-        print("Running in MCTS mode.")
-    if sum([config['mcts']['num_procs'] > 0, config['linear_inference']['num_procs'] > 0, config['linear_inference_debug']['num_procs'] > 0]) != 1:
-        raise ValueError(
-            "Exactly one of mcts, linear_inference, or linear_inference_debug must be active.")
+    # if config['linear_inference']['num_procs'] > 0:
+    #     print("Running in linear inference mode.")
+    # if config['linear_inference_debug']['num_procs'] > 0:
+    #     print("Running in linear inference debug mode.")
+    # if config['mcts']['num_procs'] > 0:
+    #     print("Running in MCTS mode.")
+    # if sum([config['mcts']['num_procs'] > 0, config['linear_inference']['num_procs'] > 0, config['linear_inference_debug']['num_procs'] > 0]) != 1:
+    #     raise ValueError(
+    #         "Exactly one of mcts, linear_inference, or linear_inference_debug must be active.")
 
     queues = {}
     print("Creating Queues:")
-    for worker_type, type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
+    for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         queues.update(
             {
-                WorkerIdentifer(worker_type, i): multiprocessing.Queue()
+                type_string + "_" + str(i): multiprocessing.Queue()
                 for i in range(config[type_string]['num_procs'])
             }
         )

@@ -50,9 +50,6 @@ class Worker(ABC):
         self.logger.info(
             f"Worker {self.worker_idx} of type {self.worker_type} initialized."
         )
-        self.logger.info(
-            f"Global Variables I can see: {globals().keys()}"
-        )
 
         self._no_inbox = False
         if self.name not in self.queues:
@@ -287,15 +284,16 @@ class Worker(ABC):
         while True:
             try:
                 self.loop()
+            except KillSignalException:
+                self.logger.info(
+                    f"Worker {self.worker_idx} of type {self.worker_type} received kill signal."
+                )
+                break
             except Exception as e:
                 self.logger.critical(
                     "An exception occurred in the worker loop!!")
                 self.logger.critical(traceback.format_exc())
                 break
-        else:
-            self.logger.info(
-                f"Worker {self.worker_idx} of type {self.worker_type} received kill signal."
-            )
 
     def main(self):
         """

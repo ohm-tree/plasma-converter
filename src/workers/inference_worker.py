@@ -7,18 +7,13 @@ the results.
 
 import asyncio
 import json
-import logging
 import multiprocessing
 import os
-import queue
-import time
 from abc import ABC, abstractmethod
-from typing import Optional, Union
 
 import numpy as np
 from wayfinder.uct.self_play import async_self_play
 
-from src.games.lazy_agent import LazyLeanAgent
 from src.games.lean_game import LeanGame, LeanState
 from src.workers.worker import Worker
 
@@ -71,6 +66,15 @@ class InferenceWorker(Worker, ABC):
         asyncio.run(self.async_run())
 
     async def async_run(self):
+
+        # spawn an async task which listens forever
+        # for incoming tasks
+        listener = asyncio.create_task(
+            self.listen(
+                channel=self.name
+            )
+        )
+
         for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
             self.logger.info(
                 f"Working on problem {current_problem}")
@@ -107,6 +111,8 @@ class InferenceWorker(Worker, ABC):
             if "result" in results:
                 self.logger.info(
                     f"Finished problem {problem['name']} result: {results['result']}")
+
+        listener.cancel()
 
     @abstractmethod
     async def solve(self, game: LeanGame):

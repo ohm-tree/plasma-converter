@@ -26,11 +26,14 @@ class LeanWorker(Worker):
                  **kwargs  # Unused
                  ):
         super().__init__(
-            name="Lean" + "_" + str(task_id),
-            worker_type="Lean",
+            name="lean" + "_" + str(task_id),
+            worker_type="lean",
             worker_idx=task_id,
             queues=queues,
             run_name=run_name,
+        )
+        self.logger.info(
+            f"Global Variables I can see: {globals().keys()}"
         )
         self.setup_repl()
         self.logger.info("Lean4 REPL setup.")
@@ -113,7 +116,7 @@ class LeanWorker(Worker):
 
     def loop(self):
         input_data = self.deque_task(
-            channel="Lean",
+            channel="lean",
             timeout=30
         )
         if input_data is None:

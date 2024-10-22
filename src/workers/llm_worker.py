@@ -59,6 +59,9 @@ class LLMWorker(Worker):
             queues=queues,
             run_name=run_name,
         )
+        self.logger.info(
+            f"Global Variables I can see: {globals().keys()}"
+        )
 
         LLM_kwargs = config['model'] if 'model' in config else None
         sampling_kwargs = config['sampling'] if 'sampling' in config else None
@@ -136,10 +139,9 @@ class LLMWorker(Worker):
                 channel=my_tasks[i]['channel']  # The response channel.
             )
 
-
-def shutdown(self):
-    destroy_model_parallel()
-    destroy_distributed_environment()
-    del self.llm.llm_engine.model_executor
-    del self.llm
-    gc.collect()
+    def shutdown(self):
+        destroy_model_parallel()
+        destroy_distributed_environment()
+        del self.llm.llm_engine.model_executor
+        del self.llm
+        gc.collect()
