@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional
 
 import numpy as np
@@ -92,6 +91,7 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             channel='completion'
         )
 
+        # TODO: make this a named dict
         res: list[dict[str, Any]] = completion['result']
 
         for i in range(num_completions):
