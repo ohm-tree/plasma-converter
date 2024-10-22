@@ -8,6 +8,7 @@ import multiprocessing
 
 from wayfinder.uct.self_play import async_self_play
 
+from src.games.lazy_agent import LazyLeanAgent
 from src.games.lean_game import LeanGame, LeanState
 from src.workers.inference_worker import InferenceWorker
 
@@ -40,11 +41,19 @@ class MCTSWorker(InferenceWorker):
 
         states: list[LeanState]
 
+        agent = LazyLeanAgent(
+            game=game,
+            worker=self,
+            max_num_completions=self.config['max_num_completions'],
+        )
+
         states, distributions, rewards = await async_self_play(
             self,
             state=state,
-            num_iters=self.num_iters,
-            max_actions=self.max_actions
+            game=game,
+            agent=agent,
+            tree_kwargs=self.config['tree_kwargs'],
+            search_kwargs=self.config['search_kwargs']
         )
 
         return {
