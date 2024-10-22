@@ -8,11 +8,12 @@ description: |
 mcts:
     num_procs: 1
     num_iters: 5
-    max_actions: 2
+    max_num_completions: 2
 
 completion:
     num_procs: 1
     batch_size: 40
+    timeout: 30
     model:
         model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
         max_num_batched_tokens: 8192
@@ -23,21 +24,7 @@ completion:
         top_k: 1
         top_p: 1.0
         stop: ["\n", "```"]
+        logprobs: 0
 
 lean:
     num_procs: 1
-
-fast_policy_value:
-    num_procs: 1
-    batch_size: 40
-    num_comments: 2
-    model:
-        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
-        max_num_batched_tokens: 8192
-        trust_remote_code: True
-    sampling:
-        max_tokens: 500
-        temperature: 1.0
-        top_p: 0.95
-        n: 1
-        stop: ["\n"]

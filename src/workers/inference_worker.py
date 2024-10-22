@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from wayfinder.uct.self_play import async_self_play
 
-from src.games.lean_game import LeanGame, LeanState
+from src.lean.lean_game import LeanGame, LeanState
 from src.workers.worker import Worker
 
 

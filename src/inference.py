@@ -87,7 +87,6 @@ def collate_results():
 def run_inference():
     # collate results
     collate_results()
-    return
 
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 

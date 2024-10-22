@@ -17,7 +17,7 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from src.games.ast_parser import lean4_parser
+from src.lean.ast_parser import lean4_parser
 
 HOME_DIR = os.path.expanduser('~')
 # 'lake build' should run itself

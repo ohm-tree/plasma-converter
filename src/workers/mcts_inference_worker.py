@@ -8,8 +8,8 @@ import multiprocessing
 
 from wayfinder.uct.self_play import async_self_play
 
-from src.games.lazy_agent import LazyLeanAgent
-from src.games.lean_game import LeanGame, LeanState
+from src.agents.lazy_agent import LazyLeanAgent
+from src.lean.lean_game import LeanGame, LeanState
 from src.workers.inference_worker import InferenceWorker
 
 

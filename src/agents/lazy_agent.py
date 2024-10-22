@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional
 import numpy as np
 from wayfinder.games import *
 
-from src.games.lean_game import LeanGame, LeanMove, LeanState
+from src.lean.lean_game import LeanGame, LeanMove, LeanState
 from src.workers.worker import *
 
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
