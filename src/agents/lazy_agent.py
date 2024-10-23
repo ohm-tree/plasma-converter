@@ -13,20 +13,83 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
     def __init__(self,
                  game: LeanGame,
                  worker: Worker,
-                 max_num_completions: int = 100,
+                 request_formula: str,
+                 max_num_completions: int,
+                 valueless: bool = False,
                  ):
         """
         """
         super().__init__(game=game)
         self.worker = worker
-
+        self.request_formula = request_formula
         self.max_num_completions = max_num_completions
+
+        self.valueless = valueless
 
     async def max_moves(self, state: LeanState) -> int:
         """
         Returns the maximum number of moves.
         """
         return self.max_num_completions
+
+    async def amount_to_request(self,
+                                state: LeanState,
+                                current_num_children: int,
+                                num_visits: int,
+                                child_num_visits: np.ndarray,
+                                child_priors: np.ndarray,
+                                child_total_value: np.ndarray,
+                                child_Q: np.ndarray,
+                                child_U: np.ndarray,
+                                c: float,
+                                expand_initial_value: float) -> tuple[int, Optional[int]]:
+        """
+        Returns the amount of moves to request.
+        """
+        if self.request_formula == "sqrt":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+            if current * current < num_visits:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            # We don't need more
+            return (min(current, max_moves), None)
+        if self.request_formula == "log":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+            if 2 ** current < num_visits:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            return (min(current, max_moves), None)
+        if self.request_formula == "conservative":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+
+            current_best = np.max(child_Q + c * child_U)
+            if expand_initial_value >= current_best:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            return (min(current, max_moves), None)
+        if self.request_formula == "pure":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+
+            current_best = np.max(child_Q + c * child_U)
+
+            # simulate a maximally likely new child.
+            remaining_probability = max(1 - np.sum(child_priors), 0)
+            new_U = remaining_probability * np.sqrt(num_visits)
+
+            if expand_initial_value + c * new_U >= current_best:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            return (min(current, max_moves), None)
+
+        raise ValueError(f"Unknown request formula: {self.request_formula}")
 
     async def require_new_move(
         self,
@@ -37,9 +100,9 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         Behavior:
 
-        On the first pass, attempts to generate exactly max_num_moves completions.
+        On each pass, attempts to generate exactly max_num_moves completions.
 
-        Then, continues generating completions until there are at least min_num_moves completions.
+        Always makes at least one pass, and stops when there are at least min_num_moves completions.
         """
 
         if max_num_moves is None:
@@ -53,11 +116,16 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             self.active_move_cache[state] = []
 
         # TODO: as the number of queries increases, we should scale the temperature up for more variety.
-        while len(self.active_move_cache[state]) < min_num_moves:
+        while True:
             num_queries_needed = max_num_moves - \
                 len(self.active_move_cache[state])
 
-            completions = await self.LLM_rollout(state, num_queries_needed, 1.0)
+            if num_queries_needed <= 0:
+                # Just make it bullet-proof.
+                break
+
+            # Scale the temperature up as the number of queries increases.
+            completions = await self.LLM_rollout(state, num_queries_needed, max_num_moves ** 0.1)
 
             active_move_set = set(self.active_move_cache[state])
             for i in range(num_queries_needed):
@@ -66,8 +134,11 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
                 probability = np.exp(probability)
                 if move not in active_move_set:
                     self.active_move_cache[state].append(move)
-                    self.policy_cache[(state, move)] = probability
+                    self.policy_cache[hash((state, move))] = probability
                     active_move_set.add(move)
+
+            if len(self.active_move_cache[state]) >= min_num_moves:
+                break
 
         return True
 
@@ -75,6 +146,8 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         Completes a state.
         """
+
+        # print("Attempting to get completions")
 
         prompt = 'Complete the following Lean 4 code.\n' + \
             'The tactic state is:\n' + \
@@ -115,6 +188,8 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         This function is called before the comments are generated.
         """
+        if self.valueless:
+            return 0
 
         def context_prompt(lean_game_dict: dict) -> str:
             """

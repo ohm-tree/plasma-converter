@@ -1,4 +1,4 @@
-run_name: fast_mcts_full_1000
+run_name: fast_mcts_full_100
 split: ["valid", "test"]
 data_dir: datasets/minif2f.jsonl
 description: |
@@ -8,9 +8,13 @@ description: |
 
 mcts:
     num_procs: 61
-    max_num_completions: 30
+    agent_class: "LazyLeanAgent"
+    agent_kwargs:
+        request_formula: "sqrt"
+        max_num_completions: 30
+        valueless: True
     search_kwargs:
-        num_iters: 1000
+        num_iters: 100
 
 completion:
     num_procs: 8

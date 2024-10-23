@@ -101,35 +101,14 @@ def run_inference():
 
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 
+    # save a copy of the config in the results folder
+    os.makedirs(os.path.join('results', run_name), exist_ok=True)
+    with open(os.path.join('results', run_name, 'config.yaml'), 'w') as file:
+        yaml.dump(config, file)
+
     for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         if type_string not in config:
             config[type_string] = {'num_procs': 0}
-
-    # Assert that the config is valid
-    # fast_pv_active = (config['fast_policy_value']['num_procs'] > 0)
-    # pv_active = (config['policy_value']['num_procs'] >
-    #              0 or config['context']['num_procs'] > 0)
-    # if fast_pv_active:
-    #     if pv_active:
-    #         raise ValueError(
-    #             "fast_policy_value and policy_value/context workers cannot be run at the same time.")
-    #     else:
-    #         print("Running in fast PV mode.")
-    # else:
-    #     if pv_active:
-    #         print("Running in normal PV mode.")
-    #     else:
-    #         print("Warning: No policy value workers are active.")
-
-    # if config['linear_inference']['num_procs'] > 0:
-    #     print("Running in linear inference mode.")
-    # if config['linear_inference_debug']['num_procs'] > 0:
-    #     print("Running in linear inference debug mode.")
-    # if config['mcts']['num_procs'] > 0:
-    #     print("Running in MCTS mode.")
-    # if sum([config['mcts']['num_procs'] > 0, config['linear_inference']['num_procs'] > 0, config['linear_inference_debug']['num_procs'] > 0]) != 1:
-    #     raise ValueError(
-    #         "Exactly one of mcts, linear_inference, or linear_inference_debug must be active.")
 
     queues: dict[str, multiprocessing.Queue] = {}
     print("Creating Queues:")
