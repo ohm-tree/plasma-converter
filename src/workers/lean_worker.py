@@ -36,26 +36,38 @@ class LeanWorker(Worker):
         self.logger.info(
             f"Global Variables I can see: {globals().keys()}"
         )
+        time.sleep(5 * task_id)
         self.setup_repl()
         self.logger.info("Lean4 REPL setup.")
 
     def setup_repl(self):
-        self.child = pexpect.spawn(
-            f"{DEFAULT_LAKE_PATH} exe repl",
-            cwd=DEFAULT_LEAN_WORKSPACE)
+        while True:
+            try:
+                self.child = pexpect.spawn(
+                    f"{DEFAULT_LAKE_PATH} exe repl",
+                    cwd=DEFAULT_LEAN_WORKSPACE)
 
-        # Use the unprotected version to avoid error-loops.
-        self._send_code_read_json(
-            {
-                "cmd": LEAN4_DEFAULT_HEADER,
-                "allTactics": True,
-                "tactics": True,
-            },
-            timeout_start=600,
-            timeout_cat=600,
-            timeout_finish=600
-        )
-        self.logger.info("Just initialized Lean4 REPL.")
+                # Use the unprotected version to avoid error-loops.
+                self._send_code_read_json(
+                    {
+                        "cmd": LEAN4_DEFAULT_HEADER,
+                        "allTactics": True,
+                        "tactics": True,
+                    },
+                    timeout_start=600,
+                    timeout_cat=600,
+                    timeout_finish=600
+                )
+                self.logger.info("Just initialized Lean4 REPL.")
+                break
+            except Exception as e:
+                self.logger.error(traceback.format_exc())
+                time.sleep(10)
+            finally:
+                try:
+                    self.child.close()
+                except:
+                    pass
 
     def send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30, kill=False):
         try:

@@ -61,7 +61,8 @@ class LazyValuelessLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
                 # Just make it bullet-proof.
                 break
 
-            completions = await self.LLM_rollout(state, num_queries_needed, 1.5)
+            # Scale the temperature up as the number of queries increases.
+            completions = await self.LLM_rollout(state, num_queries_needed, max_num_moves ** 0.1)
 
             active_move_set = set(self.active_move_cache[state])
             for i in range(num_queries_needed):

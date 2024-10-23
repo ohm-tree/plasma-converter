@@ -51,7 +51,7 @@ class LLMWorker(Worker):
                  task_id: int,
                  queues: dict[str, multiprocessing.Queue],
                  gpu_set: list[int],
-                 use_tqdm: bool = True,  # Dopamine
+                 use_tqdm: bool = False,  # Dopamine
                  **kwargs  # Unused
                  ):
         super().__init__(
