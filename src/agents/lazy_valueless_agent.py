@@ -57,6 +57,10 @@ class LazyValuelessLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             num_queries_needed = max_num_moves - \
                 len(self.active_move_cache[state])
 
+            if num_queries_needed <= 0:
+                # Just make it bullet-proof.
+                break
+
             completions = await self.LLM_rollout(state, num_queries_needed, 1.5)
 
             active_move_set = set(self.active_move_cache[state])
@@ -69,7 +73,7 @@ class LazyValuelessLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
                     self.policy_cache[hash((state, move))] = probability
                     active_move_set.add(move)
 
-            if len(self.active_move_cache[state]) < min_num_moves:
+            if len(self.active_move_cache[state]) >= min_num_moves:
                 break
 
         return True
