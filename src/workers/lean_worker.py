@@ -36,7 +36,7 @@ class LeanWorker(Worker):
         self.logger.info(
             f"Global Variables I can see: {globals().keys()}"
         )
-        time.sleep(5 * task_id)
+        time.sleep(8 * task_id)  # 8 seconds staggered start
         self.setup_repl()
         self.logger.info("Lean4 REPL setup.")
 
@@ -59,15 +59,15 @@ class LeanWorker(Worker):
                     timeout_finish=600
                 )
                 self.logger.info("Just initialized Lean4 REPL.")
-                break
             except Exception as e:
                 self.logger.error(traceback.format_exc())
                 time.sleep(10)
-            finally:
                 try:
                     self.child.close()
                 except:
                     pass
+            else:
+                break
 
     def send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30, kill=False):
         try:
