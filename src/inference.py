@@ -8,6 +8,7 @@ import time
 
 import yaml
 
+from src.collate_solutions import collate_results, collate_solutions
 from src.workers import *
 
 parser = argparse.ArgumentParser()
@@ -43,62 +44,7 @@ python src/inference.py --config configs/fast_mcts_debug.yaml
 """
 
 
-def collate_results():
-    # look in the results folder for all the results
-    # collate them into a single file
-    # save the file in the results folder
-
-    all_runs = os.listdir('results')
-    all_results = {}
-    print(all_runs)
-    for run in all_runs:
-        if not os.path.isdir(os.path.join('results', run)):
-            continue
-        all_results[run] = []
-        # load the results
-        for problem_path in os.listdir(os.path.join('results', run)):
-            result = {}
-            # Problem: aime_1983_p1
-            # Split: test
-            # Result: -1.0
-            with open(os.path.join('results', run, problem_path), 'r') as file:
-                problem = file.readline().strip()
-                split = file.readline().strip()
-                result = file.readline().strip()
-                result = {
-                    'problem': problem.split(': ')[1],
-                    'split': split.split(': ')[1],
-                    'result': result.split(': ')[1]
-                }
-            all_results[run].append(result)
-
-    # aggregate the results.
-    # for each run, count the number of problems solved in each split.
-
-    num_solved = {}
-    denominator = {}
-    for run in all_results:
-        num_solved[run] = {'valid': 0, 'test': 0}
-        denominator[run] = {'valid': 0, 'test': 0}
-        for result in all_results[run]:
-            if result['result'] == '1.0':
-                num_solved[run][result['split']] += 1
-            denominator[run][result['split']] += 1
-
-    # save the results in a file
-    with open('results/results.txt', 'w') as file:
-        for run in num_solved:
-            file.write(run + '\n')
-            file.write(
-                f"Valid: {num_solved[run]['valid']}/{denominator[run]['valid']}\n")
-            file.write(
-                f"Test: {num_solved[run]['test']}/{denominator[run]['test']}\n")
-
-
 def run_inference():
-    # collate results
-    collate_results()
-
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 
     # save a copy of the config in the results folder
@@ -216,6 +162,7 @@ def run_inference():
 
     # Collate results
     collate_results()
+    collate_solutions()
 
 
 if __name__ == '__main__':
