@@ -1,4 +1,4 @@
-run_name: fast_mcts_debug
+run_name: fast_mcts_valid_1000
 split: "valid"
 data_dir: datasets/minif2f.jsonl
 description: |

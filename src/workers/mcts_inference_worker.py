@@ -43,7 +43,7 @@ class MCTSWorker(InferenceWorker):
             f"Global Variables I can see: {globals().keys()}"
         )
 
-    async def solve(self, game: LeanGame) -> None:
+    async def solve(self, game: LeanGame) -> dict:
         state: LeanState = await game.starting_state()
 
         states: list[LeanState]
@@ -55,7 +55,7 @@ class MCTSWorker(InferenceWorker):
             max_num_completions=self.config['max_num_completions'],
         )
 
-        states, distributions, rewards = await async_self_play(
+        return await async_self_play(
             self.logger,
             state=state,
             game=game,
@@ -63,13 +63,6 @@ class MCTSWorker(InferenceWorker):
             tree_kwargs=self.config['tree_kwargs'],
             search_kwargs=self.config['search_kwargs']
         )
-
-        return {
-            'states': states,
-            'distributions': distributions,
-            'rewards': rewards,
-            "result": rewards[-1]
-        }
 
     def loop(self):
         pass
