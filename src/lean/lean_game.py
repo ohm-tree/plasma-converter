@@ -70,7 +70,7 @@ class LeanGame(Game[LeanMove, LeanState]):
                  problem: str,
                  tactic_state: str,
                  header: str = LEAN4_DEFAULT_HEADER,
-                 max_depth: int = 20,
+                 max_depth: int = 40,
                  **kwargs
                  ):
         super().__init__(**kwargs)
@@ -164,7 +164,7 @@ class LeanGame(Game[LeanMove, LeanState]):
                 "Cannot check if a non-terminal LeanState is victorious.")
         return self._win[state]
 
-    async def make_root(self) -> None:
+    async def make_root(self, state: LeanState) -> None:
         """
         Severs any references to the parent of
         this state, making it the root of the tree.

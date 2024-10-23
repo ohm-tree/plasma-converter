@@ -1,8 +1,8 @@
-run_name: fast_mcts_valid_1000
-split: "valid"
+run_name: fast_mcts_full_1000
+split: ["valid", "test"]
 data_dir: datasets/minif2f.jsonl
 description: |
-    This configuration is for debugging the fast MCTS inference method on the validation set.
+    This configuration is for running the fast MCTS inference method on the full minif2f dataset.
     The loop is Lean -> Completion -> Repeat.
     Value-less agent.
 

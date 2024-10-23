@@ -46,8 +46,6 @@ class MCTSWorker(InferenceWorker):
     async def solve(self, game: LeanGame) -> dict:
         state: LeanState = await game.starting_state()
 
-        states: list[LeanState]
-
         # TODO: add config flag for switching between valueless and regular agents
         agent = LazyValuelessLeanAgent(
             game=game,
