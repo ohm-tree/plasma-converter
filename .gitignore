@@ -9,5 +9,5 @@ data/*
 logs/*
 results/*
 wayfinder/*
-notebooks_tmp/*
+dev_notebooks/*
 nohup.out
