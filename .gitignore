@@ -9,3 +9,5 @@ data/*
 logs/*
 results/*
 wayfinder/*
+notebooks_tmp/*
+nohup.out
