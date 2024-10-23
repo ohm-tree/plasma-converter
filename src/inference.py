@@ -1,5 +1,5 @@
 """
-This file runs mcts inference with fast_pv_worker and a yaml config.
+This file runs inference with a yaml config.
 """
 
 import argparse

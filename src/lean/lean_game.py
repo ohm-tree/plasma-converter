@@ -378,3 +378,15 @@ class LeanGame(Game[LeanMove, LeanState]):
             'dead': False,
             'win': False
         }
+
+    def pretty_print(self, state: LeanState) -> str:
+        """
+        Pretty print the current state of the game as valid Lean 4 code.
+        """
+        res = ""
+        res += self.header
+        res += self.problem
+        res += state.code
+        # Add some metadata in a comment.
+        # res += f"\n\n-- Depth: {state.depth}\n"
+        return res
