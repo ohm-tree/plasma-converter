@@ -37,9 +37,9 @@ class LazyValuelessLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         Behavior:
 
-        On the first pass, attempts to generate exactly max_num_moves completions.
+        On each pass, attempts to generate exactly max_num_moves completions.
 
-        Then, continues generating completions until there are at least min_num_moves completions.
+        Always makes at least one pass, and stops when there are at least min_num_moves completions.
         """
 
         if max_num_moves is None:
@@ -53,7 +53,7 @@ class LazyValuelessLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             self.active_move_cache[state] = []
 
         # TODO: as the number of queries increases, we should scale the temperature up for more variety.
-        while len(self.active_move_cache[state]) < min_num_moves:
+        while True:
             num_queries_needed = max_num_moves - \
                 len(self.active_move_cache[state])
 
@@ -68,6 +68,9 @@ class LazyValuelessLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
                     self.active_move_cache[state].append(move)
                     self.policy_cache[hash((state, move))] = probability
                     active_move_set.add(move)
+
+            if len(self.active_move_cache[state]) < min_num_moves:
+                break
 
         return True
 

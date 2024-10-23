@@ -1,4 +1,4 @@
-run_name: fast_mcts_full_1000
+run_name: fast_mcts_full_10000
 split: ["valid", "test"]
 data_dir: datasets/minif2f.jsonl
 description: |
@@ -8,9 +8,9 @@ description: |
 
 mcts:
     num_procs: 122
-    max_num_completions: 100
+    max_num_completions: 1000
     search_kwargs:
-        num_iters: 1000
+        num_iters: 10000
 
 completion:
     num_procs: 8
@@ -22,7 +22,7 @@ completion:
         trust_remote_code: True
     sampling:
         max_tokens: 1024
-        temperature: 0.0
+        temperature: 2.0
         top_k: 1
         top_p: 1.0
         stop: ["\n", "```"]
