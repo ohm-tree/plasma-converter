@@ -2,6 +2,7 @@ import json
 import multiprocessing
 import os
 import queue
+import re
 import time
 import traceback
 from typing import Optional
@@ -16,6 +17,15 @@ DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
 DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
+
+# Useful for debugging
+"""
+{"cmd" : "import Mathlib\nimport Aesop\n\nopen BigOperators Real Nat Topology Rat\n\n"}
+
+{"cmd" : "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n", "env": 0}
+
+{"cmd" : "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n  -- First, we want to re-write the condition about the second\n  -- and fourth terms of the geometric sequence using the definition of a geometric sequence\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,\n    Nat.succ_add]\n  have h₁' : a * r = 2 := by simpa [h₀] using h₁\n  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂\n  -- Now we can divide the two equations to eliminate $a$ and determine $r$\n  have h₃ : r ^ 2 = 3 := by\n    nlinarith\n  -- Finally, we can substitute back to find $a$\n  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by\n    apply eq_or_eq_neg_of_sq_eq_sq <;>\n    field_simp <;>\n    nlinarith\n  simpa [h₀] using h₄\n", "env" : 0}
+"""
 
 
 class LeanWorker(Worker):
@@ -45,7 +55,8 @@ class LeanWorker(Worker):
             try:
                 self.child = pexpect.spawn(
                     f"{DEFAULT_LAKE_PATH} exe repl",
-                    cwd=DEFAULT_LEAN_WORKSPACE)
+                    cwd=DEFAULT_LEAN_WORKSPACE,
+                    timeout=600)
 
                 # Use the unprotected version to avoid error-loops.
                 self._send_code_read_json(
@@ -89,43 +100,37 @@ class LeanWorker(Worker):
         The setup code is *actually* guaranteed to never fail, so we can just set the timeout to be 600 seconds there.
         """
         cmd_json = json.dumps(cmd)
+        cmd_json = cmd_json.strip()  # Remove whitespace
         # print(cmd_json)
-        self.child.send(cmd_json + "\r\n")
-        # Read the input itself.
-        # This should be printed instantly, so timeout is set to 1 second.
-        self.child.expect_exact(cmd_json + "\r\n", timeout=timeout_cat)
-        assert self.child.after.decode('utf-8') == cmd_json + "\r\n"
-        # print("Sent code to Lean4 REPL.")
 
-        # Read the output.
-        # This code is critical; the repl seems to print out some
-        # strange non-json stuff before the actual json output,
-        # including characters that delete the previous input,
-        # such that it doesn't show up in debug output.
-        self.child.expect_exact("{", timeout=timeout_start)
-        res = "{"
-        # print("Received start of output from Lean4 REPL.")
-        # while res is not a valid json string, read lines.
-        # All of the lines should print essentially instantly,
-        # so there are no timeouts in this loop.
-        start_time = time.time()
-        while True:
-            res = res + self.child.readline().decode('utf-8')
-            try:
-                # print all chars in res
-                json.loads(res.strip())
-                break
-            except json.JSONDecodeError as e:
-                # print(e)
-                pass
-            if time.time() - start_time > timeout_finish:
-                raise TimeoutError("Lean4 REPL timed out.")
-            # time.sleep(0.1)
+        self.child.send(cmd_json + "\r\n")
+        # self.logger.debug(f"Waiting for start")
+
+        self.child.expect_exact("<START>", timeout=timeout_start)
+        # self.logger.debug(f"Found start")
+
+        self.child.expect_exact("<STOP>", timeout=timeout_finish)
+        # self.logger.debug(f"Found stop")
+        # Read everything before <STOP>
+        res: str = self.child.before.decode('utf-8')
+
+        try:
+            json_res = json.loads(res)
+        except json.JSONDecodeError as e:
+            self.logger.error(
+                f"Lean4 REPL output was not valid JSON:")
+            self.logger.error(res)
+            self.logger.error(str(list(res)))  # Show the exact characters
+            raise e
+        else:
+            # self.logger.info("Lean4 REPL output was valid JSON.")
+            pass
 
         # kill
         if kill:
             self.child.close()
-        return json.loads(res)
+            self.logger.error("Lean4 REPL killed.")
+        return json_res
 
     def loop(self):
         input_data = self.deque_task(
@@ -133,18 +138,18 @@ class LeanWorker(Worker):
             timeout=30
         )
         if input_data is None:
-            self.logger.info("No tasks to complete.")
+            # self.logger.info("No tasks to complete.")
             # Spinlock, disappointing, but there's nothing to do.
             return
 
-        self.logger.info(f"Received task: {input_data['task']}")
+        # self.logger.info(f"Received task: {input_data['task']}")
         result = self.send_code_read_json({
             "cmd": input_data['task'],
             # "allTactics": True,
             # "tactics": True,
             "env": 0
         })
-        self.logger.info(f"Processed task.")
+        # self.logger.info(f"Processed task.")
 
         # if result is error, try restarting the repl.
         if 'system_error' in result:
@@ -171,4 +176,38 @@ class LeanWorker(Worker):
             obj=full_result,
             channel=input_data['channel']  # The response channel.
         )
-        self.logger.info(str(result))
+        # self.logger.info(str(result))
+
+
+def test_lean_worker():
+    # This is a test function to ensure that the LeanWorker class is working correctly.
+
+    class FakeWorker(LeanWorker):  # A fake worker to simulate the Worker class
+        def __init__(self):
+            # Do not initialize the parent class
+            self.logger = logging.getLogger("FakeWorker")
+            self.child = None
+
+    worker = FakeWorker()
+
+    print("Setting up REPL... (may take up to 30 seconds)")
+    worker.setup_repl()
+    print("REPL setup complete.")
+    assert worker.child is not None  # Ensure that the child process is created
+
+    # Test sending a command
+    command = {
+        "cmd": "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n", "env": 0}
+
+    command_2 = {
+        "cmd": "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n  -- First, we want to re-write the condition about the second\n  -- and fourth terms of the geometric sequence using the definition of a geometric sequence\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,\n    Nat.succ_add]\n  have h₁' : a * r = 2 := by simpa [h₀] using h₁\n  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂\n  -- Now we can divide the two equations to eliminate $a$ and determine $r$\n  have h₃ : r ^ 2 = 3 := by\n    nlinarith\n  -- Finally, we can substitute back to find $a$\n  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by\n    apply eq_or_eq_neg_of_sq_eq_sq <;>\n    field_simp <;>\n    nlinarith\n  simpa [h₀] using h₄\n", "env": 0}
+
+    response = worker.send_code_read_json(command)
+    print(response)  # Print the response for inspection
+
+    response_2 = worker.send_code_read_json(command_2)
+    print(response_2)  # Print the response for inspection
+
+
+if __name__ == "__main__":
+    test_lean_worker()
