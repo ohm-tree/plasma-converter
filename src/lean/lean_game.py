@@ -24,6 +24,12 @@ The upshot: we should expect to see almost no timeout errors in the future!
 
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 10000\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
 
+"""
+Old header:
+LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
+
+"""
+
 
 class LeanStateError(Exception):
     pass
