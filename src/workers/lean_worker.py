@@ -133,6 +133,14 @@ class LeanWorker(Worker):
         # Read everything before <STOP>
         res: str = self.child.before.decode('utf-8')
 
+        # Sometimes, the REPL itself outputs errors, most notably this one:
+        # Error in Linarith.normalizeDenominatorsLHS: Expr.rewrite may not produce subgoals.
+
+        # So we just slice until the position of the first curly brace.
+
+        # Get everything after the first curly brace.
+        res = res[res.find("{"):]
+
         try:
             json_res = json.loads(res)
         except json.JSONDecodeError as e:
