@@ -208,8 +208,8 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             res = """This is a partial Lean 4 proof.
         ```lean4
         """
-            res += lean_game_dict['header'] +
-            lean_game_dict['problem'] + lean_game_dict['old_code']
+            res += lean_game_dict['header'] + \
+                lean_game_dict['problem'] + lean_game_dict['old_code']
             res += """
         ```
         Here is the tactic state at this point:

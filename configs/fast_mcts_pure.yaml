@@ -1,0 +1,35 @@
+run_name: fast_mcts_full_100_pure
+split: ["valid", "test"]
+data_dir: datasets/minif2f.jsonl
+description: |
+    This configuration is for running the fast MCTS inference method on the full minif2f dataset.
+    The loop is Lean -> Completion -> Repeat.
+    Value-less agent.
+
+mcts:
+    num_procs: 61
+    agent_class: "LazyLeanAgent"
+    agent_kwargs:
+        request_formula: "pure"
+        max_num_completions: 30
+        valueless: True
+    search_kwargs:
+        num_iters: 100
+
+completion:
+    num_procs: 8
+    batch_size: 40
+    timeout: 30
+    model:
+        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
+        max_num_batched_tokens: 8192
+        trust_remote_code: True
+    sampling:
+        max_tokens: 1024
+        temperature: 2.0
+        top_p: 1.0
+        stop: ["\n", "```"]
+        logprobs: 0
+
+lean:
+    num_procs: 128

@@ -111,7 +111,7 @@ class Worker(ABC):
                     "No channel specified for enqueue.")
             channel = obj["channel"]
         self.queues[channel].put(obj)
-        self.logger.info(f"Enqueued task {obj} to channel {channel}.")
+        # self.logger.info(f"Enqueued task {obj} to channel {channel}.")
 
     def enqueue_with_handler(self, obj: dict, channel: str) -> None:
         if "_task_idx" not in obj:

@@ -36,6 +36,11 @@ Run fast mcts inference with
 python src/inference.py --config configs/fast_mcts.yaml
 ```
 
+Pure mcts inference with
+```bash
+python src/inference.py --config configs/fast_mcts_pure.yaml
+```
+
 Debug fast mcts inference with
 ```bash
 python src/inference.py --config configs/fast_mcts_debug.yaml

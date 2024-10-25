@@ -5,6 +5,7 @@ saving the results to disk, and logging the results.
 """
 
 import multiprocessing
+from multiprocessing import sharedctypes
 
 from wayfinder.games.agent import Agent
 from wayfinder.uct.self_play import async_self_play
@@ -21,6 +22,7 @@ class MCTSWorker(InferenceWorker):
                  run_name: str,
                  task_id: int,
                  queues: dict[str, multiprocessing.Queue],
+                 values: dict[str, sharedctypes.Synchronized],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -30,6 +32,7 @@ class MCTSWorker(InferenceWorker):
             global_config=global_config,
             config=config,
             queues=queues,
+            values=values,
             run_name=run_name,
         )
 

@@ -1,16 +1,12 @@
 import json
 import multiprocessing
 import os
-import queue
-import re
 import time
 import traceback
-from typing import Optional
 
 import pexpect
-from numpy import full
-from performance_logger import PerformanceLogger
 
+from src.workers.performance_logger import PerformanceLogger
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
@@ -48,17 +44,26 @@ class LeanWorker(Worker):
             f"Global Variables I can see: {globals().keys()}"
         )
         time.sleep(8 * task_id)  # 8 seconds staggered start
+
+        self.num_failures = 0
+
+        self.repl_dead = False
+
         self.setup_repl()
         self.logger.info("Lean4 REPL setup.")
         self.performance_logger = PerformanceLogger()
 
     def setup_repl(self):
+        self.logger.info("Beginning Lean4 REPL setup.")
         while True:
+            self.num_failures += 1
             try:
                 self.child = pexpect.spawn(
                     f"{DEFAULT_LAKE_PATH} exe repl",
                     cwd=DEFAULT_LEAN_WORKSPACE,
-                    timeout=600)
+                    timeout=3600)
+                # Shaves off 50 ms, which is actually the main bottlneck for fast queries.
+                self.child.delaybeforesend = None
 
                 # Use the unprotected version to avoid error-loops.
                 self._send_code_read_json(
@@ -67,29 +72,34 @@ class LeanWorker(Worker):
                         "allTactics": True,
                         "tactics": True,
                     },
-                    timeout_start=600,
-                    timeout_cat=600,
-                    timeout_finish=600
+                    timeout_start=3600,
+                    timeout_cat=3600,
+                    timeout_finish=3600
                 )
                 self.logger.info("Just initialized Lean4 REPL.")
             except Exception as e:
-                self.logger.error(traceback.format_exc())
-                time.sleep(10)
                 try:
                     self.child.close()
                 except:
                     pass
+
+                self.logger.error(
+                    f"Failed to start Lean4 REPL. Attempt {self.num_failures}. Sleeping for {(2 ** self.num_failures)} minutes.")
+                self.logger.error(traceback.format_exc())
+                time.sleep(60 * (2 ** self.num_failures))
+                self.logger.error("Retrying...")
             else:
                 break
+        self.repl_dead = False
 
-    def send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30, kill=False):
+    def send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30):
         try:
-            return self._send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish, kill=kill)
+            return self._send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish)
         except Exception as e:
             self.logger.error(traceback.format_exc())
             return {'system_error': traceback.format_exc()}
 
-    def _send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30, kill=False):
+    def _send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30):
         """
         Previous thoughts:
         Note that there's actually no reason to make the timeouts super short. Timeouts aren't usually indicative
@@ -100,6 +110,13 @@ class LeanWorker(Worker):
         about the lean code that's running which is causing it to take a super long time. This is reproducible
         in linear inference on testcases (20, 61, 141). So we're going to nuke all the timeouts to 30 seconds.
         The setup code is *actually* guaranteed to never fail, so we can just set the timeout to be 600 seconds there.
+
+        Newer thoughts (2024-10-25):
+        Actually, if you inspect the actual logs produced by performance_logger, you'll see that >99% of tasks complete
+        in 5 seconds or less, and the 30 second barrier is just nuking all of the performance (because we have to wait
+        for the Lean repl to die (30 seconds) plus re-start the lean repl (another 30+ seconds) then wait for the lean
+        repl to die again (another 30 seconds) and then re-start it again (another 30+ seconds), leading to worst-case
+        behavior of ~160 seconds). I'm not sure what the best way to capitalize on this information is.
         """
         cmd_json = json.dumps(cmd)
         cmd_json = cmd_json.strip()  # Remove whitespace
@@ -128,13 +145,18 @@ class LeanWorker(Worker):
             # self.logger.info("Lean4 REPL output was valid JSON.")
             pass
 
-        # kill
-        if kill:
-            self.child.close()
-            self.logger.error("Lean4 REPL killed.")
         return json_res
 
     def loop(self):
+
+        if self.repl_dead:
+            # try to start a new REPL
+            try:
+                self.child.close(force=True)
+            except:
+                pass
+            self.setup_repl()
+
         input_data = self.deque_task(
             channel="lean",
             timeout=30
@@ -155,19 +177,54 @@ class LeanWorker(Worker):
         })
         # self.logger.info(f"Processed task.")
 
+        latency = input_data.get('latency', 0)
+
         # if result is error, try restarting the repl.
         if 'system_error' in result:
-            try:
-                self.child.close()
-            except:
-                pass
-            self.setup_repl()
-            result = self.send_code_read_json({
-                "cmd": input_data['task'],
-                # "allTactics": True,
-                # "tactics": True,
-                "env": 0
-            })
+            self.repl_dead = True
+
+            """
+            New thoughts (2024-10-25):
+            Inspecting the logs, every single time a lean 4 repl dies, it dies again
+            after it's bounced. So the best way to handle this is to never bounce those
+            tasks; they're just definitely dead.
+            """
+
+            # # Check if the task has already been bounced.
+            # # If it has, then we should return the result (error).
+            # # If not, then we should try to bounce it once.
+            # if input_data.get('bounced', False):
+            #     self.logger.error(
+            #         f"Task has already been bounced. Returning error.")
+            #     full_result = input_data
+            #     full_result.update(
+            #         {
+            #             'response': result
+            #         }
+            #     )
+            #     self.enqueue(
+            #         obj=full_result,
+            #         channel=input_data['channel']  # The response channel.
+            #     )
+            #     end_time = time.time()
+
+            #     self.performance_logger.log_query(
+            #         end_time - start_time + latency)
+            #     self.performance_logger.occasional_log(self.logger)
+
+            #     return
+            # else:
+            #     self.logger.error(f"Task has not been bounced. Bouncing task.")
+            #     input_data['bounced'] = True
+            #     # Add latency to input_data
+            #     input_data['latency'] = time.time() - start_time
+            #     self.enqueue(  # Re-queue the task.
+            #         obj=input_data,
+            #         channel="lean"  # The global lean channel.
+            #     )
+            #     return
+
+        # If we get here, we have a valid result.
 
         full_result = input_data
         full_result.update(
@@ -184,7 +241,7 @@ class LeanWorker(Worker):
         )
         # self.logger.info(str(result))
 
-        self.performance_logger.log_query(end_time - start_time)
+        self.performance_logger.log_query(end_time - start_time + latency)
         self.performance_logger.occasional_log(self.logger)
 
 
