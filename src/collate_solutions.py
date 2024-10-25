@@ -47,6 +47,8 @@ def collate_solutions():
 
         # load the results
         for problem_path in os.listdir(os.path.join('results', run)):
+            if problem_path == "config.yaml":  # Skip config files
+                continue
             result_dict = {}
             # Problem: aime_1983_p1
             # Split: test
@@ -55,11 +57,15 @@ def collate_solutions():
                 problem = file.readline().strip()
                 split = file.readline().strip()
                 result = file.readline().strip()
-                result_dict = {
-                    'problem': problem.split(': ')[1],
-                    'split': split.split(': ')[1],
-                    'result': result.split(': ')[1]
-                }
+                try:
+                    result_dict = {
+                        'problem': problem.split(': ')[1],
+                        'split': split.split(': ')[1],
+                        'result': result.split(': ')[1]
+                    }
+                except:
+                    print(f"Error parsing {run}/{problem_path}")
+                    continue
             with open(os.path.join('outputs', run, problem_path), 'r') as file:
                 # LeanState(code='  norm_num [add_assoc, add_comm, add_left_comm] at h₀ h₁ h₂ h₃\n  ring_nf at h₀ h₁ h₂ h₃\n  linarith\n', depth=3, tactic_state='', dead=False)
                 # Suspicious code, just use eval() to create the LeanState object
@@ -96,7 +102,9 @@ def collate_results():
         all_results[run] = []
         # load the results
         for problem_path in os.listdir(os.path.join('results', run)):
-            result = {}
+            if problem_path == "config.yaml":  # Skip config files
+                continue
+            result_dict = {}
             # Problem: aime_1983_p1
             # Split: test
             # Result: -1.0
@@ -104,12 +112,16 @@ def collate_results():
                 problem = file.readline().strip()
                 split = file.readline().strip()
                 result = file.readline().strip()
-                result = {
-                    'problem': problem.split(': ')[1],
-                    'split': split.split(': ')[1],
-                    'result': result.split(': ')[1]
-                }
-            all_results[run].append(result)
+                try:
+                    result_dict = {
+                        'problem': problem.split(': ')[1],
+                        'split': split.split(': ')[1],
+                        'result': result.split(': ')[1]
+                    }
+                except:
+                    print(f"Error parsing {run}/{problem_path}")
+                    continue
+            all_results[run].append(result_dict)
 
     # aggregate the results.
     # for each run, count the number of problems solved in each split.

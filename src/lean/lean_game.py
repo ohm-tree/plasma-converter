@@ -71,6 +71,7 @@ class LeanGame(Game[LeanMove, LeanState]):
                  tactic_state: str,
                  header: str = LEAN4_DEFAULT_HEADER,
                  max_depth: int = 40,
+                 max_tactic_state_length: int = 512,
                  **kwargs
                  ):
         super().__init__(**kwargs)
@@ -79,6 +80,9 @@ class LeanGame(Game[LeanMove, LeanState]):
         self.problem: str = problem
         self.header: str = header
         self.max_depth: int = max_depth
+
+        self.max_tactic_state_length: int = max_tactic_state_length
+
         self.root_tactic_state: str = tactic_state
 
         self._win = {}
@@ -201,10 +205,10 @@ class LeanGame(Game[LeanMove, LeanState]):
         if row > len(lines):
             raise ValueError(
                 f"Row is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
-        if col >= line_lengths[row-1]:
-            # The col should never be exactly line_lengths;
-            # If the cursor is "after the newline character"
-            # then it should really be the 0th index of the next line.
+        if col > line_lengths[row-1]:
+            # The col CAN be exactly line_lengths; this is just the format
+            # of the lean kernel's outputs. in this case, we will truncate
+            # following the newline.
             raise ValueError(
                 f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         return sum(line_lengths[:row-1]) + col
@@ -269,6 +273,16 @@ class LeanGame(Game[LeanMove, LeanState]):
                 tactic_state = tactic['data'].lstrip()[
                     len("unsolved goals\n"):]
 
+        if len(tactic_state) > self.max_tactic_state_length:
+            # If too long, truncate the middle section, and replace with the messages "<<Message is too long, truncated middle>>"
+            error_message = " <<Message is too long, truncated middle>> "
+            available_characters = self.max_tactic_state_length - \
+                len(error_message)
+            prefix_length = available_characters // 2
+            suffix_length = available_characters - prefix_length
+
+            tactic_state = tactic_state[:prefix_length] + \
+                error_message + tactic_state[-suffix_length:]
         return tactic_state
 
     def process(self, old_code: str, new_code: str, repl_result: dict[str, list[dict[str, str]]]):

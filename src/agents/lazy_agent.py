@@ -128,7 +128,7 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             completions = await self.LLM_rollout(state, num_queries_needed, max_num_moves ** 0.1)
 
             active_move_set = set(self.active_move_cache[state])
-            for i in range(num_queries_needed):
+            for i in range(len(completions)):
                 move = LeanMove(completions[i]['text'])
                 probability = completions[i]['cumulative_logprob']
                 probability = np.exp(probability)
@@ -167,7 +167,17 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         # TODO: make this a named dict
         res: list[dict[str, Any]] = completion['result']
 
-        for i in range(num_completions):
+        if len(res) < num_completions:
+            self.worker.logger.warning(
+                f"Only received {len(res)} completions, expected {num_completions}.")
+            self.worker.logger.warning(
+                "This is likely due to the LLM query being too long.")
+            self.worker.logger.warning(
+                "The expected output on failure is [{'text': '', 'token_ids': (), 'cumulative_logprob': 0.0}]")
+            self.worker.logger.warning(f"Length of Prompt: {len(prompt)}")
+            self.worker.logger.warning(f"Response: {res}")
+
+        for i in range(len(res)):
             if res[i]['text'].endswith('```'):
                 res[i]['text'] = res[i]['text'][:-3]
             if not res[i]['text'].endswith('\n'):
@@ -198,8 +208,8 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             res = """This is a partial Lean 4 proof.
         ```lean4
         """
-            res += lean_game_dict['header'] + \
-                lean_game_dict['problem'] + lean_game_dict['old_code']
+            res += lean_game_dict['header'] +
+            lean_game_dict['problem'] + lean_game_dict['old_code']
             res += """
         ```
         Here is the tactic state at this point:

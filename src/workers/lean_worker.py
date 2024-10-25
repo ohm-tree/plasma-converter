@@ -9,6 +9,7 @@ from typing import Optional
 
 import pexpect
 from numpy import full
+from performance_logger import PerformanceLogger
 
 from src.workers.worker import *
 
@@ -49,6 +50,7 @@ class LeanWorker(Worker):
         time.sleep(8 * task_id)  # 8 seconds staggered start
         self.setup_repl()
         self.logger.info("Lean4 REPL setup.")
+        self.performance_logger = PerformanceLogger()
 
     def setup_repl(self):
         while True:
@@ -137,6 +139,8 @@ class LeanWorker(Worker):
             channel="lean",
             timeout=30
         )
+        start_time = time.time()
+
         if input_data is None:
             # self.logger.info("No tasks to complete.")
             # Spinlock, disappointing, but there's nothing to do.
@@ -172,11 +176,16 @@ class LeanWorker(Worker):
             }
         )
 
+        end_time = time.time()
+
         self.enqueue(
             obj=full_result,
             channel=input_data['channel']  # The response channel.
         )
         # self.logger.info(str(result))
+
+        self.performance_logger.log_query(end_time - start_time)
+        self.performance_logger.occasional_log(self.logger)
 
 
 def test_lean_worker():

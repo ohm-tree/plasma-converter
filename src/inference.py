@@ -5,6 +5,7 @@ This file runs inference with a yaml config.
 import argparse
 import multiprocessing
 import time
+from multiprocessing import sharedctypes
 
 import yaml
 
@@ -65,13 +66,18 @@ def run_inference():
                 for i in range(config[type_string]['num_procs'])
             }
         )
-        print(f"{type_string}: {config[type_string]['num_procs']} queues")
+        print(
+            f"{type_string} worker-specific: {config[type_string]['num_procs']} queues")
 
     for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         if config[type_string]['num_procs'] == 0:
             continue
         queues.update({type_string: multiprocessing.Queue()})
         print(f"{type_string}: 1 queues")
+
+    values: dict[str, sharedctypes.Synchronized] = {}
+
+    values['problem_number'] = sharedctypes.Value('i', 0)
 
     # Create inference processes
     gpu_offset = 0
@@ -86,6 +92,7 @@ def run_inference():
                 'worker_type': type_string,
                 'task_id': i,
                 'queues': queues,
+                'values': values,
                 'gpu_set': [gpu_offset + i] if gpu else []}
             )
             )
