@@ -10,7 +10,19 @@ HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
 DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
+"""
+10/25/2024 Breakthrough: Setting maxHeartbeats here allows me to make the Lean 4 kernel terminate due to an internal timeout!
+This is really strong; previously it was set to 0 (to allow unlimited computation); this is good for a
+"no-holds-barred" run, but in terms of allowing for reasonable throughput compliant with low pexpect timeouts, small
+numbers are really good.
+
+The Lean default is 200000, which means roughly that each command is upper-bounded by a couple of seconds.
+Roughly 10000 means that each command runs in sub-seconds, which is what we want.
+
+The upshot: we should expect to see almost no timeout errors in the future!
+"""
+
+LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 10000\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
 class LeanStateError(Exception):

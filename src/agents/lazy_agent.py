@@ -6,8 +6,6 @@ from wayfinder.games import *
 from src.lean.lean_game import LeanGame, LeanMove, LeanState
 from src.workers.worker import *
 
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
-
 
 class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
     def __init__(self,

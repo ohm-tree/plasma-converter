@@ -6,23 +6,13 @@ import traceback
 
 import pexpect
 
+from src.lean.lean_game import LEAN4_DEFAULT_HEADER
 from src.workers.performance_logger import PerformanceLogger
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
 DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
-
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
-
-# Useful for debugging
-"""
-{"cmd" : "import Mathlib\nimport Aesop\n\nopen BigOperators Real Nat Topology Rat\n\n"}
-
-{"cmd" : "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n", "env": 0}
-
-{"cmd" : "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n  -- First, we want to re-write the condition about the second\n  -- and fourth terms of the geometric sequence using the definition of a geometric sequence\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,\n    Nat.succ_add]\n  have h₁' : a * r = 2 := by simpa [h₀] using h₁\n  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂\n  -- Now we can divide the two equations to eliminate $a$ and determine $r$\n  have h₃ : r ^ 2 = 3 := by\n    nlinarith\n  -- Finally, we can substitute back to find $a$\n  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by\n    apply eq_or_eq_neg_of_sq_eq_sq <;>\n    field_simp <;>\n    nlinarith\n  simpa [h₀] using h₄\n", "env" : 0}
-"""
 
 
 class LeanWorker(Worker):
@@ -58,10 +48,20 @@ class LeanWorker(Worker):
         while True:
             self.num_failures += 1
             try:
+                # self.child = pexpect.spawn(
+                #     f"{DEFAULT_LAKE_PATH} exe repl",
+                #     cwd=DEFAULT_LEAN_WORKSPACE,
+                #     timeout=3600)
                 self.child = pexpect.spawn(
-                    f"{DEFAULT_LAKE_PATH} exe repl",
+                    "/bin/bash",
                     cwd=DEFAULT_LEAN_WORKSPACE,
-                    timeout=3600)
+                    timeout=3600
+                )
+                self.child.sendline("stty -icanon")  # Disable canonical mode
+                # Start the Lean REPL
+                self.child.sendline(
+                    f"{DEFAULT_LAKE_PATH} exe repl")
+
                 # Shaves off 50 ms, which is actually the main bottlneck for fast queries.
                 self.child.delaybeforesend = None
 
