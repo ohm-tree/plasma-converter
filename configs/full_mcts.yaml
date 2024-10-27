@@ -59,7 +59,7 @@ value:
         max_num_batched_tokens: 8192
         trust_remote_code: True
     sampling:
-        max_tokens: 20
+        max_tokens: 10
         temperature: 1.0
         top_p: 1.0
         logprobs: 0

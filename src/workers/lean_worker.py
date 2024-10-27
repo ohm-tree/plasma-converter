@@ -265,7 +265,10 @@ class LeanWorker(Worker):
         )
         # self.logger.info(str(result))
 
-        self.performance_logger.log_query(end_time - start_time + latency)
+        self.performance_logger.log_query(
+            latency=end_time - start_time + latency,
+            total_waiting_time=start_time - full_result['enqueue_time']
+        )
         self.performance_logger.occasional_log(self.logger)
 
 

@@ -55,8 +55,11 @@ def parse_value_response(output: str, logger: logging.Logger) -> dict:
     output_end = output.find('}')
     if output_end != -1:
         output = output[:output_end].strip()
-    if output.endswith("%"):  # sometimes the model outputs a 0-100% rating
-        output = output[:-1].strip()
+    # drop all non-numeric characters
+    output = [
+        c for c in output if c.isdigit() or c == '.'
+    ]
+    output = ''.join(output)
     try:
         rating = float(output)
     except ValueError:

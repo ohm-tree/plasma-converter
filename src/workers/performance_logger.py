@@ -9,10 +9,13 @@ class PerformanceLogger():
         self.latencies = []
         self.num_queries_per_second = []
 
+        self.total_waiting_time = 0
+
         self.last_log_time = -float("inf")
         self.min_log_interval = min_log_interval
 
-    def log_query(self, latency, quantity=1):
+    def log_query(self, latency, total_waiting_time, quantity=1):
+        self.total_waiting_time += total_waiting_time
         self.query_count += quantity
         self.latencies.extend([latency] * quantity)
 
@@ -51,11 +54,15 @@ class PerformanceLogger():
         throughput_volatility = (sum((x - throughput) ** 2 for x in self.num_queries_per_second) / len(
             self.num_queries_per_second)) ** 0.5 if self.num_queries_per_second else 0
 
+        average_waiting_time = self.total_waiting_time / \
+            self.query_count if self.query_count > 0 else 0
+
         return {
             'absolute count': self.query_count,
             'absolute time (s)': elapsed_time,
             'throughput': throughput,
-            'throughput volatility': throughput_volatility
+            'throughput volatility': throughput_volatility,
+            'average waiting time': average_waiting_time,
         }
 
     def calculate_latency_stats(self):

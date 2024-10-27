@@ -20,9 +20,12 @@ The Lean default is 200000, which means roughly that each command is upper-bound
 Roughly 10000 means that each command runs in sub-seconds, which is what we want.
 
 The upshot: we should expect to see almost no timeout errors in the future!
+
+10/27/2024 update: 50000 seems to be a good balance between speed and avoiding false positives;
+"nlinarith" shouldn't be failing.
 """
 
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 10000\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
+LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 50000\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
 
 """
 Old header:
