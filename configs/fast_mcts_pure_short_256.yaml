@@ -15,6 +15,7 @@ mcts:
         valueless: True
     search_kwargs:
         num_iters: 100
+        num_crawlers: 10
         search_time_limit: 3600.0
 
 completion:

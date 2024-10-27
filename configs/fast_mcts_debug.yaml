@@ -5,6 +5,7 @@ description: |
     This configuration is for debugging the fast MCTS inference method on the validation set.
     The loop is Lean -> Completion -> Repeat.
     Value-less agent.
+
 mcts:
     num_procs: 1
     agent_class: "LazyLeanAgent"
@@ -14,6 +15,7 @@ mcts:
         valueless: True
     search_kwargs:
         num_iters: 20
+        num_crawlers: 2
         search_time_limit: 3600.0
 
 completion:
