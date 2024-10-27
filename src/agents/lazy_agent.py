@@ -38,30 +38,25 @@ Then, please discuss whether or not the proof is on the right track. Are we prov
 ANSWER:
 """
 
-VALUE_PROMPT = """The current state of the proof:
-{context}
-Here is the tactic state at this point:
+VALUE_PROMPT = """Here is the tactic state at this point:
 ```lean4
 {tactic_state}
 ```
 Rate the likelihood that this proof will succeed on a scale of 0 (very unlikely) to 100 (very likely).
 Please reason step by step, and put your final answer within \\boxed{{}}.
-"""
+{context}
+Likelihood: $\\boxed{{"""
 
 
 def parse_value_response(output: str, logger: logging.Logger) -> dict:
     """
     Parse the output of the policy-value worker into a dict.
     """
-    output_start = output.find(r'\boxed{')
-    output_end = output.find('}', output_start)
-    if output_start == -1 or output_end == -1:
-        logger.warning(
-            f"Output does not contain a boxed value. Output: {output}")
-        return {
-            'rating': 0
-        }
-
+    output_end = output.find('}')
+    if output_end != -1:
+        output = output[:output_end].strip()
+    if output.endswith("%"):  # sometimes the model outputs a 0-100% rating
+        output = output[:-1].strip()
     try:
         rating = float(output)
     except ValueError:
@@ -286,13 +281,13 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
 
         value = await self.worker.query(
             task={
-                'prompt': VALUE_PROMPT.format(**lean_game_dict, context=context['result']),
+                'prompt': VALUE_PROMPT.format(**lean_game_dict, context=context['result'][0]['text']),
                 'channel': self.worker.name,
             },
             channel='value'
         )
 
         return parse_value_response(
-            value['result'],
+            value['result'][0]['text'],
             self.worker.logger
-        )
+        )['rating']
