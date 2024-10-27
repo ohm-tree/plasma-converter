@@ -31,6 +31,12 @@ Debug fast linear inference with
 python src/inference.py --config configs/linear_debug.yaml
 ```
 
+Run full mcts inference with
+```bash
+python src/inference.py --config configs/full_mcts.yaml
+```
+
+
 Run fast mcts inference with
 ```bash
 python src/inference.py --config configs/fast_mcts.yaml
