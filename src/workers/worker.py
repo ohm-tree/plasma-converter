@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import queue
 import random
+import time
 import traceback
 from abc import ABC, abstractmethod
 from typing import Optional, Union
@@ -113,11 +114,13 @@ class Worker(ABC):
         self.queues[channel].put(obj)
         # self.logger.info(f"Enqueued task {obj} to channel {channel}.")
 
-    def enqueue_with_handler(self, obj: dict, channel: str) -> None:
+    def enqueue_with_handler(self, obj: dict, channel: str, with_time_diagnostic: bool = True) -> None:
         if "_task_idx" not in obj:
             obj["_task_idx"] = self.name + "_" + \
                 str(self._task_idx) + "_" + str(random.randint(0, 1 << 30))
             self._task_idx += 1
+        if with_time_diagnostic:
+            obj["enqueue_time"] = time.time()
 
         self.dequeue_events[obj["_task_idx"]] = asyncio.Event()
         self.enqueue(obj, channel)
@@ -192,6 +195,7 @@ class Worker(ABC):
                                       timeout: Optional[int] = None,
                                       batch_size: Optional[int] = None,
                                       validate=True,
+                                      time_diagnostic: bool = True,
                                       ) -> list[dict]:
         """
         If batch_size is None, return all tasks available.
@@ -238,6 +242,10 @@ class Worker(ABC):
                 "Dequeued task with _task_idx " + task["_task_idx"] + "."
             )
             self.logger.info(f"Task: {task}")
+            if time_diagnostic:
+                task["dequeue_time"] = time.time()
+                self.logger.info(
+                    f"Task {task['_task_idx']} took {task['dequeue_time'] - task['enqueue_time']} seconds to dequeue.")
             self.dequeue_results[task["_task_idx"]] = task
             self.dequeue_events[task["_task_idx"]].set()
         return res

@@ -6,23 +6,13 @@ import traceback
 
 import pexpect
 
+from src.lean.lean_game import LEAN4_DEFAULT_HEADER
 from src.workers.performance_logger import PerformanceLogger
 from src.workers.worker import *
 
 HOME_DIR = os.path.expanduser('~')
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
 DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
-
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
-
-# Useful for debugging
-"""
-{"cmd" : "import Mathlib\nimport Aesop\n\nopen BigOperators Real Nat Topology Rat\n\n"}
-
-{"cmd" : "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n", "env": 0}
-
-{"cmd" : "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n  -- First, we want to re-write the condition about the second\n  -- and fourth terms of the geometric sequence using the definition of a geometric sequence\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero,\n    Nat.succ_add]\n  have h₁' : a * r = 2 := by simpa [h₀] using h₁\n  have h₂' : a * r ^ 3 = 6 := by simpa [h₀] using h₂\n  -- Now we can divide the two equations to eliminate $a$ and determine $r$\n  have h₃ : r ^ 2 = 3 := by\n    nlinarith\n  -- Finally, we can substitute back to find $a$\n  have h₄ : a = 2 / Real.sqrt 3 ∨ a = -(2 / Real.sqrt 3) := by\n    apply eq_or_eq_neg_of_sq_eq_sq <;>\n    field_simp <;>\n    nlinarith\n  simpa [h₀] using h₄\n", "env" : 0}
-"""
 
 
 class LeanWorker(Worker):
@@ -43,7 +33,11 @@ class LeanWorker(Worker):
         self.logger.info(
             f"Global Variables I can see: {globals().keys()}"
         )
-        time.sleep(8 * task_id)  # 8 seconds staggered start
+        self.starting_time = time.time()
+        # 15 seconds staggered start. I just want everyone to spawn without dying!
+        time.sleep(15 * task_id)
+
+        self.num_procs = config['num_procs']
 
         self.num_failures = 0
 
@@ -55,13 +49,34 @@ class LeanWorker(Worker):
 
     def setup_repl(self):
         self.logger.info("Beginning Lean4 REPL setup.")
+
+        # Staggered start
+        remaining_time = 15 * self.num_procs - \
+            (time.time() - self.starting_time)
+        if remaining_time > 0 and self.num_failures > 0:
+            self.logger.info(
+                f"Other Lean processes have not finished initializing yet. To avoid jamming up the REPL, sleeping for {remaining_time:.2f} seconds.")
+            time.sleep(remaining_time)
         while True:
             self.num_failures += 1
             try:
+                # self.child = pexpect.spawn(
+                #     f"{DEFAULT_LAKE_PATH} exe repl",
+                #     cwd=DEFAULT_LEAN_WORKSPACE,
+                #     timeout=3600)
                 self.child = pexpect.spawn(
-                    f"{DEFAULT_LAKE_PATH} exe repl",
+                    "/bin/bash",
                     cwd=DEFAULT_LEAN_WORKSPACE,
-                    timeout=3600)
+                    timeout=3600
+                )
+                self.logger.info("Just started bash.")
+                self.child.sendline("stty -icanon")  # Disable canonical mode
+                self.logger.info("Just disabled canonical mode.")
+                # Start the Lean REPL
+                self.child.sendline(
+                    f"{DEFAULT_LAKE_PATH} exe repl")
+                self.logger.info("Just started REPL.")
+
                 # Shaves off 50 ms, which is actually the main bottlneck for fast queries.
                 self.child.delaybeforesend = None
 
@@ -73,7 +88,6 @@ class LeanWorker(Worker):
                         "tactics": True,
                     },
                     timeout_start=3600,
-                    timeout_cat=3600,
                     timeout_finish=3600
                 )
                 self.logger.info("Just initialized Lean4 REPL.")
@@ -92,14 +106,16 @@ class LeanWorker(Worker):
                 break
         self.repl_dead = False
 
-    def send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30):
+    def send_code_read_json(self, cmd, timeout_start=30, timeout_finish=1200):
         try:
-            return self._send_code_read_json(cmd, timeout_start=timeout_start, timeout_cat=timeout_cat, timeout_finish=timeout_finish)
+            return self._send_code_read_json(cmd, timeout_start=timeout_start, timeout_finish=timeout_finish)
         except Exception as e:
+            self.logger.error(f"Error on command: {cmd}")
             self.logger.error(traceback.format_exc())
+
             return {'system_error': traceback.format_exc()}
 
-    def _send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30):
+    def _send_code_read_json(self, cmd, timeout_start=30, timeout_finish=1200):
         """
         Previous thoughts:
         Note that there's actually no reason to make the timeouts super short. Timeouts aren't usually indicative
@@ -249,7 +265,10 @@ class LeanWorker(Worker):
         )
         # self.logger.info(str(result))
 
-        self.performance_logger.log_query(end_time - start_time + latency)
+        self.performance_logger.log_query(
+            latency=end_time - start_time + latency,
+            total_waiting_time=start_time - full_result['enqueue_time']
+        )
         self.performance_logger.occasional_log(self.logger)
 
 

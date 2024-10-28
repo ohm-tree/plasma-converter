@@ -6,7 +6,72 @@ from wayfinder.games import *
 from src.lean.lean_game import LeanGame, LeanMove, LeanState
 from src.workers.worker import *
 
-LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
+# Todo: prompts are *data*; they can be stored in files and read from configs.
+
+COMPLETION_PROMPT = """Complete the following Lean 4 code.
+The tactic state is:
+```lean4
+{tactic_state}
+```
+Here is the Lean 4 code so far:
+```lean4
+{header}
+{problem}
+{old_code}
+"""  # No 3 backticks at the end, so the model can complete the code.
+
+
+CONTEXT_PROMPT = """This is a partial Lean 4 proof.
+```lean4
+{header}
+{problem}
+{old_code}
+```
+Here is the tactic state at this point:
+```lean4
+{tactic_state}
+```
+QUESTION:
+Please summarize what we have proven so far.
+Please summarize the current tactic state of the proof.
+Then, please discuss whether or not the proof is on the right track. Are we proving useful lemmas? Are we using the right tactics? Are we missing any key insights?
+ANSWER:
+"""
+
+VALUE_PROMPT = """Here is the tactic state at this point:
+```lean4
+{tactic_state}
+```
+Rate the likelihood that this proof will succeed on a scale of 0 (very unlikely) to 100 (very likely).
+Please reason step by step, and put your final answer within \\boxed{{}}.
+{context}
+Likelihood: $\\boxed{{"""
+
+
+def parse_value_response(output: str, logger: logging.Logger) -> dict:
+    """
+    Parse the output of the policy-value worker into a dict.
+    """
+    output_end = output.find('}')
+    if output_end != -1:
+        output = output[:output_end].strip()
+    # drop all non-numeric characters
+    output = [
+        c for c in output if c.isdigit() or c == '.'
+    ]
+    output = ''.join(output)
+    try:
+        rating = float(output)
+    except ValueError:
+        logger.warning(
+            f"Rating not a number. Returning 0. Output: {output}")
+        return {
+            'rating': 0
+        }
+
+    return {
+        'rating': (rating - 50) / 50
+    }
 
 
 class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
@@ -147,12 +212,12 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         Completes a state.
         """
 
-        # print("Attempting to get completions")
-
-        prompt = 'Complete the following Lean 4 code.\n' + \
-            'The tactic state is:\n' + \
-            state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
-            state.code
+        prompt = COMPLETION_PROMPT.format(
+            tactic_state=state.tactic_state,
+            header=self.game.header,
+            problem=self.game.problem,
+            old_code=state.code,
+        )
 
         completion = await self.worker.query(
             task={
@@ -201,74 +266,6 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         if self.valueless:
             return 0
 
-        def context_prompt(lean_game_dict: dict) -> str:
-            """
-            Generate a prompt for the policy-value worker to suggest comments.
-            """
-            res = """This is a partial Lean 4 proof.
-        ```lean4
-        """
-            res += lean_game_dict['header'] + \
-                lean_game_dict['problem'] + lean_game_dict['old_code']
-            res += """
-        ```
-        Here is the tactic state at this point:
-        ```lean4
-        """
-            res += lean_game_dict['tactic_state']
-            res += f"""
-        ```
-        QUESTION:
-        Please summarize what we have proven so far.
-        Please summarize the current tactic state of the proof.
-        Then, please discuss whether or not the proof is on the right track. Are we proving useful lemmas? Are we using the right tactics? Are we missing any key insights?
-
-        ANSWER:
-        """
-            return res
-
-        def value_prompt(lean_game_dict: dict, discussion_context: str) -> str:
-            # We should call the LLM now.
-
-            res = discussion_context + f"""Here is the tactic state at this point:
-        ```lean4
-        """
-            res += lean_game_dict['tactic_state']
-            res += f"""
-        ```
-        Rate the likelihood that this proof will succeed on a scale of 0 (very unlikely) to 100 (very likely).
-        Please delimit this rating with a single number inside <RATING></RATING> tags.
-
-        <RATING>"""
-            return res
-
-        def parse_value_response(output: str, logger: logging.Logger) -> dict:
-            """
-            Parse the output of the policy-value worker into a dict.
-            """
-            if "</RATING>" not in output:
-                logger.warning("Rating not found in output. Returning 0.")
-                return {
-                    'rating': 0
-                }
-
-            output = output[:output.find('</RATING>')]
-
-            try:
-                rating = float(output)
-            except ValueError:
-                logger.warning(
-                    f"Rating not a number. Returning 0. Output: {output}")
-                return {
-                    'rating': 0
-                }
-
-            return {
-                'rating': (rating - 50) / 100
-            }
-        # print("#" * 80)
-        # print(self.state.header, self.state.problem,
-        #       self.state.old_code, self.state.tactic_state)
         lean_game_dict = {
             "header": self.game.header,
             "problem": self.game.problem,
@@ -279,7 +276,7 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
 
         context = await self.worker.query(
             task={
-                'prompt': context_prompt(lean_game_dict),
+                'prompt': CONTEXT_PROMPT.format(**lean_game_dict),
                 'channel': self.worker.name,
             },
             channel='context'
@@ -287,10 +284,13 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
 
         value = await self.worker.query(
             task={
-                'prompt': value_prompt(lean_game_dict, context),
+                'prompt': VALUE_PROMPT.format(**lean_game_dict, context=context['result'][0]['text']),
                 'channel': self.worker.name,
             },
             channel='value'
         )
 
-        return parse_value_response(value)
+        return parse_value_response(
+            value['result'][0]['text'],
+            self.worker.logger
+        )['rating']

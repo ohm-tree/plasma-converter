@@ -167,6 +167,8 @@ class LLMWorker(Worker):
         # sampling_param_inputs = [i['sampling_params'] for i in my_tasks]
         outputs: list[RequestOutput] = self.generate(
             input_data, sampling_param_inputs)
+
+        total_waiting_time = 0
         for i in range(len(outputs)):
             response = []
             for j in outputs[i].outputs:
@@ -181,14 +183,17 @@ class LLMWorker(Worker):
                 'result': response
             })
 
+            total_waiting_time += start_time - full_response['enqueue_time']
+
             self.enqueue(
                 obj=full_response,
                 channel=my_tasks[i]['channel']  # The response channel.
             )
         end_time = time.time()
         self.performance_logger.log_query(
-            end_time - start_time,
-            len(my_tasks)
+            latency=end_time - start_time,
+            total_waiting_time=total_waiting_time,
+            quantity=len(my_tasks)
         )
         self.performance_logger.occasional_log(self.logger)
 

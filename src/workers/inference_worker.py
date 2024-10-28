@@ -123,6 +123,11 @@ class InferenceWorker(Worker, ABC):
                     for i, state in enumerate(results['states']):
                         file.write(state.__str__() + "\n")
 
+            if "tree_diagnostics" in results:
+                with open(os.path.join(self.output_path, f"{problem['name']}_tree.txt"), 'w') as file:
+                    for i, state in enumerate(results['tree_diagnostics']):
+                        file.write(state.__str__() + "\n")
+
             if "result" in results:
                 self.logger.info(
                     f"Finished problem {problem['name']} result: {results['result']}")
