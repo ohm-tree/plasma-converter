@@ -14,10 +14,9 @@ from src.workers import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, required=True)
-args = parser.parse_args()
+parser.add_argument('-y', action='store_true')
 
-with open(args.config, 'r') as file:
-    config = yaml.safe_load(file)
+args = parser.parse_args()
 
 
 """
@@ -55,13 +54,77 @@ python src/inference.py --config configs/fast_mcts_debug.yaml
 """
 
 
-def run_inference():
+def config_load_dialog() -> tuple[dict, str]:
+    """
+    Load the configuration from the provided YAML file and handle existing runs.
+
+    This function checks for existing runs with the same configuration and prompts the user
+    to either start a new run or resume an existing one. It also saves the configuration
+    for the current run.
+
+    Returns:
+    -------
+    config : dict
+        The loaded configuration dictionary.
+    run_name : str
+        The name of the current run.
+    """
+
+    # first, read the config of every folder in the 'results' folder.
+    # If any of them are the same, then append to matches.
+    # 1. Warn the user, ask them if they would like to start a new run (default) or resume a run (they should select from the matches).
+    # 2. If they choose to resume, simply set the run name to that folder's name. add a new file called restarts.txt to that folder and append the current time to it.
+    # 3. If they choose to start a new run, create a new folder with a timestamp.
+
+    with open(args.config, 'r') as file:
+        config = yaml.safe_load(file)
+
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
+
+    # check for the -y flag
+    if args.y:
+        print(f"Starting new run: {run_name}")
+    else:
+        existing_runs = os.listdir('results')
+        matches = []
+        for run in existing_runs:
+            if not os.path.isdir(os.path.join('results', run)):
+                continue
+            if run.startswith(config['run_name']):
+                # possible match. read the yaml file.
+                with open(os.path.join('results', run, 'config.yaml'), 'r') as file:
+                    existing_config = yaml.safe_load(file)
+                    if existing_config == config:
+                        matches.append(run)  # add to matches
+
+        if matches:
+            print("Found existing runs that match the current configuration:")
+            for i, match in enumerate(matches):
+                print(f"{i + 1}: {match}")
+            choice = input("Would you like to start a new run (y/n)? ")
+            if choice.lower() == 'n':
+                choice = input("Which run would you like to resume? ")
+                run_name = matches[int(choice) - 1]
+                print(f"Resuming run: {run_name}")
+
+                with open(os.path.join('results', run_name, 'restarts.txt'), 'a') as file:
+                    # append the current time
+                    file.write(time.strftime("%Y-%m-%d %H:%M:%S") + "\n")
+            else:
+                print(f"Starting new run: {run_name}")
+        else:
+            print(f"Starting new run: {run_name}")
 
     # save a copy of the config in the results folder
     os.makedirs(os.path.join('results', run_name), exist_ok=True)
     with open(os.path.join('results', run_name, 'config.yaml'), 'w') as file:
         yaml.dump(config, file)
+
+    return config, run_name
+
+
+def run_inference():
+    config, run_name = config_load_dialog()
 
     for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         if type_string not in config:

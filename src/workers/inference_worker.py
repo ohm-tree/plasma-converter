@@ -90,6 +90,15 @@ class InferenceWorker(Worker, ABC):
                 if current_problem >= len(self.data):
                     break
                 self.problem_number.value += 1
+
+            # check if results have already been written for this problem;
+            # if so, then we have resumed an existing run, and can skip this problem
+            problem_name = self.data[current_problem]['name']
+            if os.path.exists(os.path.join(self.result_path, f"{problem_name}.txt")):
+                self.logger.warning(
+                    f"Skipping problem {problem_name} as results already exist.")
+                continue
+
             self.logger.info(
                 f"Working on problem {current_problem}")
             problem = self.data[current_problem]
