@@ -1,4 +1,4 @@
-run_name: fast_mcts_full_100
+run_name: mcts_full_minif2f
 split: ["valid", "test"]
 data_dir: datasets/minif2f.jsonl
 description: |
@@ -12,14 +12,14 @@ mcts:
     agent_kwargs:
         request_formula: "sqrt"
         max_num_completions: 30
-        valueless: True
+        valueless: False
     search_kwargs:
         num_iters: 100
         num_crawlers: 10
         search_time_limit: 3600.0
 
 completion:
-    num_procs: 8
+    num_procs: 3
     batch_size: 40
     timeout: 30
     model:
@@ -35,3 +35,32 @@ completion:
 
 lean:
     num_procs: 128
+
+context:
+    num_procs: 4
+    batch_size: 40
+    timeout: 30
+    model:
+        model: "deepseek-ai/DeepSeek-Prover-V1.5-RL"
+        max_num_batched_tokens: 8192
+        trust_remote_code: True
+    sampling:
+        max_tokens: 8192
+        temperature: 1.0
+        top_p: 1.0
+        logprobs: 0
+
+value:
+    num_procs: 1
+    batch_size: 40
+    timeout: 30
+    model:
+        model: "deepseek-ai/deepseek-math-7b-instruct"
+        max_num_batched_tokens: 8192
+        trust_remote_code: True
+    sampling:
+        max_tokens: 10
+        temperature: 1.0
+        top_p: 1.0
+        logprobs: 0
+        stop: ["\n", "}"]

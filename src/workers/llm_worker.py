@@ -1,5 +1,6 @@
 # Set up vllm stuff.
 import gc
+import time
 from secrets import token_bytes
 
 # remote queries to openai
@@ -11,6 +12,7 @@ from vllm.distributed.parallel_state import (
     destroy_model_parallel,
 )
 
+from src.workers.performance_logger import PerformanceLogger
 from src.workers.worker import *
 
 # detect the type of gpus available.
@@ -106,6 +108,7 @@ class LLMWorker(Worker):
         )
         self.gpu_set = gpu_set
         self.use_tqdm = use_tqdm
+        self.performance_logger = PerformanceLogger()
 
     def generate(self, input_data: list[str],
                  sampling_params: list[SamplingParams],
@@ -126,8 +129,9 @@ class LLMWorker(Worker):
             timeout=self.config['timeout'],
             batch_size=self.config['batch_size'],
         )
-        self.logger.info(
-            f"Received {len(my_tasks)} tasks.")
+        # self.logger.info(
+        #     f"Received {len(my_tasks)} tasks.")
+        start_time = time.time()
 
         if len(my_tasks) == 0:
             # Spinlock, disappointing, but there's nothing to do.
@@ -181,6 +185,8 @@ class LLMWorker(Worker):
         # sampling_param_inputs = [i['sampling_params'] for i in my_tasks]
         outputs: list[RequestOutput] = self.generate(
             input_data, sampling_param_inputs)
+
+        total_waiting_time = 0
         for i in range(len(outputs)):
             response = []
             for j in outputs[i].outputs:
@@ -195,10 +201,19 @@ class LLMWorker(Worker):
                 'result': response
             })
 
+            total_waiting_time += start_time - full_response['enqueue_time']
+
             self.enqueue(
                 obj=full_response,
                 channel=my_tasks[i]['channel']  # The response channel.
             )
+        end_time = time.time()
+        self.performance_logger.log_query(
+            latency=end_time - start_time,
+            total_waiting_time=total_waiting_time,
+            quantity=len(my_tasks)
+        )
+        self.performance_logger.occasional_log(self.logger)
 
     def shutdown(self):
         destroy_model_parallel()

@@ -6,6 +6,7 @@ the results.
 """
 
 import multiprocessing
+from multiprocessing import sharedctypes
 
 from src.agents.lazy_agent import LazyLeanAgent
 from src.lean.lean_game import LeanGame, LeanState
@@ -19,6 +20,7 @@ class LinearWorker(InferenceWorker):
                  run_name: str,
                  task_id: int,
                  queues: dict[str, multiprocessing.Queue],
+                 values: dict[str, sharedctypes.Synchronized],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -28,6 +30,7 @@ class LinearWorker(InferenceWorker):
             global_config=global_config,
             config=config,
             queues=queues,
+            values=values,
             run_name=run_name,
         )
 

@@ -10,7 +10,7 @@ mcts:
     num_procs: 61
     agent_class: "LazyLeanAgent"
     agent_kwargs:
-        request_formula: "sqrt"
+        request_formula: "conservative"
         max_num_completions: 30
         valueless: True
     search_kwargs:

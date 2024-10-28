@@ -5,12 +5,13 @@ saving the results to disk, and logging the results.
 """
 
 import multiprocessing
+from multiprocessing import sharedctypes
 
+from wayfinder.games.agent import Agent
 from wayfinder.uct.self_play import async_self_play
 
 from src.agents.lazy_agent import LazyLeanAgent
-from src.agents.lazy_valueless_agent import LazyValuelessLeanAgent
-from src.lean.lean_game import LeanGame, LeanState
+from src.lean.lean_game import LeanGame, LeanMove, LeanState
 from src.workers.inference_worker import InferenceWorker
 
 
@@ -21,6 +22,7 @@ class MCTSWorker(InferenceWorker):
                  run_name: str,
                  task_id: int,
                  queues: dict[str, multiprocessing.Queue],
+                 values: dict[str, sharedctypes.Synchronized],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -30,6 +32,7 @@ class MCTSWorker(InferenceWorker):
             global_config=global_config,
             config=config,
             queues=queues,
+            values=values,
             run_name=run_name,
         )
 
@@ -43,15 +46,20 @@ class MCTSWorker(InferenceWorker):
             f"Global Variables I can see: {globals().keys()}"
         )
 
+    def create_agent(self, game: LeanGame) -> Agent[LeanGame, LeanState, LeanMove]:
+        if self.config['agent_class'] == 'LazyLeanAgent':
+            return LazyLeanAgent(
+                game=game,
+                worker=self,
+                **self.config['agent_kwargs']
+            )
+
+        raise ValueError(f"Unknown agent class: {self.config['agent_class']}")
+
     async def solve(self, game: LeanGame) -> dict:
         state: LeanState = await game.starting_state()
 
-        # TODO: add config flag for switching between valueless and regular agents
-        agent = LazyValuelessLeanAgent(
-            game=game,
-            worker=self,
-            max_num_completions=self.config['max_num_completions'],
-        )
+        agent = self.create_agent(game)
 
         return await async_self_play(
             self.logger,

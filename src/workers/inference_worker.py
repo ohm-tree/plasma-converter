@@ -11,6 +11,7 @@ import multiprocessing
 import os
 import pickle
 from abc import ABC, abstractmethod
+from multiprocessing import sharedctypes
 
 import numpy as np
 from wayfinder.uct.self_play import async_self_play
@@ -28,6 +29,7 @@ class InferenceWorker(Worker, ABC):
                  config: dict,
                  run_name: str,
                  queues: dict[str, multiprocessing.Queue],
+                 values: dict[str, sharedctypes.Synchronized],
                  **kwargs  # Unused
                  ):
         super().__init__(
@@ -40,6 +42,8 @@ class InferenceWorker(Worker, ABC):
 
         self.config = config
         self.global_config = global_config
+
+        self.problem_number: sharedctypes.Synchronized = values['problem_number']
 
         self.load_problems()
 
@@ -79,7 +83,13 @@ class InferenceWorker(Worker, ABC):
             )
         )
 
-        for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
+        # for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
+        while True:
+            with self.problem_number.get_lock():
+                current_problem = self.problem_number.value
+                if current_problem >= len(self.data):
+                    break
+                self.problem_number.value += 1
             self.logger.info(
                 f"Working on problem {current_problem}")
             problem = self.data[current_problem]
@@ -111,6 +121,11 @@ class InferenceWorker(Worker, ABC):
                 # save the human printout to a file
                 with open(os.path.join(self.output_path, f"{problem['name']}.txt"), 'w') as file:
                     for i, state in enumerate(results['states']):
+                        file.write(state.__str__() + "\n")
+
+            if "tree_diagnostics" in results:
+                with open(os.path.join(self.output_path, f"{problem['name']}_tree.txt"), 'w') as file:
+                    for i, state in enumerate(results['tree_diagnostics']):
                         file.write(state.__str__() + "\n")
 
             if "result" in results:
