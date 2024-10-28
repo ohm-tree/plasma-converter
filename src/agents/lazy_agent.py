@@ -75,11 +75,15 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         Completes a state.
         """
-
-        prompt = 'Complete the following Lean 4 code.\n' + \
-            'The tactic state is:\n' + \
-            state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
-            state.code
+        prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
+            '```lean\n' + self.game.header + self.game.problem + \
+            state.code + \
+            "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n" + \
+            "  --" 
+        # prompt = 'Complete the following Lean 4 code.\n' + \
+        #     'The tactic state is:\n' + \
+        #     state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
+        #     state.code
 
         completion = await self.worker.query(
             task={

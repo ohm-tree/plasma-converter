@@ -48,6 +48,7 @@ def collate_results():
     # collate them into a single file
     # save the file in the results folder
 
+    os.makedirs('results', exist_ok=True)
     all_runs = os.listdir('results')
     all_results = {}
     print(all_runs)

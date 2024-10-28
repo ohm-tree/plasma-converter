@@ -321,6 +321,7 @@ class LeanGame(Game[LeanMove, LeanState]):
         goals = []
         sorries = repl_result.get('sorries', [])
         complete = True
+        bad_errors = []
 
         if len(sorries) > 0:
             complete = False
@@ -330,8 +331,11 @@ class LeanGame(Game[LeanMove, LeanState]):
                 complete = False
                 if m['data'].lstrip().startswith("unsolved goals\n"):
                     goals.append(m)
+                elif m['data'].lstrip().startswith("unexpected end of input"):
+                    pass
                 else:
                     errors.append(m)
+                    bad_errors.append(m)
             elif m['severity'] == 'warning':
                 if "declaration uses 'sorry'" in m['data']:
                     sorries.append(m)
@@ -340,13 +344,6 @@ class LeanGame(Game[LeanMove, LeanState]):
                     complete = False
 
                 warnings.append(m)
-                # There exist some warnings that are not errors.
-                # The most common is "'variables' has been replaced by 'variable' in lean 4"
-                #
-                # if not ("declaration uses 'sorry'" in m['data'] or 'failed' in m['data']):
-                #     raise ValueError(
-                #         f"Unexpected warning: {m['data']}")
-                # complete = False
                 warnings.append(m)
 
             elif m['severity'] == 'info':
@@ -355,13 +352,12 @@ class LeanGame(Game[LeanMove, LeanState]):
                 raise ValueError(
                     f"Unexpected severity: {m['severity']}")
 
-        valid_code = self.truncate(old_code, new_code, sorries, errors)
-
-        if valid_code.strip() == "":
-            # This means that the new code was truncated to nothing,
-            # i.e. the first new line of code written caused an error.
-            # This is a dead state.
+            
+        if len(bad_errors):
             return dead_result
+            
+        valid_code = new_code
+        
 
         tactic_state = self.get_goals(goals)
         if complete:

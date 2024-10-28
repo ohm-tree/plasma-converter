@@ -100,6 +100,7 @@ class LLMWorker(Worker):
 
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
+        print("gpu_set: ", len(gpu_set), gpu_set)
         self.llm = LLM(
             **LLM_kwargs
         )
@@ -160,6 +161,23 @@ class LLMWorker(Worker):
             for i in sampling_kwarg_inputs
         ]
 
+        def truncate(snippet: str) -> str:
+                new_code = snippet
+                if new_code.endswith('```'):
+                    new_code = new_code[:-3]
+
+                lines = new_code.split('\n')
+                def start_of_comment(line: str) -> bool:
+                    # get the first character that's not a space
+                    strip_str = line.lstrip()
+                    first_non_space = strip_str[0] if strip_str else ''
+                    return first_non_space in ['/', '-']
+                for i in range(1, len(lines)):
+                    if start_of_comment(lines[i]) and not start_of_comment(lines[i-1]):
+                        new_code = '\n'.join(lines[:i]) + '\n'
+                        break
+                return new_code
+
         # sampling_param_inputs = [i['sampling_params'] for i in my_tasks]
         outputs: list[RequestOutput] = self.generate(
             input_data, sampling_param_inputs)
@@ -167,8 +185,8 @@ class LLMWorker(Worker):
             response = []
             for j in outputs[i].outputs:
                 response.append({
-                    'text': j.text,
-                    'token_ids': j.token_ids,
+                    'text': truncate(j.text),
+                    # 'token_ids': j.token_ids,
                     'cumulative_logprob': j.cumulative_logprob
                 })
 

@@ -41,33 +41,22 @@ class LeanWorker(Worker):
         self.logger.info("Lean4 REPL setup.")
 
     def setup_repl(self):
-        while True:
-            try:
-                self.child = pexpect.spawn(
-                    f"{DEFAULT_LAKE_PATH} exe repl",
-                    cwd=DEFAULT_LEAN_WORKSPACE)
+        self.child = pexpect.spawn(
+            f"{DEFAULT_LAKE_PATH} exe repl",
+            cwd=DEFAULT_LEAN_WORKSPACE)
 
-                # Use the unprotected version to avoid error-loops.
-                self._send_code_read_json(
-                    {
-                        "cmd": LEAN4_DEFAULT_HEADER,
-                        "allTactics": True,
-                        "tactics": True,
-                    },
-                    timeout_start=600,
-                    timeout_cat=600,
-                    timeout_finish=600
-                )
-                self.logger.info("Just initialized Lean4 REPL.")
-                break
-            except Exception as e:
-                self.logger.error(traceback.format_exc())
-                time.sleep(10)
-            finally:
-                try:
-                    self.child.close()
-                except:
-                    pass
+        # Use the unprotected version to avoid error-loops.
+        self._send_code_read_json(
+            {
+                "cmd": LEAN4_DEFAULT_HEADER,
+                "allTactics": True,
+                "tactics": True,
+            },
+            timeout_start=600,
+            timeout_cat=600,
+            timeout_finish=600
+        )
+        self.logger.info("Just initialized Lean4 REPL.")
 
     def send_code_read_json(self, cmd, timeout_start=30, timeout_cat=30, timeout_finish=30, kill=False):
         try:
@@ -89,7 +78,7 @@ class LeanWorker(Worker):
         The setup code is *actually* guaranteed to never fail, so we can just set the timeout to be 600 seconds there.
         """
         cmd_json = json.dumps(cmd)
-        # print(cmd_json)
+        # print("cmd_json", cmd_json)
         self.child.send(cmd_json + "\r\n")
         # Read the input itself.
         # This should be printed instantly, so timeout is set to 1 second.
@@ -137,11 +126,10 @@ class LeanWorker(Worker):
             # Spinlock, disappointing, but there's nothing to do.
             return
 
+        print("input_data", input_data)
         self.logger.info(f"Received task: {input_data['task']}")
         result = self.send_code_read_json({
             "cmd": input_data['task'],
-            # "allTactics": True,
-            # "tactics": True,
             "env": 0
         })
         self.logger.info(f"Processed task.")
@@ -155,8 +143,6 @@ class LeanWorker(Worker):
             self.setup_repl()
             result = self.send_code_read_json({
                 "cmd": input_data['task'],
-                # "allTactics": True,
-                # "tactics": True,
                 "env": 0
             })
 
