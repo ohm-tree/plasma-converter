@@ -54,4 +54,4 @@ def upload_folder_to_gcs(source_folder_name, destination_folder_name, bucket_nam
 
 
 if __name__ == "__main__":
-    upload_to_gcs("/home/ubuntu/ohm-tree-filesys-az/plasma-converter/knowledge/tactic_states.txt", "knowledge/tactic_states.txt")
+    upload_to_gcs("/home/ubuntu/ohm-tree-filesys-az/plasma-converter/knowledge/tactic_states_embeddings.npy", "knowledge/tactic_states_embeddings.npy")
