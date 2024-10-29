@@ -1,8 +1,8 @@
 """
 Run 
 ```
-export GOOGLE_APPLICATION_CREDENTIALS="/home/ubuntu/ohm-tree-filesys/plasma-converter-9e8e4fa06716.json"
-source bashrc
+export GOOGLE_APPLICATION_CREDENTIALS="/home/ubuntu/ohm-tree-filesys-az/plasma-converter-9e8e4fa06716.json"
+source ~/.bashrc
 ```
 in terminal beforehand.
 """ 
@@ -54,4 +54,4 @@ def upload_folder_to_gcs(source_folder_name, destination_folder_name, bucket_nam
 
 
 if __name__ == "__main__":
-    upload_to_gcs("/home/ubuntu/ohm-tree-filesys/plasma-converter/logs/minif2f-valid-one-step_2024-10-18_19-25-54", "one_shot_results")
+    upload_to_gcs("/home/ubuntu/ohm-tree-filesys-az/plasma-converter/knowledge/tactic_states.txt", "knowledge/tactic_states.txt")

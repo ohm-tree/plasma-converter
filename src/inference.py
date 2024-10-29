@@ -111,6 +111,8 @@ def collate_results():
 def run_inference():
     run_name = config['run_name'] + time.strftime("_%Y-%m-%d_%H-%M-%S")
 
+    print("run_name", run_name)
+
     # save a copy of the config in the results folder
     os.makedirs(os.path.join('results', run_name), exist_ok=True)
     with open(os.path.join('results', run_name, 'config.yaml'), 'w') as file:
@@ -231,8 +233,8 @@ def run_inference():
     print("All processes terminated.")
 
     # Collate results
-    collate_results()
-    collate_solutions()
+    # collate_results()
+    # collate_solutions()
 
 
 if __name__ == '__main__':

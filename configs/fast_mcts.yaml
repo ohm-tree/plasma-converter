@@ -11,12 +11,12 @@ mcts:
     agent_class: "LazyLeanAgent"
     agent_kwargs:
         request_formula: "sqrt"
-        max_num_completions: 30
+        max_num_completions: 5
         valueless: True
     search_kwargs:
         num_iters: 100
         num_crawlers: 10
-        search_time_limit: 3600.0
+        search_time_limit: 1000.0
 
 completion:
     num_procs: 8
@@ -28,9 +28,9 @@ completion:
         trust_remote_code: True
     sampling:
         max_tokens: 256
-        temperature: 2.0
-        top_p: 1.0
-        stop: ["\n", "```"]
+        temperature: 1.0
+        top_p: .95
+        stop: ["/--", "```"]
         logprobs: 0
 
 lean:

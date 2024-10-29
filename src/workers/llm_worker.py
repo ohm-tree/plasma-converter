@@ -102,7 +102,7 @@ class LLMWorker(Worker):
 
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_set))
 
-        print("gpu_set: ", len(gpu_set), gpu_set)
+        # print("gpu_set: ", len(gpu_set), gpu_set)
         self.llm = LLM(
             **LLM_kwargs
         )
@@ -185,6 +185,8 @@ class LLMWorker(Worker):
         # sampling_param_inputs = [i['sampling_params'] for i in my_tasks]
         outputs: list[RequestOutput] = self.generate(
             input_data, sampling_param_inputs)
+
+        self.logger.info(outputs)
 
         total_waiting_time = 0
         for i in range(len(outputs)):

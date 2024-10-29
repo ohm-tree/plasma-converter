@@ -196,7 +196,8 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             for i in range(len(completions)):
                 move = LeanMove(completions[i]['text'])
                 probability = completions[i]['cumulative_logprob']
-                probability = np.exp(probability)
+                probability = np.exp(probability/3)
+                probability = probability / np.sum(probability)
                 if move not in active_move_set:
                     self.active_move_cache[state].append(move)
                     self.policy_cache[hash((state, move))] = probability
@@ -211,15 +212,16 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         Completes a state.
         """
+
         prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
             '```lean\n' + self.game.header + self.game.problem + \
             state.code + \
-            "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n" + \
-            "  --" 
+            "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n"
         # prompt = 'Complete the following Lean 4 code.\n' + \
         #     'The tactic state is:\n' + \
         #     state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
         #     state.code
+
 
         completion = await self.worker.query(
             task={

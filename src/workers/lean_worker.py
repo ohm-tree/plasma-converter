@@ -48,24 +48,6 @@ class LeanWorker(Worker):
         self.performance_logger = PerformanceLogger()
 
     def setup_repl(self):
-<<<<<<< HEAD
-        self.child = pexpect.spawn(
-            f"{DEFAULT_LAKE_PATH} exe repl",
-            cwd=DEFAULT_LEAN_WORKSPACE)
-
-        # Use the unprotected version to avoid error-loops.
-        self._send_code_read_json(
-            {
-                "cmd": LEAN4_DEFAULT_HEADER,
-                "allTactics": True,
-                "tactics": True,
-            },
-            timeout_start=600,
-            timeout_cat=600,
-            timeout_finish=600
-        )
-        self.logger.info("Just initialized Lean4 REPL.")
-=======
         self.logger.info("Beginning Lean4 REPL setup.")
 
         # Staggered start
@@ -114,7 +96,6 @@ class LeanWorker(Worker):
                     self.child.close()
                 except:
                     pass
->>>>>>> 2e4cbf8b7ea674cbba0a61a1c5cd5f0878aaaba2
 
                 self.logger.error(
                     f"Failed to start Lean4 REPL. Attempt {self.num_failures}. Sleeping for {(2 ** self.num_failures)} minutes.")
@@ -154,13 +135,9 @@ class LeanWorker(Worker):
         behavior of ~160 seconds). I'm not sure what the best way to capitalize on this information is.
         """
         cmd_json = json.dumps(cmd)
-<<<<<<< HEAD
-        # print("cmd_json", cmd_json)
-=======
         cmd_json = cmd_json.strip()  # Remove whitespace
         # print(cmd_json)
 
->>>>>>> 2e4cbf8b7ea674cbba0a61a1c5cd5f0878aaaba2
         self.child.send(cmd_json + "\r\n")
         # self.logger.debug(f"Waiting for start")
 
@@ -215,12 +192,7 @@ class LeanWorker(Worker):
             # Spinlock, disappointing, but there's nothing to do.
             return
 
-<<<<<<< HEAD
-        print("input_data", input_data)
-        self.logger.info(f"Received task: {input_data['task']}")
-=======
         # self.logger.info(f"Received task: {input_data['task']}")
->>>>>>> 2e4cbf8b7ea674cbba0a61a1c5cd5f0878aaaba2
         result = self.send_code_read_json({
             "cmd": input_data['task'],
             "env": 0
@@ -231,17 +203,6 @@ class LeanWorker(Worker):
 
         # if result is error, try restarting the repl.
         if 'system_error' in result:
-<<<<<<< HEAD
-            try:
-                self.child.close()
-            except:
-                pass
-            self.setup_repl()
-            result = self.send_code_read_json({
-                "cmd": input_data['task'],
-                "env": 0
-            })
-=======
             self.repl_dead = True
 
             """
@@ -286,7 +247,6 @@ class LeanWorker(Worker):
             #     return
 
         # If we get here, we have a valid result.
->>>>>>> 2e4cbf8b7ea674cbba0a61a1c5cd5f0878aaaba2
 
         full_result = input_data
         full_result.update(

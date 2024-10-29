@@ -16,3 +16,6 @@ jupyterlab==4.2.5
 
 # training runs
 wandb
+
+# saving results
+google-cloud-storage
