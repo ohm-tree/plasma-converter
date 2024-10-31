@@ -193,14 +193,14 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             completions = await self.LLM_rollout(state, num_queries_needed, max_num_moves ** 0.1)
 
             active_move_set = set(self.active_move_cache[state])
+            probability = [completion['cumulative_logprob'] for completion in completions]
+            probability = np.exp(np.array(probability)/3)
             for i in range(len(completions)):
                 move = LeanMove(completions[i]['text'])
-                probability = completions[i]['cumulative_logprob']
-                probability = np.exp(probability/3)
-                probability = probability / np.sum(probability)
+                # print("p_i", probability[i])
                 if move not in active_move_set:
                     self.active_move_cache[state].append(move)
-                    self.policy_cache[hash((state, move))] = probability
+                    self.policy_cache[hash((state, move))] = probability[i]
                     active_move_set.add(move)
 
             if len(self.active_move_cache[state]) >= min_num_moves:
@@ -212,11 +212,16 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         """
         Completes a state.
         """
-
+        # TODO get indent from state.code to force completion starting with --
+        code_lines = state.code.split('\n')
+        # number of spaces in prefix of last code line
+        indent = len(code_lines[-1]) - len(code_lines[-1].lstrip())
+        prefix = (" " * indent) + "--"
         prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
             '```lean\n' + self.game.header + self.game.problem + \
             state.code + \
-            "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n"
+            "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n" + \
+            prefix
         # prompt = 'Complete the following Lean 4 code.\n' + \
         #     'The tactic state is:\n' + \
         #     state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
@@ -226,6 +231,7 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         completion = await self.worker.query(
             task={
                 'prompt': prompt,
+                'prefix': prefix,
                 'n': num_completions,
                 'temperature': temperature,
                 'channel': self.worker.name,

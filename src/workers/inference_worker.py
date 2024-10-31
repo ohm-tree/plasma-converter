@@ -82,7 +82,6 @@ class InferenceWorker(Worker, ABC):
                 channel=self.name
             )
         )
-
         # for current_problem in range(self.worker_idx, len(self.data), self.config['num_procs']):
         while True:
             with self.problem_number.get_lock():
@@ -129,11 +128,14 @@ class InferenceWorker(Worker, ABC):
                         file.write(state.__str__() + "\n")
 
             if "result" in results:
+                # print("distribution", results['distributions'])
                 self.logger.info(
                     f"Finished problem {problem['name']} result: {results['result']}")
                 with open(os.path.join(self.result_path, f"{problem['name']}.txt"), 'w') as file:
                     file.write(f"Problem: {problem['name']}\n")
                     file.write(f"Split: {problem['split']}\n")
+                    file.write(f"Move Count: {results['move_count']}\n")
+                    file.write(f"Proof: "\n{results['winning_node'].state.code}\n"")
                     file.write(f"Result: {results['result']}\n")
 
         listener.cancel()

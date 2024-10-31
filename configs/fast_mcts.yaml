@@ -1,5 +1,5 @@
-run_name: fast_mcts_full_100
-split: ["valid", "test"]
+run_name: medium_valid
+split: ["valid"]
 data_dir: datasets/minif2f.jsonl
 description: |
     This configuration is for running the fast MCTS inference method on the full minif2f dataset.
@@ -11,12 +11,14 @@ mcts:
     agent_class: "LazyLeanAgent"
     agent_kwargs:
         request_formula: "sqrt"
-        max_num_completions: 5
+        max_num_completions: 10
         valueless: True
     search_kwargs:
-        num_iters: 100
-        num_crawlers: 10
-        search_time_limit: 1000.0
+        num_iters: 500
+        num_crawlers: 5
+        search_time_limit: 3600
+    tree_kwargs:
+        c: 1
 
 completion:
     num_procs: 8

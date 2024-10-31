@@ -186,14 +186,14 @@ class LLMWorker(Worker):
         outputs: list[RequestOutput] = self.generate(
             input_data, sampling_param_inputs)
 
-        self.logger.info(outputs)
+        # self.logger.info(outputs)
 
         total_waiting_time = 0
         for i in range(len(outputs)):
             response = []
             for j in outputs[i].outputs:
                 response.append({
-                    'text': truncate(j.text),
+                    'text': my_tasks[i]['prefix'] + truncate(j.text),
                     # 'token_ids': j.token_ids,
                     'cumulative_logprob': j.cumulative_logprob
                 })
