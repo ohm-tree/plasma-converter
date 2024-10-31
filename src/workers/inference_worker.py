@@ -135,7 +135,8 @@ class InferenceWorker(Worker, ABC):
                     file.write(f"Problem: {problem['name']}\n")
                     file.write(f"Split: {problem['split']}\n")
                     file.write(f"Move Count: {results['move_count']}\n")
-                    file.write(f"Proof: "\n{results['winning_node'].state.code}\n"")
+                    file.write(f"Winning node state hash: {results['winning_node'].state.__hash__()}\n")
+                    file.write(f"Proof: \n{results['winning_node'].state.code}\n")
                     file.write(f"Result: {results['result']}\n")
 
         listener.cancel()

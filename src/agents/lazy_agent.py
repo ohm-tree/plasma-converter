@@ -8,17 +8,25 @@ from src.workers.worker import *
 
 # Todo: prompts are *data*; they can be stored in files and read from configs.
 
-COMPLETION_PROMPT = """Complete the following Lean 4 code.
-The tactic state is:
-```lean4
-{tactic_state}
-```
-Here is the Lean 4 code so far:
+# COMPLETION_PROMPT = """Complete the following Lean 4 code.
+# The tactic state is:
+# ```lean4
+# {tactic_state}
+# ```
+# Here is the Lean 4 code so far:
+# ```lean4
+# {header}
+# {problem}
+# {old_code}
+# """  # No 3 backticks at the end, so the model can complete the code.
+
+COMPLETION_PROMPT =  """Complete the following Lean 4 code with explanatory comments.
 ```lean4
 {header}
 {problem}
-{old_code}
-"""  # No 3 backticks at the end, so the model can complete the code.
+{code}
+{tactic_state}
+{comment_prefix}"""
 
 
 CONTEXT_PROMPT = """This is a partial Lean 4 proof.
@@ -213,31 +221,63 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
         Completes a state.
         """
         # TODO get indent from state.code to force completion starting with --
-        code_lines = state.code.split('\n')
+        
+
+        # prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
+        #     '```lean\n' + self.game.header + self.game.problem + \
+        #     state.code + \
+        #     "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n" + \
+        #     prefix
+
+        dummy_prompt = COMPLETION_PROMPT.format(
+            header=self.game.header,
+            problem=self.game.problem,
+            code=state.code,
+            tactic_state = "",
+            comment_prefix = ""
+        )
+        print("dummy prompt:\n", dummy_prompt)
+
+        completion_indent = await self.worker.query(
+            task={
+                'prompt': dummy_prompt,
+                "max_tokens": 10,
+                'n': 1,
+                'temperature': 0,
+                'channel': self.worker.name,
+            },
+            channel='completion'
+        )
+
+        code_lines = completion_indent["result"][0]["text"].split('\n')
         # number of spaces in prefix of last code line
-        indent = len(code_lines[-1]) - len(code_lines[-1].lstrip())
-        prefix = (" " * indent) + "--"
-        prompt = 'Complete the following Lean 4 code with explanatory comments.' + \
-            '```lean\n' + self.game.header + self.game.problem + \
-            state.code + \
-            "\n  /-- Tactic state:\n" + '\n'.join(['  ' + line for line in state.tactic_state.strip().splitlines()]) + "\n  -/\n" + \
-            prefix
-        # prompt = 'Complete the following Lean 4 code.\n' + \
-        #     'The tactic state is:\n' + \
-        #     state.tactic_state.strip()+'\n```lean\n' + self.game.header + self.game.problem + \
-        #     state.code
+        indent = " " * (len(code_lines[-1]) - len(code_lines[-1].lstrip()))
+        comment_prefix = indent + "--"
+
+        ts_lines = ['/--\n'] + [indent + line for line in state.tactic_state.strip().splitlines()] + ['\n/--\n']
+        tactic_state = '\n'.join(ts_lines)
+
+        prompt = COMPLETION_PROMPT.format(
+            header=self.game.header,
+            problem=self.game.problem,
+            code=state.code,
+            tactic_state = tactic_state,
+            comment_prefix = comment_prefix
+        )
+
+        print("real prompt:\n", prompt)
 
 
         completion = await self.worker.query(
             task={
                 'prompt': prompt,
-                'prefix': prefix,
                 'n': num_completions,
                 'temperature': temperature,
                 'channel': self.worker.name,
             },
             channel='completion'
         )
+        
 
         # TODO: make this a named dict
         res: list[dict[str, Any]] = completion['result']
@@ -252,11 +292,28 @@ class LazyLeanAgent(Agent[LeanGame, LeanState, LeanMove]):
             self.worker.logger.warning(f"Length of Prompt: {len(prompt)}")
             self.worker.logger.warning(f"Response: {res}")
 
+        def truncate(snippet: str) -> str:
+            new_code = snippet
+            if new_code.endswith('```'):
+                new_code = new_code[:-3]
+
+            lines = new_code.split('\n')
+            def start_of_comment(line: str) -> bool:
+                # get the first character that's not a space
+                strip_str = line.lstrip()
+                first_non_space = strip_str[0] if strip_str else ''
+                return first_non_space in ['/', '-']
+            for i in range(1, len(lines)):
+                if start_of_comment(lines[i]) and not start_of_comment(lines[i-1]):
+                    new_code = '\n'.join(lines[:i]) + '\n'
+                    break
+            return new_code
+
         for i in range(len(res)):
-            if res[i]['text'].endswith('```'):
-                res[i]['text'] = res[i]['text'][:-3]
-            if not res[i]['text'].endswith('\n'):
-                res[i]['text'] += '\n'
+            code = comment_prefix + res[i]['text']
+            code = truncate(code)
+            if not code.endswith('\n'):
+                code += '\n'
         return res
 
     async def policy(self, state: LeanState, move: LeanMove) -> float:
