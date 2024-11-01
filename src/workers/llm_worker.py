@@ -15,35 +15,6 @@ from vllm.distributed.parallel_state import (
 from src.workers.performance_logger import PerformanceLogger
 from src.workers.worker import *
 
-# detect the type of gpus available.
-# If there is at least one A100 80GB or H100,
-# tensor parallelization is not needed.
-# Else, check that there are at least 4 V100s.
-# and set tensor_parallel_size=4
-
-# num_devices = torch.cuda.device_count()
-# device_counts = {}
-# for i in range(num_devices):
-#     device_name = torch.cuda.get_device_name(i)
-#     if device_name in device_counts:
-#         device_counts[device_name] += 1
-#     else:
-#         device_counts[device_name] = 1
-
-# print(f"Worker {completion_worker_id} detected the following devices: {device_counts}")
-
-# if "A100-SXM4-80GB" in device_counts or "H100-SXM4-80GB" in device_counts:
-#     tensor_parallel_size = 1
-#     llm = LLM(model="deepseek-ai/DeepSeek-Prover-V1.5-RL",
-#               max_num_batched_tokens=8192,
-#               trust_remote_code=True
-#               )
-# elif "Tesla V100-SXM2-16GB" in device_counts:
-#     if device_counts["Tesla V100-SXM2-16GB"] >= 4:
-#         tensor_parallel_size = 4
-#     else:
-#         raise ValueError("Not enough Tesla V100-SXM2-16GB GPUs available.")
-
 
 class LLMWorker(Worker):
     def __init__(self,
@@ -109,18 +80,23 @@ class LLMWorker(Worker):
         self.use_tqdm = use_tqdm
         self.performance_logger = PerformanceLogger()
 
-    def generate(self, input_data: list[str],
+        self.chat_mode = config.get('chat', False)  # Get chat flag from config
+
+    def generate(self, input_data: list[str | list[dict]],
                  sampling_params: list[SamplingParams],
                  ) -> list[RequestOutput]:
-        # self.logger.info(
-        #     "input_data: " + str(input_data) + "\n" +
-        #     "sampling_params: " + str(sampling_params)
-        # )
-        return self.llm.generate(
-            input_data,
-            sampling_params=sampling_params,
-            use_tqdm=self.use_tqdm
-        )
+        if self.chat_mode:
+            return self.llm.chat(
+                messages=input_data,
+                sampling_params=sampling_params,
+                use_tqdm=self.use_tqdm
+            )
+        else:
+            return self.llm.generate(
+                input_data,
+                sampling_params=sampling_params,
+                use_tqdm=self.use_tqdm
+            )
 
     def loop(self):
         my_tasks = self.spin_deque_tasks(
@@ -136,7 +112,12 @@ class LLMWorker(Worker):
             # Spinlock, disappointing, but there's nothing to do.
             return
         # We have tasks to complete.
-        input_data = [i['prompt'] for i in my_tasks]
+        if self.chat_mode:
+            input_data = [i['messages']
+                          for i in my_tasks]  # Get messages for chat mode
+        else:
+            input_data = [i['prompt']
+                          for i in my_tasks]  # Original prompt handling
 
         sampling_param_keys = [
             'n',

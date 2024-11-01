@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Dict, Sequence
+from typing import Dict, Sequence, TypedDict
 
 import numpy as np
 from wayfinder.games import *
@@ -18,32 +18,32 @@ class LeanStateError(Exception):
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class LeanMessage:
     """Represents a message from the Lean verifier"""
     severity: str  # 'error', 'warning', 'info'
     data: str
-    pos: dict[str, int]  # line and column information
+    line: int  # Line number (1-indexed)
+    col: int  # Column number (0-indexed)
 
 
-@dataclass
-class AnnotatedCode:
-    """Represents Lean code with inline annotations"""
-    raw_code: str
-    annotations: list[tuple[int, str]]  # (position, annotation message)
-
-    def to_annotated_string(self) -> str:
-        """Convert the code and annotations into a single string with inline comments"""
-        lines = self.raw_code.split('\n')
-        # Sort annotations by line number in reverse order to avoid position shifts
-        sorted_annotations = sorted(
-            self.annotations, key=lambda x: x[0], reverse=True)
-
-        for pos, message in sorted_annotations:
-            line_num = self.raw_code.count('\n', 0, pos)
-            lines[line_num] += f"  -- {message}"
-
-        return '\n'.join(lines)
+def to_annotated_string(code: str, messages: tuple[LeanMessage]) -> str:
+    """Convert the code and annotations into a single string with inline comments"""
+    lines = code.split('\n')
+    sorted_annotations = sorted(
+        messages, key=lambda x: x.line)
+    res = ""
+    annotation_index = 0
+    for i, line in enumerate(lines):
+        res += line + '\n'
+        # lines are 1-indexed
+        while annotation_index < len(sorted_annotations) and sorted_annotations[annotation_index].line - 1 == i:
+            message = sorted_annotations[annotation_index]
+            res += f"<{message.severity}>" + '\n'
+            res += message.data + '\n'
+            res += f"</{message.severity}>" + '\n'
+            annotation_index += 1
+    return res
 
 
 @dataclass(frozen=True)
@@ -58,8 +58,8 @@ class LeanState(State):
     code: str  # Raw Lean code
     depth: int
     dead: bool
-    messages: list[LeanMessage]  # All messages from verifier
-    annotated_code: AnnotatedCode
+    messages: tuple[LeanMessage]  # All messages from verifier
+    annotated_code: str
     scratchpad: str  # Arbitrary text for notes/working
 
     @classmethod
@@ -95,6 +95,13 @@ def truncate_middle(text: str, max_length: int) -> str:
     suffix_length = available_chars - prefix_length
 
     return text[:prefix_length] + ellipsis + text[-suffix_length:]
+
+
+class ProcessResult(TypedDict):
+    """Result from processing Lean verifier response"""
+    messages: tuple[LeanMessage, ...]  # Processed and truncated messages
+    dead: bool  # Whether this is a dead state
+    win: bool  # Whether this is a winning state
 
 
 class LeanGame(Game[LeanMove, LeanState]):
@@ -151,11 +158,12 @@ class LeanGame(Game[LeanMove, LeanState]):
         Returns the starting state of the game.
         """
         res = LeanState(
-            code="",
+            code=self.problem,
             depth=0,
             dead=False,
-            messages=[],
-            annotated_code=AnnotatedCode(raw_code="", annotations=[]),
+            messages=tuple(),
+            annotated_code=to_annotated_string(
+                self.problem, tuple()),
             scratchpad=""
         )
         self._win[res] = False
@@ -190,9 +198,11 @@ class LeanGame(Game[LeanMove, LeanState]):
             raise LeanStateError(
                 "Cannot get the next state of a terminal LeanState.")
 
+        new_code = self.problem + action.new_code
+
         response = await self.worker.query(
             task={
-                'task': self.problem + action.new_code,
+                'task': new_code,
                 'channel': self.worker.name
             },
             channel='lean'
@@ -200,23 +210,13 @@ class LeanGame(Game[LeanMove, LeanState]):
         repl_result = response['response']
         process_result = self.process(repl_result)
 
-        # Create annotations from messages
-        annotations = []
-        for msg in process_result['messages']:
-            pos = self.get_index(action.new_code,
-                                 msg.pos['line'],
-                                 msg.pos['column'])
-            annotations.append((pos, f"{msg.severity}: {msg.data}"))
-
         new_state = LeanState(
-            code=action.new_code,
+            code=new_code,
             depth=state.depth + 1,
             dead=process_result['dead'],
-            messages=process_result['messages'],
-            annotated_code=AnnotatedCode(
-                raw_code=action.new_code,
-                annotations=annotations
-            ),
+            messages=tuple(process_result['messages']),
+            annotated_code=to_annotated_string(
+                new_code, process_result['messages']),
             scratchpad=state.scratchpad + action.scratchpad_append
         )
 
@@ -287,7 +287,7 @@ class LeanGame(Game[LeanMove, LeanState]):
                 f"Column is too large. row = {row}, col = {col}, line_lengths = {line_lengths}, s = {s}")
         return sum(line_lengths[:row-1]) + col
 
-    def process(self, repl_result: dict) -> dict:
+    def process(self, repl_result: dict) -> ProcessResult:
         """
         Process the Lean verifier response into a structured format.
 
@@ -297,18 +297,13 @@ class LeanGame(Game[LeanMove, LeanState]):
 
         Parameters
         ----------
-        code: str
-            The Lean code being processed
         repl_result: dict
             Raw response from the Lean verifier
 
         Returns
         -------
-        dict
-            Contains:
-            - messages: list[LeanMessage] - Processed and truncated messages
-            - dead: bool - Whether this is a dead state
-            - win: bool - Whether this is a winning state
+        ProcessResult
+            Contains processed messages and state information
         """
         messages = []
         complete = True
@@ -322,7 +317,8 @@ class LeanGame(Game[LeanMove, LeanState]):
             msg = LeanMessage(
                 severity=m['severity'],
                 data=truncated_data,
-                pos=m['pos']
+                line=m['pos']['line'],
+                col=m['pos']['column']
             )
 
             if msg.severity == 'error':
@@ -336,7 +332,7 @@ class LeanGame(Game[LeanMove, LeanState]):
                 messages.append(msg)
 
         return {
-            'messages': messages,
+            'messages': tuple(messages),
             'dead': False,
             'win': complete
         }
@@ -348,22 +344,82 @@ class LeanGame(Game[LeanMove, LeanState]):
         Returns a string containing:
         1. The standard Lean header
         2. The problem statement
-        3. The current code
-        4. The scratchpad content (as Lean comments)
-
-        Note: The code portion is raw (without annotations)
-        so it can be used with the Lean verifier. The scratchpad
-        is included as comments at the end.
+        3. The current annotated code
+        4. The scratchpad content
         """
         res = ""
-        res += self.header
-        res += self.problem
-        res += state.code
-
-        # Add scratchpad as comments if non-empty
-        if state.scratchpad.strip():
-            res += "\n\n/-\nScratchpad:\n"
-            res += state.scratchpad
-            res += "\n-/\n"
+        res += self.header.strip('\n') + '\n'
+        res += state.annotated_code.strip('\n') + '\n'
+        res += "Scratchpad:\n"
+        res += state.scratchpad.strip('\n') + '\n'
 
         return res
+
+
+async def test_lean_game():
+    class FakeWorker():
+        def __init__(self):
+            self.name = "fake"
+            self.responses = {
+                # Hardcoded responses for testing
+                "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n": {
+                    'response': {"messages":
+                                 [{"severity": "error",
+                                   "pos": {"line": 2, "column": 0},
+                                     "endPos": None,
+                                     "data": "unexpected end of input; expected '{'"},
+                                     {"severity": "error",
+                                      "pos": {"line": 1, "column": 157},
+                                      "endPos": {"line": 1, "column": 159},
+                                      "data":
+                                      "unsolved goals\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : u 1 = 2\nh₂ : u 3 = 6\n⊢ u 0 = 2 / √3 ∨ u 0 = -(2 / √3)"}],
+                                 "env": 1,
+                                 "ast": []}
+                },
+                "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero, Nat.succ_add]\n": {
+                    'response': {"messages":
+                                 [{"severity": "error",
+                                   "pos": {"line": 1, "column": 157},
+                                     "endPos": {"line": 2, "column": 101},
+                                     "data":
+                                     "unsolved goals\na r : ℝ\nu : ℕ → ℝ\nh₀ : ∀ (k : ℕ), u k = a * r ^ k\nh₁ : a * r ^ succ 0 = 2\nh₂ : a * r ^ 3 = 6\n⊢ a * r ^ 0 = 2 / √3 ∨ a * r ^ 0 = -(2 / √3)"}],
+                                 "env": 2,
+                                 "ast": []}
+                }
+            }
+
+        async def query(self, task: dict, channel: str) -> dict:
+            return self.responses[task['task']]
+
+    EXAMPLE_PROBLEM = "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n"
+
+    worker = FakeWorker()
+    game = LeanGame(
+        worker=worker,
+        problem=EXAMPLE_PROBLEM,
+        header=LEAN4_DEFAULT_HEADER
+    )
+    state = await game.starting_state()
+    print(game.pretty_print(state))
+
+    state = await game.next_state(state, LeanMove(
+        new_code="  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero, Nat.succ_add]\n",
+        scratchpad_append="This is a scratchpad message"
+    ))
+    print(game.pretty_print(state))
+
+    state = await game.next_state(state, LeanMove(
+        new_code="",
+        scratchpad_append="This is a scratchpad message"
+    ))
+    print(game.pretty_print(state))
+
+
+if __name__ == "__main__":
+    asyncio.run(test_lean_game())
+
+
+"""
+{"cmd": "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\nsimp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero, Nat.succ_add]\n", "env": 0}
+
+"""

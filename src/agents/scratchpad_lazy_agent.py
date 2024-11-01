@@ -3,45 +3,9 @@ from typing import Any, Optional
 import numpy as np
 from wayfinder.games import *
 
+from src.agents.scratchpad_lazy_agent_prompts import *
 from src.lean.scratchpad_lean_game import LeanGame, LeanMove, LeanState
 from src.workers.worker import *
-
-SCRATCHPAD_PROMPT = """Here is the current state of a Lean proof:
-```lean4
-{annotated_code}
-```
-Here are my current notes in the scratchpad:
-{scratchpad}
-
-Please analyze the current state of the proof, especially noting the error messages.
-What should we try next? What insights can we draw from our previous attempts?
-Write your thoughts as a continuation of the scratchpad.
-
-Your response should start immediately without any preamble.
-"""
-
-CODE_PROMPT = """Here is the current state of a Lean proof, with error annotations:
-```lean4
-{annotated_code}
-```
-
-Here are my notes about the proof:
-{scratchpad}
-
-Please rewrite the proof, taking into account the error messages and insights from the notes.
-"""
-
-VALUE_PROMPT = """Here is a Lean proof with error annotations:
-```lean4
-{annotated_code}
-```
-
-Here are the notes from attempting this proof:
-{scratchpad}
-
-Based on the state of this code and the included annotations, rate the likelihood that this proof will succeed on a scale of 0 (very unlikely) to 100 (very likely).
-Please reason step by step about what's working and what isn't, then put your final answer in \\boxed{{}}
-"""
 
 
 class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
@@ -101,21 +65,22 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
                     max_num_moves ** 0.1
                 )
 
-                for code_completion in code_completions:
-                    move = LeanMove(
-                        new_code=code_completion['text'],
-                        scratchpad_append=scratchpad_completion['text']
-                    )
-                    # Combined log probability
-                    probability = np.exp(
-                        scratchpad_completion['cumulative_logprob'] +
-                        code_completion['cumulative_logprob']
-                    )
+                code_completion = code_completions[0]
 
-                    if move not in active_move_set:
-                        self.active_move_cache[state].append(move)
-                        self.policy_cache[hash((state, move))] = probability
-                        active_move_set.add(move)
+                move = LeanMove(
+                    new_code=code_completion['text'],
+                    scratchpad_append=scratchpad_completion['text']
+                )
+                # Combined log probability
+                probability = np.exp(
+                    scratchpad_completion['cumulative_logprob'] +
+                    code_completion['cumulative_logprob']
+                )
+
+                if move not in active_move_set:
+                    self.active_move_cache[state].append(move)
+                    self.policy_cache[hash((state, move))] = probability
+                    active_move_set.add(move)
 
             if len(self.active_move_cache[state]) >= min_num_moves:
                 break
@@ -123,64 +88,63 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
         return True
 
     async def generate_scratchpad(self, state: LeanState, n: int, temperature: float) -> list[dict]:
-        """Generate scratchpad additions."""
-        prompt = SCRATCHPAD_PROMPT.format(
-            annotated_code=state.annotated_code.to_annotated_string(),
-            scratchpad=state.scratchpad
+        """Generate scratchpad additions using chat completion."""
+        messages = get_scratchpad_messages(
+            state.annotated_code,
+            state.scratchpad
         )
 
         completion = await self.worker.query(
             task={
-                'prompt': prompt,
+                'messages': messages,
                 'n': n,
                 'temperature': temperature,
                 'channel': self.worker.name,
             },
-            channel='completion'
+            channel='chat'
         )
         return completion['result']
 
     async def generate_code(self, state: LeanState, new_scratchpad: str, n: int, temperature: float) -> list[dict]:
-        """Generate new code given the state and new scratchpad addition."""
-        prompt = CODE_PROMPT.format(
-            annotated_code=state.annotated_code.to_annotated_string(),
-            scratchpad=state.scratchpad + new_scratchpad
+        """Generate new code using chat completion."""
+        messages = get_code_messages(
+            state.annotated_code,
+            state.scratchpad + new_scratchpad
         )
 
         completion = await self.worker.query(
             task={
-                'prompt': prompt,
+                'messages': messages,
                 'n': n,
                 'temperature': temperature,
                 'channel': self.worker.name,
             },
-            channel='completion'
+            channel='chat'
         )
 
         result = completion['result']
         for r in result:
-            if r['text'].endswith('```'):
-                r['text'] = r['text'][:-3]
-            if not r['text'].endswith('\n'):
-                r['text'] += '\n'
+            if "```" in r['text']:
+                r['text'] = r['text'][:r['text'].find("```")]
+
         return result
 
     async def value(self, state: LeanState) -> float:
-        """Estimate value based on annotated code and scratchpad."""
+        """Estimate value using chat completion."""
         if self.valueless:
             return 0
 
-        prompt = VALUE_PROMPT.format(
-            annotated_code=state.annotated_code.to_annotated_string(),
-            scratchpad=state.scratchpad
+        messages = get_value_messages(
+            state.annotated_code,
+            state.scratchpad
         )
 
         value = await self.worker.query(
             task={
-                'prompt': prompt,
+                'messages': messages,
                 'channel': self.worker.name,
             },
-            channel='value'
+            channel='chat'
         )
 
         return parse_value_response(value['result'][0]['text'], self.worker.logger)['rating']
@@ -193,13 +157,27 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
 
 def parse_value_response(output: str, logger: logging.Logger) -> dict:
     """Parse value response, returning normalized rating between -1 and 1."""
-    output_end = output.find('}')
-    if output_end != -1:
-        output = output[:output_end].strip()
-    output = ''.join(c for c in output if c.isdigit() or c == '.')
+    # Find content inside \boxed{}
+    start = output.find('\\boxed{')
+    if start == -1:
+        logger.warning(
+            f"No \\boxed{{}} found. Returning 0. Output: {output}")
+        return {'rating': 0}
+
+    start += len('\\boxed{')
+    end = output.find('}', start)
+    if end == -1:
+        logger.warning(
+            f"Unclosed \\boxed{{}}. Returning 0. Output: {output}")
+        return {'rating': 0}
+
+    boxed_content = output[start:end].strip()
+    # Extract just the numbers and decimal points
+    rating_str = ''.join(
+        c for c in boxed_content if c.isdigit() or c == '.')
     try:
-        rating = float(output)
+        rating = float(rating_str)
+        return {'rating': (rating - 50) / 50}
     except ValueError:
         logger.warning(f"Rating not a number. Returning 0. Output: {output}")
         return {'rating': 0}
-    return {'rating': (rating - 50) / 50}
