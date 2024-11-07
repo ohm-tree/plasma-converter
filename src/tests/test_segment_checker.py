@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from pure_NL_experiments.segment_checker import ScrambleVerifier
+from src.NL.segment_checker import ScrambleVerifier
 
 
 class TestScrambleVerifier(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestScrambleVerifier(unittest.TestCase):
         self.verifier = ScrambleVerifier(
             self.problem_statement, self.segments, self.segment_index)
 
-    @patch('segment_checker.chat_gpt')
+    @patch('src.NL.segment_checker.chat_gpt')
     def test_generate_scrambled_versions(self, mock_chat_gpt):
         # Mock the GPT response for generate_scrambled_versions
         mock_chat_gpt.return_value = (
@@ -34,7 +34,7 @@ class TestScrambleVerifier(unittest.TestCase):
         ]
         self.assertEqual(scrambled_segments, expected_segments)
 
-    @patch('segment_checker.chat_gpt')
+    @patch('src.NL.segment_checker.chat_gpt')
     def test_parse_gpt_variations(self, mock_chat_gpt):
         # No need to mock chat_gpt here since we're testing parse_gpt_variations directly
         content = (
@@ -47,8 +47,8 @@ class TestScrambleVerifier(unittest.TestCase):
                                "Second variation.", "Third variation."]
         self.assertEqual(variations, expected_variations)
 
-    @patch('segment_checker.chat_gpt')
-    @patch('segment_checker.random.shuffle')
+    @patch('src.NL.segment_checker.chat_gpt')
+    @patch('src.NL.segment_checker.random.shuffle')
     def test_multiple_choice_evaluation(self, mock_shuffle, mock_chat_gpt):
         # Mock the shuffle function to do nothing
         mock_shuffle.side_effect = lambda x: None
@@ -67,7 +67,7 @@ class TestScrambleVerifier(unittest.TestCase):
         self.assertEqual(choice, '4')
         self.assertEqual(correct_option_number, 4)
 
-    @patch('segment_checker.chat_gpt')
+    @patch('src.NL.segment_checker.chat_gpt')
     def test_explain_error(self, mock_chat_gpt):
         # Mock the GPT response for explain_error
         mock_chat_gpt.return_value = "The error is in the calculation step."
@@ -77,8 +77,8 @@ class TestScrambleVerifier(unittest.TestCase):
         self.assertEqual(self.verifier.explanation,
                          "The error is in the calculation step.")
 
-    @patch('segment_checker.chat_gpt')
-    @patch('segment_checker.random.shuffle')
+    @patch('src.NL.segment_checker.chat_gpt')
+    @patch('src.NL.segment_checker.random.shuffle')
     def test_check_segment_correct(self, mock_shuffle, mock_chat_gpt):
         # Mock the shuffle function to do nothing
         mock_shuffle.side_effect = lambda x: None
@@ -100,8 +100,12 @@ class TestScrambleVerifier(unittest.TestCase):
         self.assertTrue(result)
         self.assertIsNone(self.verifier.explanation)
 
-    @patch('segment_checker.chat_gpt')
-    def test_check_segment_incorrect(self, mock_chat_gpt):
+    @patch('src.NL.segment_checker.chat_gpt')
+    @patch('src.NL.segment_checker.random.shuffle')
+    def test_check_segment_incorrect(self, mock_shuffle, mock_chat_gpt):
+        # Mock the shuffle function to do nothing
+        mock_shuffle.side_effect = lambda x: None
+
         # Mock the GPT responses for check_segment when the segment is incorrect
         def side_effect(prompt):
             if "Generate" in prompt:

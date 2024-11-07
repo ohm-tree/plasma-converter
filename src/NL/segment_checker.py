@@ -103,12 +103,19 @@ class ScrambleVerifier(SegmentChecker):
         options_with_numbers = [
             f"{idx + 1}. {option}" for idx, option in enumerate(options)]
         options_text = '\n'.join(options_with_numbers)
-        prompt = (
-            f"Given the problem statement:\n{self.problem_statement}\n\n"
-            f"Given the context:\n{context}\n\n"
-            f"Which of the following options logically follows from the context?\n{options_text}\n"
-            "Please provide the number of the correct option."
-        )
+        if context.strip() != "":
+            prompt = (
+                f"Given the problem statement:\n{self.problem_statement}\n\n"
+                f"Given the context:\n{context}\n\n"
+                f"Which of the following options logically follows from the context?\n{options_text}\n"
+                "Please provide the number of the correct option."
+            )
+        else:
+            prompt = (
+                f"Given the problem statement:\n{self.problem_statement}\n\n"
+                f"Which of the following options logically follows from the problem statement?\n{options_text}\n"
+                "Please provide the number of the correct option."
+            )
         choice = chat_gpt(prompt)
         # Return GPT's choice and the correct option number
         return choice.strip(), correct_index + 1
@@ -200,6 +207,7 @@ def main():
         print(f"Segment {i+1}: {'Correct' if result else 'Incorrect'}")
         if not result:
             print(f"Explanation: {verifier.explanation}\n")
+            break  # Stop after the first incorrect segment
     print("\n")
 
 

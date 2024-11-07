@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from pure_NL_experiments.segmentation import AtomicSegmentation, SentenceSegmentation
+from src.NL.segmentation import AtomicSegmentation, SentenceSegmentation
 
 
 class TestSentenceSegmentation(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestSentenceSegmentation(unittest.TestCase):
 
 
 class TestAtomicSegmentation(unittest.TestCase):
-    @patch('segmentation.OpenAI')
+    @patch('src.NL.segmentation.OpenAI')
     def test_atomic_segmentation_basic(self, mock_openai):
         problem_text = "Prove that the sum of two even numbers is even."
         proof_text = "Let a and b be even numbers. Then a = 2k and b = 2m for some integers k and m. Therefore, a + b = 2(k + m), which is even."
@@ -76,7 +76,7 @@ class TestAtomicSegmentation(unittest.TestCase):
         ]
         self.assertEqual(segmenter.segment(), expected_segments)
 
-    @patch('segmentation.OpenAI')
+    @patch('src.NL.segmentation.OpenAI')
     def test_atomic_segmentation_complex(self, mock_openai):
         problem_text = "Prove that every bounded sequence has a convergent subsequence."
         proof_text = "Let (a_n) be a bounded sequence. By the Bolzano-Weierstrass theorem, there exists a convergent subsequence of (a_n)."
@@ -106,7 +106,7 @@ class TestAtomicSegmentation(unittest.TestCase):
         ]
         self.assertEqual(segmenter.segment(), expected_segments)
 
-    @patch('segmentation.OpenAI')
+    @patch('src.NL.segmentation.OpenAI')
     def test_atomic_segmentation_empty(self, mock_openai):
         problem_text = "Prove that zero equals zero."
         proof_text = ""
@@ -128,7 +128,7 @@ class TestAtomicSegmentation(unittest.TestCase):
         expected_segments = []
         self.assertEqual(segmenter.segment(), expected_segments)
 
-    @patch('segmentation.OpenAI')
+    @patch('src.NL.segmentation.OpenAI')
     def test_atomic_segmentation_non_numbered(self, mock_openai):
         problem_text = "Prove that if n is odd, then n^2 is odd."
         proof_text = "Suppose n is odd. Then n = 2k + 1 for some integer k. Therefore, n^2 = 4k^2 + 4k + 1, which is odd."

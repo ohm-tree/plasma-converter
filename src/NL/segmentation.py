@@ -158,6 +158,24 @@ def main():
     for idx, segment in enumerate(segments, 1):
         print(f"{idx}. {segment}")
 
+    # Expected output (results may vary due to the randomness in GPT-4):
+    # Problem:
+    # Prove that the square of any odd integer is odd.
+    #
+    # Segmented Proof:
+    # 1. Let n be an odd integer.
+    # 2. Then n = 2k + 1 for some integer k.
+    # 3. Therefore, n^2 = (2k + 1)^2 = 4k^2 + 4k + 1, which is odd.
+    # Problem:
+    # Prove that the square of any odd integer is odd.
+    #
+    # Segmented Proof:
+    # 1. Let n be an odd integer.
+    # 2. Then n = 2k + 1 for some integer k.
+    # 3. Therefore, n^2 = (2k + 1)^2.
+    # 4. Simplify to n^2 = 4k^2 + 4k + 1.
+    # 5. Since the form 4k^2 + 4k + 1 is in the format of 2m+1, n^2 is odd.
+
 
 if __name__ == '__main__':
     main()

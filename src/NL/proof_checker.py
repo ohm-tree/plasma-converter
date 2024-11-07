@@ -3,7 +3,8 @@
 import os
 
 from openai import OpenAI
-from segmentation import AtomicSegmentation, SentenceSegmentation
+
+from src.NL.segmentation import AtomicSegmentation, SentenceSegmentation
 
 # Set up OpenAI API Key
 client = OpenAI(

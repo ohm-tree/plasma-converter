@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from pure_NL_experiments.segment_labeler import BasicSegmentLabeler
+from src.NL.segment_labeler import BasicSegmentLabeler
 
 
 class TestBasicSegmentLabeler(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestBasicSegmentLabeler(unittest.TestCase):
             self.assertEqual(
                 label, 'deduction', f"Segment {index+1} should be labeled as 'deduction'.")
 
-    @patch('segment_labeler.chat_gpt')
+    @patch('src.NL.segment_labeler.chat_gpt')
     def test_label_segment_without_keyword(self, mock_chat_gpt):
         # Test segments without deduction keywords
         indices_without_deduction = [0, 5, 6]
@@ -46,7 +46,7 @@ class TestBasicSegmentLabeler(unittest.TestCase):
             self.assertIn('Given the context:', last_call_args)
             mock_chat_gpt.reset_mock()
 
-    @patch('segment_labeler.chat_gpt')
+    @patch('src.NL.segment_labeler.chat_gpt')
     def test_label_segment_gpt_deduction(self, mock_chat_gpt):
         # Test when GPT determines it's a deduction
         mock_chat_gpt.return_value = 'Deduction'
@@ -58,7 +58,7 @@ class TestBasicSegmentLabeler(unittest.TestCase):
                          f"Segment {index+1} should be labeled as 'deduction'.")
         mock_chat_gpt.assert_called_once()
 
-    @patch('segment_labeler.chat_gpt')
+    @patch('src.NL.segment_labeler.chat_gpt')
     def test_label_segment_gpt_proposition(self, mock_chat_gpt):
         # Test when GPT determines it's a proposition
         mock_chat_gpt.return_value = 'Proposition'
