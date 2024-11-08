@@ -92,12 +92,58 @@ class ScrambleVerifier(SegmentChecker):
             print(f"Scrambled segments: {variations}")
         return variations
 
-    def multiple_choice_evaluation(self, context: str, options: list[str]) -> list[int]:
+    def _generate_multiple_choice_prompt(self, context: str, options_text: str) -> list[dict]:
+        """
+        Generates the message history for multiple choice evaluation with few-shot examples.
+        """
+        few_shot_messages = [
+            {"role": "user", "content":
+                "Given the problem statement:\n"
+                "Prove that the sum of two even numbers is even.\n\n"
+                "Given the context:\n"
+                "Let n and m be two even numbers. Then $n = 2a$ and $m = 2b$ for some integers $a$ and $b$.\n\n"
+                "Which of the following options logically follows from the context?\n"
+                "1. Thus, $n + m = 2a + 2b = 2(a + b)$, which is even.\n"
+                "2. Thus, $n + m = 2a + 2b = 2(a - b)$, which is even.\n"
+                "3. Thus, $n + m = 2a + 2b = 4(a + b)$, which is even.\n"
+                "4. None of the above.\n"
+                "Please provide the number of the correct option."
+             },
+            {"role": "assistant", "content": "1"},
+            {"role": "user", "content":
+                "Given the problem statement:\n"
+                "Evaluate the integral of $\\frac{1}{x} dx$.\n\n"
+                "Given the context:\n"
+                "We need to find the antiderivative of $\\frac{1}{x}$.\n\n"
+                "Which of the following options logically follows from the context?\n"
+                "1. Therefore, $\\int \\frac{1}{x} dx = -\\frac{1}{x^2} + C$\n"
+                "2. Therefore, $\\int \\frac{1}{x} dx = \\frac{1}{x} + C$\n"
+                "3. Therefore, $\\int \\frac{1}{x} dx = x + C$\n"
+                "4. None of the above.\n"
+                "Please provide the number of the correct option."
+             },
+            {"role": "assistant", "content": "4"},
+        ]
+
+        if context.strip() != "":
+            content = (
+                f"Given the problem statement:\n{self.problem_statement}\n\n"
+                f"Given the context:\n{context}\n\n"
+                f"Which of the following options logically follows from the context?\n{options_text}\n"
+                "Please say ONLY the number of the correct option and NOTHING ELSE!"
+            )
+        else:
+            content = (
+                f"Given the problem statement:\n{self.problem_statement}\n\n"
+                f"Which of the following options logically follows from the problem statement?\n{options_text}\n"
+                "Please say ONLY the number of the correct option and NOTHING ELSE!"
+            )
+
+        return few_shot_messages + [{"role": "user", "content": content}]
+
+    def multiple_choice_evaluation(self, context: str, options: list[str]) -> dict:
         """
         Presents multiple choices to the model and asks which one logically follows.
-
-        Internally, the options are shuffled and the model is asked to choose one.
-        The frequencies of the choices are returned.
 
         Parameters:
         ----------
@@ -108,46 +154,62 @@ class ScrambleVerifier(SegmentChecker):
 
         Returns:
         -------
-        list[int]
-            The frequencies of the choices. 
+        dict
+            Dictionary containing:
+            - 'frequencies': list of frequencies for each option
+            - 'none_of_above': count of "None of the above" selections
+            - 'parse_errors': count of responses that couldn't be parsed
         """
         frequencies = [0] * len(options)
+        none_of_above_count = 0
+        parse_errors = 0
 
         for _ in range(self.num_multiple_choice_repeats):
             permutation = list(range(len(options)))
             random.shuffle(permutation)
-            options = [options[i] for i in permutation]
+            shuffled_options = [options[i] for i in permutation]
+
+            # Add "None of the above" as the last option
+            all_options = shuffled_options + ["None of the above"]
 
             options_with_numbers = [
-                f"{idx + 1}. {option}" for idx, option in enumerate(options)]
+                f"{idx + 1}. {option}" for idx, option in enumerate(all_options)]
             options_text = '\n'.join(options_with_numbers)
-            if context.strip() != "":
-                prompt = (
-                    f"Given the problem statement:\n{self.problem_statement}\n\n"
-                    f"Given the context:\n{context}\n\n"
-                    f"Which of the following options logically follows from the context?\n{options_text}\n"
-                    "Please provide the number of the correct option."
-                )
-            else:
-                prompt = (
-                    f"Given the problem statement:\n{self.problem_statement}\n\n"
-                    f"Which of the following options logically follows from the problem statement?\n{options_text}\n"
-                    "Please provide the number of the correct option."
-                )
+
+            messages = self._generate_multiple_choice_prompt(
+                context, options_text)
+
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                n=self.sample_n
+                messages=messages,
+                n=self.sample_n,
+                max_tokens=3  # Only need to return the number
             )
             for choice in response.choices:
                 response_text = choice.message.content.strip()
+                # if the response text contains a period,
+                # truncate to everything before it;
+                # the model likely output "x. Some text"
+                # where x is the number we want
+                if '.' in response_text:
+                    response_text = response_text.split('.')[0]
                 try:
                     response_idx = int(response_text) - 1
-                    frequencies[permutation[response_idx]] += 1
+                    # If "None of the above" was chosen
+                    if response_idx == len(all_options) - 1:
+                        none_of_above_count += 1
+                    else:
+                        frequencies[permutation[response_idx]] += 1
                 except ValueError:
-                    # Handle unexpected responses
+                    print(f"Error parsing response: {response_text}")
+                    parse_errors += 1
                     continue
-        return frequencies
+
+        return {
+            'frequencies': frequencies,
+            'none_of_above': none_of_above_count,
+            'parse_errors': parse_errors
+        }
 
     def explain_error(self, context: str, segment: str):
         """
@@ -174,11 +236,12 @@ class ScrambleVerifier(SegmentChecker):
         scrambled_segments = self.generate_scrambled_versions(
             context, correct_segment)
         options = [correct_segment] + scrambled_segments
-        frequencies = self.multiple_choice_evaluation(context, options)
-
+        results = self.multiple_choice_evaluation(context, options)
+        if self.verbose:
+            print(f"Results: {results}")
         # Determine if the correct segment was chosen majority of the time
         # The correct segment is always the index 0
-        correct_votes = frequencies[0]
+        correct_votes = results['frequencies'][0]
         if correct_votes / self.num_multiple_choice_repeats >= self.accept_threshold:
             # Segment is verified
             return True
@@ -192,8 +255,8 @@ def main():
     problem_statement = "Prove that the sum of two even numbers is even."
     segments = [
         "Let n and m be two even numbers.",
-        "Then n = 2a and m = 2b for some integers a and b.",
-        "Thus, n + m = 2a + 2b = 2(a + b), which is even."
+        "Then $n = 2a$ and $m = 2b$ for some integers $a$ and $b$.",
+        "Thus, $n + m = 2a + 2b = 2(a + b)$, which is even."
     ]
     print("Sum of Two Even Numbers")
     for i in [1, 2]:  # Segment 0 is a proposition, and hence should be skipped
@@ -206,13 +269,12 @@ def main():
     print("\n")
 
     # Incorrect Calculus Example
-    problem_statement_calc = "Evaluate the integral of 1/x dx."
+    problem_statement_calc = "Evaluate the integral of $\\frac{1}{x} dx$."
     segments_calc = [
-        "We know that the integral of 1/x dx is -1/x^2 + C.",
-        "Therefore, ∫1/x dx = -1/x^2 + C."
+        "We know that the integral of $\\frac{1}{x} dx$ is $-\\frac{1}{x^2} + C$.",
+        "Therefore, $\\int \\frac{1}{x} dx = -\\frac{1}{x^2} + C$."
     ]
     print("Integral of 1/x (Calculus)")
-    # Segment 1 is incorrect
     verifier = ScrambleVerifier(
         problem_statement_calc, segments_calc, 0, accept_threshold=0.5, verbose=True)
     result = verifier.check_segment()
@@ -224,13 +286,12 @@ def main():
     # Incorrect Number Theory Example
     problem_statement_nt = "Prove that the sum of any two odd numbers is even."
     segments_nt = [
-        "Let m and n be odd numbers.",
-        "Then m = 2a + 1 and n = 2b + 1 for some integers a and b.",
-        "Therefore, m + n = 2a + 1 + 2b + 1 = 2(a + b + 1).",
-        "Thus, m + n is odd."
+        "Let $m$ and $n$ be odd numbers.",
+        "Then $m = 2a + 1$ and $n = 2b + 1$ for some integers $a$ and $b$.",
+        "Therefore, $m + n = 2a + 1 + 2b + 1 = 2(a + b + 1)$.",
+        "Thus, $m + n$ is odd."
     ]
     print("Sum of Two Odd Numbers (Number Theory)")
-    # Segment 4 is incorrect
     verifier = ScrambleVerifier(
         problem_statement_nt, segments_nt, 3, accept_threshold=0.5, verbose=True)
     result = verifier.check_segment()
