@@ -1,3 +1,5 @@
+from typing import Optional
+
 from openai import OpenAI
 
 
@@ -36,10 +38,13 @@ class AtomicSegmentation(ProofSegmentation):
     Segments the proof into atomic ideas using GPT with improved few-shot prompting.
     """
 
-    def __init__(self, problem_text: str, proof_text: str):
+    def __init__(self, problem_text: str, proof_text: str, client: Optional[OpenAI] = None):
         super().__init__(problem_text, proof_text)
-        # Initialize the OpenAI client (API key is read from the environment variable OPENAI_API_KEY)
-        self.client = OpenAI()
+        if client is None:
+            # Initialize the OpenAI client (API key is read from the environment variable OPENAI_API_KEY)
+            self.client = OpenAI()
+        else:
+            self.client = client
 
     def segment(self) -> list[str]:
         # Simulate previous user-assistant interactions

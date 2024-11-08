@@ -3,21 +3,9 @@
 import os
 import random
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from openai import OpenAI
-
-# Set up OpenAI API Key
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),  # Or set your API key directly here
-)
-
-
-def chat_gpt(prompt: str, model: str = "gpt-4") -> str:
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
 
 
 class SegmentChecker(ABC):
@@ -50,11 +38,16 @@ class ScrambleVerifier(SegmentChecker):
         segments: list[str],
         segment_index: int,
         num_scrambles: int = 3,
-        num_repeats: int = 1
+        num_repeats: int = 1,
+        client: Optional[OpenAI] = None
     ):
         super().__init__(problem_statement, segments, segment_index)
         self.num_scrambles = num_scrambles
         self.num_repeats = num_repeats
+        if client is None:
+            self.client = OpenAI()
+        else:
+            self.client = client
 
     def generate_scrambled_versions(self, context: str, segment: str) -> list[str]:
         """
@@ -67,7 +60,11 @@ class ScrambleVerifier(SegmentChecker):
             f"Generate {self.num_scrambles} variations of the next segment that are similar but contain a subtle mathematical error."
             " Provide the variations as a numbered list."
         )
-        content = chat_gpt(prompt)
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        content = response.choices[0].message.content.strip()
         scrambled_segments = self.parse_gpt_variations(content)
         return scrambled_segments[:self.num_scrambles]
 
@@ -116,7 +113,11 @@ class ScrambleVerifier(SegmentChecker):
                 f"Which of the following options logically follows from the problem statement?\n{options_text}\n"
                 "Please provide the number of the correct option."
             )
-        choice = chat_gpt(prompt)
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        choice = response.choices[0].message.content.strip()
         # Return GPT's choice and the correct option number
         return choice.strip(), correct_index + 1
 
@@ -130,7 +131,11 @@ class ScrambleVerifier(SegmentChecker):
             f"Given the context:\n{context}\n\n"
             "Please provide a detailed explanation of why this segment is incorrect."
         )
-        self.explanation = chat_gpt(prompt)
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        self.explanation = response.choices[0].message.content.strip()
 
     def check_segment(self) -> bool:
         """

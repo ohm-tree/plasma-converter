@@ -1,21 +1,7 @@
-import os
-import re
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from openai import OpenAI
-
-# Set up OpenAI API Key
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),  # Or set your API key directly here
-)
-
-
-def chat_gpt(prompt: str, model: str = "gpt-4") -> str:
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
 
 
 class SegmentLabeler(ABC):
@@ -45,8 +31,12 @@ class BasicSegmentLabeler(SegmentLabeler):
     Labels a segment based on keywords and GPT evaluation.
     """
 
-    def __init__(self, problem_statement: str, segments: list[str], segment_index: int):
+    def __init__(self, problem_statement: str, segments: list[str], segment_index: int, client: Optional[OpenAI] = None):
         super().__init__(problem_statement, segments, segment_index)
+        if client is None:
+            self.client = OpenAI()
+        else:
+            self.client = client
         self.deduction_keywords = [
             'then', 'therefore', 'thus', 'hence', 'implies', 'consequently',
             'as a result', 'so', 'accordingly', 'because', 'since', 'due to'
@@ -60,7 +50,7 @@ class BasicSegmentLabeler(SegmentLabeler):
             self.label = 'deduction'
             return self.label
         else:
-            # Prompt GPT appropriately, including the problem statement and context
+            # Replace chat_gpt call with direct OpenAI API call
             prompt = (
                 f"Given the problem statement:\n{self.problem_statement}\n\n"
                 f"Given the context:\n{self.context}\n\n"
@@ -69,8 +59,12 @@ class BasicSegmentLabeler(SegmentLabeler):
                 "is it only stating propositions or definitions?\n"
                 "Please answer 'deduction' or 'proposition'."
             )
-            response = chat_gpt(prompt)
-            response_clean = response.strip().lower()
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            response_clean = response.choices[0].message.content.strip(
+            ).lower()
             if 'deduction' in response_clean:
                 self.label = 'deduction'
             else:
