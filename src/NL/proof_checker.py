@@ -59,6 +59,11 @@ class ProofChecker:
             raise ValueError(
                 f"Unknown segmentation method: {self.segmentation_method}")
         segments = segmentation.segment()
+
+        if self.verbose:
+            print("Segments:")
+            for idx, segment in enumerate(segments, 1):
+                print(f"{idx}. {segment}")
         return segments
 
     def label_segments(self) -> list[str]:
@@ -76,6 +81,8 @@ class ProofChecker:
                 self.problem_statement, self.segments, i, self.client
             )
             labeled_segments.append(labeler.label_segment())
+            if self.verbose:
+                print(f"Segment {i} labeled as {labeled_segments[i]}")
         return labeled_segments
 
     def check_segments(self, verbose: bool = False):
@@ -84,7 +91,10 @@ class ProofChecker:
         """
         for i in range(len(self.segments)):
             if self.labels[i] == 'proposition':
+                if verbose:
+                    print(f"Segment {i} is a proposition and is skipped.")
                 continue
+            print(f"Checking segment {i}...")
             verifier = ScrambleVerifier(
                 self.problem_statement,
                 self.segments,
