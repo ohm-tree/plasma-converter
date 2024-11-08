@@ -60,7 +60,7 @@ class BasicSegmentLabeler(SegmentLabeler):
                 "Please answer 'deduction' or 'proposition'."
             )
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}]
             )
             response_clean = response.choices[0].message.content.strip(

@@ -1,23 +1,13 @@
 # proof_checker.py
 
 import os
+from typing import Optional
 
 from openai import OpenAI
 
+from src.NL.segment_checker import ScrambleVerifier
+from src.NL.segment_labeler import BasicSegmentLabeler
 from src.NL.segmentation import AtomicSegmentation, SentenceSegmentation
-
-# Set up OpenAI API Key
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),  # Or set your API key directly here
-)
-
-
-def chat_gpt(prompt: str, model: str = "gpt-4") -> str:
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
 
 
 class ProofChecker:
@@ -27,7 +17,10 @@ class ProofChecker:
         proof_text: str,
         num_scrambles: int = 3,
         segmentation_method: str = 'sentence',
-        num_repeats: int = 1
+        verification_method: str = 'scramble',
+        num_repeats: int = 1,
+        client: Optional[OpenAI] = None,
+        verbose: bool = False
     ):
         self.problem_statement = problem_statement
         self.proof_text = proof_text
@@ -35,50 +28,96 @@ class ProofChecker:
         self.segmentation_method = segmentation_method
         self.num_repeats = num_repeats
         self.segments = self.segment_proof()
+        self.labels = self.label_segments()
         self.is_verified = False
         self.error_segment = None
         self.explanation = None
+        if client is None:
+            self.client = OpenAI()
+        else:
+            self.client = client
+        self.verify_proof(verbose=verbose)
 
     def segment_proof(self) -> list[str]:
         """
         Segments the proof into smaller chunks using the specified segmentation method.
+
+        Returns:
+        -------
+        list[str]
+            A list of segments.
         """
         if self.segmentation_method == 'sentence':
             segmentation = SentenceSegmentation(
                 self.problem_statement, self.proof_text)
         elif self.segmentation_method == 'atomic':
             segmentation = AtomicSegmentation(
-                self.problem_statement, self.proof_text)
+                self.problem_statement, self.proof_text, self.client
+            )
         else:
             raise ValueError(
                 f"Unknown segmentation method: {self.segmentation_method}")
         segments = segmentation.segment()
         return segments
 
-    def verify_proof(self):
+    def label_segments(self) -> list[str]:
         """
-        Verifies the proof by iteratively checking each segment using a SegmentChecker.
+        Labels each segment as either 'deduction' or 'verification'.
+
+        Returns:
+        -------
+        list[str]
+            A list of labels for each segment.  
+        """
+        labeled_segments = []
+        for i in range(len(self.segments)):
+            labeler = BasicSegmentLabeler(
+                self.problem_statement, self.segments, i, self.client
+            )
+            labeled_segments.append(labeler.label_segment())
+        return labeled_segments
+
+    def verify_proof(self, verbose: bool = False):
+        """
+        Verifies the proof by iteratively checking each deduction using a SegmentChecker.
         """
         for i in range(len(self.segments)):
+            if self.labels[i] == 'proposition':
+                continue
             verifier = ScrambleVerifier(
                 self.problem_statement,
                 self.segments,
                 i,
                 num_scrambles=self.num_scrambles,
-                num_repeats=self.num_repeats
+                num_repeats=self.num_repeats,
+                client=self.client
             )
             if not verifier.check_segment():
                 # Proof is rejected
                 self.is_verified = False
                 self.error_segment = self.segments[i]
                 self.explanation = verifier.explanation
+                if verbose:
+                    print(
+                        f"Proof is incorrect. Error found in segment: {self.error_segment}")
+                    print(f"Explanation: {self.explanation}")
                 return
+            else:
+                if verbose:
+                    print(f"Segment {i} verified.")
+
         # All segments verified
         self.is_verified = True
 
     def get_result(self) -> tuple[bool, str, str]:
         """
         Returns the verification result, error segment (if any), and explanation.
+
+        Returns:
+        -------
+        tuple[bool, str, str]
+            A tuple containing a boolean indicating whether the proof is verified,
+            the error segment (if any), and the explanation.
         """
         return self.is_verified, self.error_segment, self.explanation
 
@@ -109,7 +148,6 @@ if __name__ == "__main__":
         num_scrambles=3,
         num_repeats=3
     )
-    checker.verify_proof()
     is_verified, error_segment, explanation = checker.get_result()
 
     if is_verified:

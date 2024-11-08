@@ -107,7 +107,7 @@ class AtomicSegmentation(ProofSegmentation):
 
         # Call the OpenAI API with the constructed messages
         response = self.client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=messages
         )
 
@@ -163,7 +163,7 @@ def main():
     for idx, segment in enumerate(segments, 1):
         print(f"{idx}. {segment}")
 
-    # Expected output (results may vary due to the randomness in GPT-4):
+    # Expected output (results may vary due to the randomness in gpt-4o-mini):
     # Problem:
     # Prove that the square of any odd integer is odd.
     #
