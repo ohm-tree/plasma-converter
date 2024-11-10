@@ -94,39 +94,53 @@ class ProofChecker:
                 if verbose:
                     print(f"Segment {i} is a proposition and is skipped.")
                 continue
-            print(f"Checking segment {i}...")
-            verifier = ScrambleVerifier(
-                self.problem_statement,
-                self.segments,
-                i,
-                client=self.client,
-                **self.checker_kwargs
-            )
-            if not verifier.check_segment():
-                # Proof is rejected
-                self.is_verified = False
-                self.error_segment = self.segments[i]
-                self.explanation = verifier.explanation
+            elif self.labels[i] == 'informal':
                 if verbose:
-                    print(
-                        f"Proof is incorrect. Error found in segment: {self.error_segment}")
-                    print(f"Explanation: {self.explanation}")
-                return
+                    print(f"Segment {i} is informal and is skipped.")
+                continue
+            elif self.labels[i] == 'definition':
+                if verbose:
+                    print(f"Segment {i} is a definition and is skipped.")
+                continue
+            elif self.labels[i] == 'unknown':
+                if verbose:
+                    print(f"Segment {i} is unknown and is skipped.")
+                continue
             else:
                 if verbose:
-                    print(f"Segment {i} verified.")
+                    print(f"Checking segment {i}...")
+                verifier = ScrambleVerifier(
+                    self.problem_statement,
+                    self.segments,
+                    i,
+                    client=self.client,
+                    **self.checker_kwargs
+                )
+                if not verifier.check_segment():
+                    # Proof is rejected
+                    self.is_verified = False
+                    self.error_segment = self.segments[i]
+                    self.explanation = verifier.explanation
+                    if verbose:
+                        print(
+                            f"Proof is incorrect. Error found in segment: {self.error_segment}")
+                        print(f"Explanation: {self.explanation}")
+                    return
+                else:
+                    if verbose:
+                        print(f"Segment {i} verified.")
 
         # All segments verified
         self.is_verified = True
 
-    def verify(self) -> tuple[bool, str, str]:
+    def verify(self) -> dict:
         """
         Returns the verification result, error segment (if any), and explanation.
 
         Returns:
         -------
-        tuple[bool, str, str]
-            A tuple containing a boolean indicating whether the proof is verified,
+        dict
+            A dictionary containing a boolean indicating whether the proof is verified,
             the error segment (if any), and the explanation.
         """
 
@@ -134,7 +148,11 @@ class ProofChecker:
         self.labels = self.label_segments()
         self.check_segments(verbose=self.verbose)
 
-        return self.is_verified, self.error_segment, self.explanation
+        return {
+            "is_verified": self.is_verified,
+            "error_segment": self.error_segment,
+            "explanation": self.explanation
+        }
 
 
 # Example usage

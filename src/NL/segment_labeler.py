@@ -84,10 +84,18 @@ class BasicSegmentLabeler(SegmentLabeler):
             {
                 "prompt": self._create_segment_prompt(
                     problem_statement=example_problem,
-                    context="Let's prove that $\\sqrt{2}$ is irrational. Assume, for contradiction, that $\\sqrt{2}$ is rational. Then $\\sqrt{2} = \\frac{a}{b}$ implies $2 = \\frac{a^2}{b^2}$.",
+                    context="Let's prove that $\\sqrt{2}$ is irrational. Assume, for contradiction, that $\\\sqrt{2}$ is rational. Then $\\\sqrt{2} = \\frac{a}{b}$ implies $2 = \\frac{a^2}{b^2}$.",
                     segment="Therefore, $a^2 = 2b^2$."
                 ),
                 "response": "deduction"
+            },
+            {
+                "prompt": self._create_segment_prompt(
+                    problem_statement=example_problem,
+                    context="Let's prove that $\\\sqrt{2}$ is irrational. Assume, for contradiction, that $\\\sqrt{2}$ is rational.",
+                    segment="This is a key insight that will help us reach a contradiction later."
+                ),
+                "response": "informal"
             }
         ]
         return examples
@@ -99,7 +107,7 @@ class BasicSegmentLabeler(SegmentLabeler):
                 "role": "system",
                 "content": (
                     "You are a mathematical proof analyzer that labels segments "
-                    "of proofs as either 'deduction', 'proposition', or 'informal'."
+                    "of proofs as either 'deduction', 'proposition', 'definition', or 'informal'."
                 )
             }
         ]
@@ -135,12 +143,22 @@ class BasicSegmentLabeler(SegmentLabeler):
         # Generate messages and make API call
         messages = self._generate_messages(segment)
         response = self.client.chat.completions.create(
-            model="gpt-4-mini",
+            model="gpt-4o-mini",
             messages=messages
         )
 
         response_clean = response.choices[0].message.content.strip().lower()
-        self.label = 'deduction' if 'deduction' in response_clean else 'proposition'
+        if 'deduction' in response_clean:
+            self.label = 'deduction'
+        elif 'definition' in response_clean:
+            self.label = 'definition'
+        elif 'informal' in response_clean:
+            self.label = 'informal'
+        elif 'proposition' in response_clean:
+            self.label = 'proposition'
+        else:
+            print("Warning: Unknown label:", response_clean)
+            self.label = 'unknown'
         return self.label
 
 
