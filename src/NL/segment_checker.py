@@ -8,7 +8,7 @@ from typing import Optional
 
 from openai import OpenAI
 
-from src.NL.prompt import FewShotPrompter
+from src.utils.prompt import FewShotPrompter
 
 
 class SegmentChecker(ABC):

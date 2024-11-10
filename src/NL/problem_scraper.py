@@ -11,7 +11,7 @@ import tqdm
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
-from src.NL.prompt import FewShotPrompter
+from src.utils.prompt import FewShotPrompter
 
 
 class AopsMultipleChoiceProblem(BaseModel):
