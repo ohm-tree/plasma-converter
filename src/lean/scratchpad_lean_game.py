@@ -14,7 +14,7 @@ DEFAULT_LEAN_WORKSPACE = 'mathlib4/'
 LEAN4_DEFAULT_HEADER = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 50000\nset_option linter.all false\nopen BigOperators Real Nat Topology Rat\n\n"
 
 
-class LeanStateError(Exception):
+class ScratchpadStateError(Exception):
     pass
 
 
@@ -47,14 +47,14 @@ def to_annotated_string(code: str, messages: tuple[LeanMessage]) -> str:
 
 
 @dataclass(frozen=True)
-class LeanMove:
+class ScratchpadMove:
     """Represents a move in the game"""
     new_code: str  # Complete new Lean code
     scratchpad_append: str  # Text to append to scratchpad
 
 
 @dataclass(frozen=True)
-class LeanState(State):
+class ScratchpadState(State):
     code: str  # Raw Lean code
     depth: int
     dead: bool
@@ -63,7 +63,7 @@ class LeanState(State):
     scratchpad: str  # Arbitrary text for notes/working
 
     @classmethod
-    def saves(cls, states: Sequence['LeanState'], filename: str) -> None:
+    def saves(cls, states: Sequence['ScratchpadState'], filename: str) -> None:
         """Save a collection of states to a file."""
         np.save(filename, [{
             'code': state.code,
@@ -75,7 +75,7 @@ class LeanState(State):
         } for state in states])
 
     @classmethod
-    def loads(cls, filename: str) -> list['LeanState']:
+    def loads(cls, filename: str) -> list['ScratchpadState']:
         """Load a collection of states from a file."""
         states = np.load(filename, allow_pickle=True)
         return [cls(**state) for state in states]
@@ -104,9 +104,9 @@ class ProcessResult(TypedDict):
     win: bool  # Whether this is a winning state
 
 
-class LeanGame(Game[LeanMove, LeanState]):
+class ScratchpadGame(Game[ScratchpadMove, ScratchpadState]):
     """
-    The LeanGame class implements a game interface for interacting with the Lean 4 proof assistant.
+    The ScratchpadGame class implements a game interface for interacting with the Lean 4 proof assistant.
     This is the "core" of the game, and does not involve implementation details which
     should be delegated to a higher-level algorithm for playing the game.
 
@@ -128,7 +128,9 @@ class LeanGame(Game[LeanMove, LeanState]):
 
     def __init__(self,
                  worker: Worker,
+                 informal_problem: str,
                  problem: str,
+                 tactic_state: str,  # Unused
                  header: str = LEAN4_DEFAULT_HEADER,
                  max_depth: int = 40,
                  max_message_length: int = 512,
@@ -138,6 +140,7 @@ class LeanGame(Game[LeanMove, LeanState]):
         self.worker = worker
 
         self.problem: str = problem
+        self.informal_problem: str = informal_problem
         self.header: str = header
         self.max_depth: int = max_depth
 
@@ -153,11 +156,11 @@ class LeanGame(Game[LeanMove, LeanState]):
     def death_value(self):
         return -1.0
 
-    async def starting_state(self) -> 'LeanState':
+    async def starting_state(self, **kwargs) -> 'ScratchpadState':
         """
         Returns the starting state of the game.
         """
-        res = LeanState(
+        res = ScratchpadState(
             code=self.problem,
             depth=0,
             dead=False,
@@ -169,10 +172,10 @@ class LeanGame(Game[LeanMove, LeanState]):
         self._win[res] = False
         return res
 
-    async def is_legal(self, state: LeanState, action: LeanMove) -> bool:
+    async def is_legal(self, state: ScratchpadState, action: ScratchpadMove) -> bool:
         return True
 
-    async def next_state(self, state: LeanState, action: LeanMove) -> 'LeanState':
+    async def next_state(self, state: ScratchpadState, action: ScratchpadMove) -> 'ScratchpadState':
         """
         Returns the next state of the game given a current state and action.
 
@@ -184,19 +187,19 @@ class LeanGame(Game[LeanMove, LeanState]):
 
         Parameters
         ----------
-        state: LeanState
+        state: ScratchpadState
             The current state of the game.
-        action: LeanMove
+        action: ScratchpadMove
             The action containing new code and scratchpad text.
 
         Raises
         ------
-        LeanStateError
+        ScratchpadStateError
             If the current state is terminal
         """
         if await self.terminal(state):
-            raise LeanStateError(
-                "Cannot get the next state of a terminal LeanState.")
+            raise ScratchpadStateError(
+                "Cannot get the next state of a terminal ScratchpadState.")
 
         new_code = self.problem + action.new_code
 
@@ -210,39 +213,40 @@ class LeanGame(Game[LeanMove, LeanState]):
         repl_result = response['response']
         process_result = self.process(repl_result)
 
-        new_state = LeanState(
+        new_state = ScratchpadState(
             code=new_code,
             depth=state.depth + 1,
             dead=process_result['dead'],
             messages=tuple(process_result['messages']),
             annotated_code=to_annotated_string(
                 new_code, process_result['messages']),
-            scratchpad=state.scratchpad + action.scratchpad_append
+            scratchpad=state.scratchpad +
+            action.scratchpad_append.strip('\n') + '\n'
         )
 
         self._win[new_state] = process_result['win']
 
         return new_state
 
-    async def terminal(self, state: LeanState) -> bool:
+    async def terminal(self, state: ScratchpadState) -> bool:
         return state.dead or state.depth >= self.max_depth or self._win[state]
 
-    async def reward(self, state: LeanState) -> float:
+    async def reward(self, state: ScratchpadState) -> float:
         """
         Returns a float consisting of the reward for the player.
         """
         if not await self.terminal(state):
-            raise LeanStateError(
-                "Cannot get the reward of a non-terminal LeanState.")
+            raise ScratchpadStateError(
+                "Cannot get the reward of a non-terminal ScratchpadState.")
         return 1.0 if self._win[state] else -1.0
 
-    async def victorious(self, state: LeanState) -> bool:
+    async def victorious(self, state: ScratchpadState) -> bool:
         if not await self.terminal(state):
-            raise LeanStateError(
-                "Cannot check if a non-terminal LeanState is victorious.")
+            raise ScratchpadStateError(
+                "Cannot check if a non-terminal ScratchpadState is victorious.")
         return self._win[state]
 
-    async def make_root(self, state: LeanState) -> None:
+    async def make_root(self, state: ScratchpadState) -> None:
         """
         Severs any references to the parent of
         this state, making it the root of the tree.
@@ -337,7 +341,7 @@ class LeanGame(Game[LeanMove, LeanState]):
             'win': complete
         }
 
-    def pretty_print(self, state: LeanState) -> str:
+    def pretty_print(self, state: ScratchpadState) -> str:
         """
         Pretty print the current state of the game.
 
@@ -394,7 +398,7 @@ async def test_lean_game():
     EXAMPLE_PROBLEM = "theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by\n"
 
     worker = FakeWorker()
-    game = LeanGame(
+    game = ScratchpadGame(
         worker=worker,
         problem=EXAMPLE_PROBLEM,
         header=LEAN4_DEFAULT_HEADER
@@ -402,15 +406,15 @@ async def test_lean_game():
     state = await game.starting_state()
     print(game.pretty_print(state))
 
-    state = await game.next_state(state, LeanMove(
+    state = await game.next_state(state, ScratchpadMove(
         new_code="  simp_all only [Nat.one_eq_succ_zero, Nat.zero_eq, zero_add, Nat.add_succ, Nat.add_zero, Nat.succ_add]\n",
-        scratchpad_append="This is a scratchpad message"
+        scratchpad_append="This is a scratchpad message\n"
     ))
     print(game.pretty_print(state))
 
-    state = await game.next_state(state, LeanMove(
+    state = await game.next_state(state, ScratchpadMove(
         new_code="",
-        scratchpad_append="This is a scratchpad message"
+        scratchpad_append="This is a scratchpad message\n"
     ))
     print(game.pretty_print(state))
 

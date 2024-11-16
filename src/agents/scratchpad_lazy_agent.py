@@ -4,13 +4,17 @@ import numpy as np
 from wayfinder.games import *
 
 from src.agents.scratchpad_lazy_agent_prompts import *
-from src.lean.scratchpad_lean_game import LeanGame, LeanMove, LeanState
+from src.lean.scratchpad_lean_game import (
+    ScratchpadGame,
+    ScratchpadMove,
+    ScratchpadState,
+)
 from src.workers.worker import *
 
 
-class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
+class ScratchpadLazyAgent(Agent[ScratchpadGame, ScratchpadState, ScratchpadMove]):
     def __init__(self,
-                 game: LeanGame,
+                 game: ScratchpadGame,
                  worker: Worker,
                  request_formula: str,
                  max_num_completions: int,
@@ -22,12 +26,71 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
         self.max_num_completions = max_num_completions
         self.valueless = valueless
 
-    async def max_moves(self, state: LeanState) -> int:
+    async def max_moves(self, state: ScratchpadState) -> int:
         return self.max_num_completions
+
+    async def amount_to_request(self,
+                                state: ScratchpadState,
+                                current_num_children: int,
+                                num_visits: int,
+                                child_num_visits: np.ndarray,
+                                child_priors: np.ndarray,
+                                child_total_value: np.ndarray,
+                                child_Q: np.ndarray,
+                                child_U: np.ndarray,
+                                c: float,
+                                expand_initial_value: float) -> tuple[int, Optional[int]]:
+        """
+        Returns the amount of moves to request.
+        """
+        if self.request_formula == "sqrt":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+            if current * current < num_visits:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            # We don't need more
+            return (min(current, max_moves), None)
+        if self.request_formula == "log":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+            if 2 ** current < num_visits:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            return (min(current, max_moves), None)
+        if self.request_formula == "conservative":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+
+            current_best = np.max(child_Q + c * child_U)
+            if expand_initial_value >= current_best:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            return (min(current, max_moves), None)
+        if self.request_formula == "pure":
+            max_moves = await self.max_moves(state)
+            current = await self.len_active_moves(state)
+            if current < 4:
+                return (max(1, current), min(4, max_moves))
+
+            current_best = np.max(child_Q + c * child_U)
+
+            # simulate a maximally likely new child.
+            remaining_probability = max(1 - np.sum(child_priors), 0)
+            new_U = remaining_probability * np.sqrt(num_visits)
+
+            if expand_initial_value + c * new_U >= current_best:
+                return (min(current, max_moves), min(current * 2, max_moves))
+            return (min(current, max_moves), None)
+
+        raise ValueError(f"Unknown request formula: {self.request_formula}")
 
     async def require_new_move(
         self,
-        state: LeanState,
+        state: ScratchpadState,
         min_num_moves: int,
         max_num_moves: Optional[int] = None
     ) -> bool:
@@ -67,7 +130,7 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
 
                 code_completion = code_completions[0]
 
-                move = LeanMove(
+                move = ScratchpadMove(
                     new_code=code_completion['text'],
                     scratchpad_append=scratchpad_completion['text']
                 )
@@ -87,7 +150,7 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
 
         return True
 
-    async def generate_scratchpad(self, state: LeanState, n: int, temperature: float) -> list[dict]:
+    async def generate_scratchpad(self, state: ScratchpadState, n: int, temperature: float) -> list[dict]:
         """Generate scratchpad additions using chat completion."""
         messages = get_scratchpad_messages(
             state.annotated_code,
@@ -105,10 +168,11 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
         )
         return completion['result']
 
-    async def generate_code(self, state: LeanState, new_scratchpad: str, n: int, temperature: float) -> list[dict]:
+    async def generate_code(self, state: ScratchpadState, new_scratchpad: str, n: int, temperature: float) -> list[dict]:
         """Generate new code using chat completion."""
         messages = get_code_messages(
             state.annotated_code,
+            self.game.problem,
             state.scratchpad + new_scratchpad
         )
 
@@ -129,7 +193,7 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
 
         return result
 
-    async def value(self, state: LeanState) -> float:
+    async def value(self, state: ScratchpadState) -> float:
         """Estimate value using chat completion."""
         if self.valueless:
             return 0
@@ -149,7 +213,7 @@ class ScratchpadLazyAgent(Agent[LeanGame, LeanState, LeanMove]):
 
         return parse_value_response(value['result'][0]['text'], self.worker.logger)['rating']
 
-    async def policy(self, state: LeanState, move: LeanMove) -> float:
+    async def policy(self, state: ScratchpadState, move: ScratchpadMove) -> float:
         if hash((state, move)) in self.policy_cache:
             return self.policy_cache[hash((state, move))]
         raise ValueError("Move probability not calculated.")

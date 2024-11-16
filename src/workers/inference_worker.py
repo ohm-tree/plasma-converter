@@ -12,11 +12,13 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from multiprocessing import sharedctypes
+from typing import Union
 
 import numpy as np
 from wayfinder.uct.self_play import async_self_play
 
 from src.lean.lean_game import LeanGame, LeanState
+from src.lean.scratchpad_lean_game import ScratchpadGame, ScratchpadState
 from src.workers.worker import Worker
 
 
@@ -42,6 +44,8 @@ class InferenceWorker(Worker, ABC):
 
         self.config = config
         self.global_config = global_config
+        self.game_class = self.global_config['game_class']
+        assert self.game_class in ['lean', 'scratchpad']
 
         self.problem_number: sharedctypes.Synchronized = values['problem_number']
 
@@ -97,13 +101,22 @@ class InferenceWorker(Worker, ABC):
             formal_statement = problem['formal_statement']
             PROBLEM_STATEMENT = informal_prefix + formal_statement
             tactic_state = problem['goal']
-
-            game: LeanGame = LeanGame(
-                worker=self,
-                problem=PROBLEM_STATEMENT,
-                tactic_state=tactic_state,
-                max_depth=40
-            )
+            if self.game_class == 'lean':
+                game: LeanGame = LeanGame(
+                    worker=self,
+                    informal_problem=informal_prefix,
+                    problem=PROBLEM_STATEMENT,
+                    tactic_state=tactic_state,
+                    max_depth=40
+                )
+            elif self.game_class == 'scratchpad':
+                game: ScratchpadGame = ScratchpadGame(
+                    worker=self,
+                    informal_problem=informal_prefix,
+                    problem=PROBLEM_STATEMENT,
+                    tactic_state=tactic_state,
+                    max_depth=40
+                )
 
             results = await self.solve(game)
 
@@ -139,7 +152,7 @@ class InferenceWorker(Worker, ABC):
         listener.cancel()
 
     @abstractmethod
-    async def solve(self, game: LeanGame):
+    async def solve(self, game: Union[LeanGame, ScratchpadGame]):
         raise NotImplementedError
 
     def loop(self):

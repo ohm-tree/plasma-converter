@@ -6,6 +6,14 @@ EXAMPLE_RAW_CODE_INPUT = """theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ)
 EXAMPLE_ANNOTATED_CODE_INPUT = """theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by
 """
 
+EXAMPLE_SCRATCHPAD_INPUT = (
+    "To solve this problem, we need to find the value of $a$ and "
+    "$r$ such that the sequence $u$ satisfies the given conditions.\n\n"
+    "First, we can use the fact that $u 1 = 2$ and $u 3 = 6$ to find $r$.\n\n"
+    "Then, we can substitute back to find $a$."
+)
+
+
 EXAMPLE_CODE_OUTPUT = """```lean4
 theorem amc12b_2003_p6 (a r : ℝ) (u : ℕ → ℝ) (h₀ : ∀ k, u k = a * r ^ k) (h₁ : u 1 = 2) (h₂ : u 3 = 6) : u 0 = 2 / Real.sqrt 3 ∨ u 0 = -(2 / Real.sqrt 3) := by
   -- First, we want to re-write the condition about the second
@@ -71,9 +79,15 @@ def get_code_messages(annotated_code: str, problem_statement: str, scratchpad: s
     return [
         {"role": "system", "content": CODE_SYSTEM_PROMPT},
         {"role": "user", "content": CODE_PROMPT.format(
+            annotated_code=EXAMPLE_ANNOTATED_CODE_INPUT,
+            scratchpad=EXAMPLE_SCRATCHPAD_INPUT
+        )},
+        {"role": "assistant", "content": EXAMPLE_CODE_OUTPUT},
+        {"role": "user", "content": CODE_PROMPT.format(
             annotated_code=annotated_code, scratchpad=scratchpad)},
-        {"role": "assistant", "content": CODE_ASSISTANT_PREFIX.format(
-            problem_statement=problem_statement)}
+        # Unfortunately, the assistant prefix doesn't usually work for DeepSeek models.
+        # {"role": "assistant", "content": CODE_ASSISTANT_PREFIX.format(
+        #     problem_statement=problem_statement)}
     ]
 
 

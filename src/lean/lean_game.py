@@ -88,6 +88,7 @@ class LeanGame(Game[LeanMove, LeanState]):
 
     def __init__(self,
                  worker: Worker,
+                 informal_problem: str,
                  problem: str,
                  tactic_state: str,
                  header: str = LEAN4_DEFAULT_HEADER,
@@ -99,6 +100,7 @@ class LeanGame(Game[LeanMove, LeanState]):
         self.worker = worker
 
         self.problem: str = problem
+        self.informal_problem: str = informal_problem
         self.header: str = header
         self.max_depth: int = max_depth
 

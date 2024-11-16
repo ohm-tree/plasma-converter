@@ -44,8 +44,6 @@ class LLMWorker(Worker):
         LLM_kwargs = config['model'] if 'model' in config else None
         sampling_kwargs = config['sampling'] if 'sampling' in config else None
 
-        self.channel = self.worker_type
-
         if LLM_kwargs is None:
             LLM_kwargs = {
                 "model": "deepseek-ai/DeepSeek-Prover-V1.5-RL",
@@ -81,6 +79,11 @@ class LLMWorker(Worker):
         self.performance_logger = PerformanceLogger()
 
         self.chat_mode = config.get('chat', False)  # Get chat flag from config
+
+        if self.chat_mode:
+            self.channel = "chat"
+        else:
+            self.channel = "completion"
 
     def generate(self, input_data: list[str | list[dict]],
                  sampling_params: list[SamplingParams],

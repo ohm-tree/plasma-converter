@@ -51,6 +51,10 @@ Debug fast mcts inference with
 python src/inference.py --config configs/fast_mcts_debug.yaml
 ```
 
+Run linear inference with scratchpad with
+```bash
+python src/inference.py --config configs/linear_scratchpad_debug.yaml
+```
 
 """
 
@@ -69,6 +73,7 @@ def run_inference():
 
     queues: dict[str, multiprocessing.Queue] = {}
     print("Creating Queues:")
+    print("worker-specific:")
     for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         queues.update(
             {
@@ -79,11 +84,18 @@ def run_inference():
         print(
             f"{type_string} worker-specific: {config[type_string]['num_procs']} queues")
 
+    print("worker-general:")
     for type_string, _, _, _ in WORKER_TYPES_AND_STRINGS:
         if config[type_string]['num_procs'] == 0:
             continue
         queues.update({type_string: multiprocessing.Queue()})
         print(f"{type_string}: 1 queues")
+
+    # Special queues:
+    print("special:")
+    # Chat
+    queues.update({'chat': multiprocessing.Queue()})
+    print("chat: 1 queues")
 
     values: dict[str, sharedctypes.Synchronized] = {}
 

@@ -6,12 +6,19 @@ saving the results to disk, and logging the results.
 
 import multiprocessing
 from multiprocessing import sharedctypes
+from typing import Union
 
 from wayfinder.games.agent import Agent
 from wayfinder.uct.self_play import async_self_play
 
 from src.agents.lazy_agent import LazyLeanAgent
+from src.agents.scratchpad_lazy_agent import ScratchpadLazyAgent
 from src.lean.lean_game import LeanGame, LeanMove, LeanState
+from src.lean.scratchpad_lean_game import (
+    ScratchpadGame,
+    ScratchpadMove,
+    ScratchpadState,
+)
 from src.workers.inference_worker import InferenceWorker
 
 
@@ -42,24 +49,42 @@ class MCTSWorker(InferenceWorker):
         if "search_kwargs" not in self.config:
             self.config["search_kwargs"] = {}
 
+        self.global_config = global_config
+        self.game_class = self.config['game_class']
+
         self.logger.info(
             f"Global Variables I can see: {globals().keys()}"
         )
 
-    def create_agent(self, game: LeanGame) -> Agent[LeanGame, LeanState, LeanMove]:
+    def create_lean_agent(self, game: LeanGame) -> Agent[LeanGame, LeanState, LeanMove]:
         if self.config['agent_class'] == 'LazyLeanAgent':
             return LazyLeanAgent(
                 game=game,
                 worker=self,
                 **self.config['agent_kwargs']
             )
-
         raise ValueError(f"Unknown agent class: {self.config['agent_class']}")
 
-    async def solve(self, game: LeanGame) -> dict:
+    def create_scratchpad_agent(self, game: ScratchpadGame) -> Agent[ScratchpadGame, ScratchpadState, ScratchpadMove]:
+        return ScratchpadLazyAgent(
+            game=game,
+            worker=self,
+            **self.config['agent_kwargs']
+        )
+
+    async def solve(self, game: Union[LeanGame, ScratchpadGame]) -> dict:
+        if isinstance(game, LeanGame):
+            assert self.game_class == 'lean'
+            return await self.solve_lean(game)
+        elif isinstance(game, ScratchpadGame):
+            assert self.game_class == 'scratchpad'
+            return await self.solve_scratchpad(game)
+        raise ValueError(f"Unknown game class: {type(game)}")
+
+    async def solve_lean(self, game: LeanGame) -> dict:
         state: LeanState = await game.starting_state()
 
-        agent = self.create_agent(game)
+        agent = self.create_lean_agent(game)
 
         return await async_self_play(
             self.logger,
@@ -68,6 +93,16 @@ class MCTSWorker(InferenceWorker):
             agent=agent,
             tree_kwargs=self.config['tree_kwargs'],
             search_kwargs=self.config['search_kwargs']
+        )
+
+    async def solve_scratchpad(self, game: ScratchpadGame) -> dict:
+        state: ScratchpadState = await game.starting_state()
+        agent = self.create_scratchpad_agent(game)
+        return await async_self_play(
+            self.logger,
+            state=state,
+            game=game,
+            agent=agent,
         )
 
     def loop(self):
