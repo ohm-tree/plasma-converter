@@ -82,12 +82,11 @@ CONTEXT = (
     "```lean4\n"
     "{annotated_code}\n"
     "```\n"
-
 )
 
 SCRATCHPAD_PROMPT = CONTEXT + (
-    "This code currently has the following error message:\n"
-    "{error_message}\n"
+    # "This code currently has the following error message:\n"
+    # "{error_message}\n"
     "Please analyze the current state of the proof, "
     "especially noting the error messages. "
     "What should we try next? "
@@ -110,16 +109,33 @@ CODE_SYSTEM_PROMPT = (
 )
 
 CODE_PROMPT = CONTEXT + (
-    "This code currently has the following error message:\n"
-    "{error_message}\n"
+    # "This code currently has the following error message:\n"
+    # "{error_message}\n"
     "Please re-write the proof to fix the errors."
 )
 
 
-CODE_ASSISTANT_PREFIX = (
-    "```lean4\n"
-    "{problem_statement}\n"
-)  # The assistant will output a continuation of this prefix.
+# CODE_ASSISTANT_PREFIX = (
+#     "```lean4\n"
+#     "{problem_statement}\n"
+# )  # The assistant will output a continuation of this prefix.
+
+
+code_prompter = FewShotPrompter(
+    system_prompt=CODE_SYSTEM_PROMPT,
+    fstring_prompt=CODE_PROMPT,
+    few_shot_examples=[
+        {
+            "problem_statement": EXAMPLE_NATURAL_LANGUAGE_PROBLEM_STATEMENT,
+            "natural_language_proof": EXAMPLE_NATURAL_LANGUAGE_PROOF,
+            "scratchpad": EXAMPLE_SCRATCHPAD_OUTPUT,
+            "annotated_code": EXAMPLE_ANNOTATED_CODE_INPUT,
+        }
+    ],
+    few_shot_responses=[
+        EXAMPLE_CODE_OUTPUT
+    ]
+)
 
 
 VALUE_SYSTEM_PROMPT = "You are an expert mathematician and Lean prover assistant."
@@ -139,14 +155,13 @@ def get_value_messages(annotated_code: str, scratchpad: str) -> list[dict]:
     ]
 
 
-code_prompter = FewShotPrompter(
+value_prompter = FewShotPrompter(
     examples=[
         {
             "input": EXAMPLE_ANNOTATED_CODE_INPUT,
-            "output": EXAMPLE_CODE_OUTPUT
+            "output": EXAMPLE_VALUE_OUTPUT
         }
     ],
-    system_prompt=CODE_SYSTEM_PROMPT,
-    user_prompt=CODE_PROMPT,
-    assistant_prefix=CODE_ASSISTANT_PREFIX
+    system_prompt=VALUE_SYSTEM_PROMPT,
+    user_prompt=VALUE_PROMPT
 )

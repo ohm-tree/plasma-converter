@@ -21,11 +21,11 @@ completion:
         max_num_batched_tokens: 8192
         trust_remote_code: True
     sampling:
-        max_tokens: 1024
+        max_tokens: 8192
         temperature: 0.0
         top_k: 1
         top_p: 1.0
-        stop: ["\n", "```"]
+        stop: ["```"]
         logprobs: 0
 
 lean:
