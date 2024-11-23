@@ -147,21 +147,7 @@ VALUE_PROMPT = CONTEXT + (
 )
 
 
-def get_value_messages(annotated_code: str, scratchpad: str) -> list[dict]:
-    return [
-        {"role": "system", "content": VALUE_SYSTEM_PROMPT},
-        {"role": "user", "content": VALUE_PROMPT.format(
-            annotated_code=annotated_code, scratchpad=scratchpad)}
-    ]
-
-
 value_prompter = FewShotPrompter(
-    examples=[
-        {
-            "input": EXAMPLE_ANNOTATED_CODE_INPUT,
-            "output": EXAMPLE_VALUE_OUTPUT
-        }
-    ],
     system_prompt=VALUE_SYSTEM_PROMPT,
-    user_prompt=VALUE_PROMPT
+    fstring_prompt=VALUE_PROMPT
 )

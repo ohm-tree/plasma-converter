@@ -91,6 +91,7 @@ class LeanGame(Game[LeanMove, LeanState]):
                  informal_problem: str,
                  problem: str,
                  tactic_state: str,
+                 natural_language_proof: str,
                  header: str = LEAN4_DEFAULT_HEADER,
                  max_depth: int = 40,
                  max_tactic_state_length: int = 512,
@@ -101,6 +102,7 @@ class LeanGame(Game[LeanMove, LeanState]):
 
         self.problem: str = problem
         self.informal_problem: str = informal_problem
+        self.natural_language_proof: str = natural_language_proof
         self.header: str = header
         self.max_depth: int = max_depth
 

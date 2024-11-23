@@ -24,6 +24,7 @@ def load_problems():
 
             game: LeanGame = LeanGame(
                 worker=None,
+                informal_problem=informal_prefix,
                 problem=PROBLEM_STATEMENT,
                 tactic_state=tactic_state,
                 max_depth=40

@@ -131,6 +131,7 @@ class ScratchpadGame(Game[ScratchpadMove, ScratchpadState]):
                  informal_problem: str,
                  problem: str,
                  tactic_state: str,  # Unused
+                 natural_language_proof: str,
                  header: str = LEAN4_DEFAULT_HEADER,
                  max_depth: int = 40,
                  max_message_length: int = 512,
@@ -141,6 +142,7 @@ class ScratchpadGame(Game[ScratchpadMove, ScratchpadState]):
 
         self.problem: str = problem
         self.informal_problem: str = informal_problem
+        self.natural_language_proof: str = natural_language_proof
         self.header: str = header
         self.max_depth: int = max_depth
 

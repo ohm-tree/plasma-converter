@@ -3,7 +3,11 @@ from typing import Any, Optional
 import numpy as np
 from wayfinder.games import *
 
-from src.agents.scratchpad_lazy_agent_prompts import *
+from src.agents.scratchpad_lazy_agent_prompts import (
+    code_prompter,
+    scratchpad_prompter,
+    value_prompter,
+)
 from src.lean.scratchpad_lean_game import (
     ScratchpadGame,
     ScratchpadMove,
@@ -152,9 +156,11 @@ class ScratchpadLazyAgent(Agent[ScratchpadGame, ScratchpadState, ScratchpadMove]
 
     async def generate_scratchpad(self, state: ScratchpadState, n: int, temperature: float) -> list[dict]:
         """Generate scratchpad additions using chat completion."""
-        messages = get_scratchpad_messages(
-            state.annotated_code,
-            state.scratchpad
+        messages = scratchpad_prompter.create_prompt(
+            problem_statement=self.game.problem,
+            natural_language_proof=self.game.natural_language_proof,
+            annotated_code=state.annotated_code,
+            scratchpad=state.scratchpad
         )
 
         completion = await self.worker.query(
@@ -170,10 +176,11 @@ class ScratchpadLazyAgent(Agent[ScratchpadGame, ScratchpadState, ScratchpadMove]
 
     async def generate_code(self, state: ScratchpadState, new_scratchpad: str, n: int, temperature: float) -> list[dict]:
         """Generate new code using chat completion."""
-        messages = get_code_messages(
-            state.annotated_code,
-            self.game.problem,
-            state.scratchpad + new_scratchpad
+        messages = code_prompter.create_prompt(
+            natural_language_proof=self.game.natural_language_proof,
+            annotated_code=state.annotated_code,
+            problem_statement=self.game.problem,
+            scratchpad=state.scratchpad + new_scratchpad
         )
 
         completion = await self.worker.query(
@@ -198,9 +205,11 @@ class ScratchpadLazyAgent(Agent[ScratchpadGame, ScratchpadState, ScratchpadMove]
         if self.valueless:
             return 0
 
-        messages = get_value_messages(
-            state.annotated_code,
-            state.scratchpad
+        messages = value_prompter.create_prompt(
+            problem_statement=self.game.problem,
+            natural_language_proof=self.game.natural_language_proof,
+            scratchpad=state.scratchpad,
+            annotated_code=state.annotated_code,
         )
 
         value = await self.worker.query(

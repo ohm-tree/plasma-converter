@@ -101,12 +101,14 @@ class InferenceWorker(Worker, ABC):
             formal_statement = problem['formal_statement']
             PROBLEM_STATEMENT = informal_prefix + formal_statement
             tactic_state = problem['goal']
+            natural_language_proof = problem['natural_language_proof']
             if self.game_class == 'lean':
                 game: LeanGame = LeanGame(
                     worker=self,
                     informal_problem=informal_prefix,
                     problem=PROBLEM_STATEMENT,
                     tactic_state=tactic_state,
+                    natural_language_proof=natural_language_proof,
                     max_depth=40
                 )
             elif self.game_class == 'scratchpad':
@@ -115,6 +117,7 @@ class InferenceWorker(Worker, ABC):
                     informal_problem=informal_prefix,
                     problem=PROBLEM_STATEMENT,
                     tactic_state=tactic_state,
+                    natural_language_proof=natural_language_proof,
                     max_depth=40
                 )
 
